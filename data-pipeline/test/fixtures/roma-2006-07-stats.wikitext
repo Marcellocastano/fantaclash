@@ -1,0 +1,36 @@
+=== Statistiche dei giocatori ===
+Sono in ''corsivo'' i calciatori che hanno lasciato la società a stagione in corso.
+{{Statistiche dei giocatori
+| Competizione1 = Serie A
+| Competizione2 = Coppa Italia
+| Competizione3 = Champions League
+| Competizione4 = Supercoppa italiana
+| {{Sortname|A.|Aquilani|Alberto Aquilani}} {{Sommastat|13|1|3|0 |3|0|0|0 |5|0|0|0 |1|0|0|0}}
+| {{Sortname|M.|Cassetti|Marco Cassetti}} {{Sommastat|28|2|7|0|6|0|0|0|8|0|0|0 |1|0|0|0}}
+| {{Sortname|C.|Chivu|Cristian Chivu}} {{Sommastat|28|0|6|0|7|0|0|0|8|0|0|0 |1|0|0|0}}
+| {{Sortname|L.|Cufré|Leandro Cufré}} {{Sommastat|0|0|0|0|0|0|0|0| 0|0|0|0 |1|0|0|0}}
+| {{Sortname|G.|Curci|Gianluca Curci}} {{Sommastat|6|-9|0|0| 6|-7|0|0| 0|0|0|0 |0|0|0|0}}
+| {{Sortname|D.|De Rossi|Daniele De Rossi}} {{Sommastat|36|2|7|0 |8|2|0|0|10|2|0|0 |1|0|0|0}}
+| {{Sortname|R.|Defendi|Rodrigo Defendi}} {{Sommastat|0|0|0|0 |1|0|0|0|1|0|0|0 |0|0|0|0}}
+| {{Sortname||Doni|Doniéber Alexander Marangon}} {{Sommastat|32|-25|3|0 |2|-4|0|0 |8|-12|0|0 |1|-3|0|0}}
+| {{Sortname|R.|Faty|Ricardo Faty}} {{Sommastat|11|0|1|0 |1|0|0|0|3|0|0|0 |0|0|0|0}}
+| {{Sortname|M.|Ferrari|Matteo Ferrari}} {{Sommastat|27|2|6|1|6|0|0|0|6|0|0|0 |0|0|0|0}}
+| {{Sortname||Júlio Sérgio}} {{Sommastat|0|0|0|0|0|0|0|0| 0|0|0|0 |0|0|0|0}}
+| {{Sortname||Mancini|Alessandro Faiolhe Amantino}} {{Sommastat|29|8|4|0 |8|3|0|0|7|1|0|0 |1|0|0|0}}
+| {{Sortname|G.|Martínez|Gilberto Martínez}} {{Sommastat|0|0|0|0|0|0|0|0|0|0|0|0 |0|0|0|0}}
+| {{Sortname|P.|Mexès|Philippe Mexès}} {{Sommastat|27|3|10|0|6|0|0|0|7|0|0|0 |1|0|0|0}}
+| {{Sortname||Mido}} {{Sommastat|0|0|0|0|0|0|0|0| 0|0|0|0 |1|0|0|0}}
+| ''{{Sortname|V.|Montella|Vincenzo Montella}}'' {{Sommastat|12|3|2|0 |1|2|0|0|3|0|0|0 |0|0|0|0}}
+| {{Sortname|S.|Okaka|Stefano Okaka}} {{Sommastat|6|1|1|0 |2|0|0|0|3|0|0|0 |0|0|0|0}}
+| {{Sortname|C.|Panucci|Christian Panucci}} {{Sommastat|34|5|6|0|6|2|0|1|9|1|0|0 |1|0|0|0}}
+| {{Sortname|S.|Perrotta|Simone Perrotta}} {{Sommastat|34|8|5|0 |6|4|0|0|9|1|0|0 |1|0|0|0}}
+| {{Sortname|D.|Pizarro|David Pizarro}} {{Sommastat|32|1|7|0 |7|3|0|0|7|1|0|0 |0|0|0|0}}
+| {{Sortname|A.|Rosi|Aleandro Rosi}} {{Sommastat|19|2|3|0 |5|0|0|0|4|0|0|0 |0|0|0|0}}
+| {{Sortname|R.|Taddei|Rodrigo Taddei}} {{Sommastat|29|5|1|0 |6|0|0|0|8|2|0|0 |1|0|0|0}}
+| {{Sortname|F.|Tavano|Francesco Tavano}} {{Sommastat|14|2|0|0 |2|0|0|0|0|0|0|0 |0|0|0|0}}
+| {{Sortname|M.|Tonetto|Max Tonetto}} {{Sommastat|30|0|20|0 |6|0|0|0|7|0|0|0 |1|0|0|0}}
+| {{Sortname|F.|Totti|Francesco Totti}} {{Sommastat|35|26|2|1 |5|2|0|0|9|4|0|0 |1|0|0|0}}
+| {{Sortname|V.|Virga|Valerio Virga}} {{Sommastat|4|0|0|0 |2|1|0|0|1|0|0|0 |0|0|0|0}}
+| {{Sortname|M.|Vučinić|Mirko Vučinić}} {{Sommastat|25|2|2|0 |2|0|0|0|6|1|0|0 |0|0|0|0}}
+| {{Sortname|C.|Wilhelmsson|Christian Wilhelmsson}} {{Sommastat|19|1|3|0 |3|0|0|0|3|0|0|0 |0|0|0|0}}
+}}

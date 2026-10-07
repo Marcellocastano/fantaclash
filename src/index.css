@@ -1,0 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-canvas: 245 243 238;
+  --c-surface: 232 228 218;
+  --c-ink: 52 58 56;
+  --c-ink-soft: 78 84 81;
+  --c-ink-muted: 94 100 97;
+  --c-ink-faint: 110 115 112;
+  --c-line: 222 220 213;
+  --c-line-strong: 189 185 175;
+  --c-pitch: 52 75 67;
+  --c-on-pitch: 245 243 238;
+  --c-peach: 231 191 168;
+  --c-on-peach: 52 58 56;
+  --c-ok: 71 120 92;
+  --c-danger: 185 79 69;
+  --c-role-p: 143 109 31;
+  --c-role-d: 76 139 95;
+  --c-role-c: 69 105 154;
+  --c-role-a: 176 80 63;
+  --c-card-yellow: 214 170 46;
+  --c-card-red: 196 64 52;
+  color-scheme: light;
+
+  font-family: 'Public Sans', sans-serif;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+:root[data-theme="dark"] {
+  --c-canvas: 28 34 32;
+  --c-surface: 35 42 39;
+  --c-ink: 236 232 223;
+  --c-ink-soft: 184 182 175;
+  --c-ink-muted: 157 157 150;
+  --c-ink-faint: 122 123 118;
+  --c-line: 54 64 60;
+  --c-line-strong: 86 98 92;
+  --c-pitch: 141 174 159;
+  --c-on-pitch: 28 34 32;
+  --c-peach: 231 191 168;
+  --c-on-peach: 28 34 32;
+  --c-ok: 111 166 132;
+  --c-danger: 217 120 110;
+  --c-role-p: 210 171 82;
+  --c-role-d: 116 173 133;
+  --c-role-c: 125 156 198;
+  --c-role-a: 210 125 110;
+  --c-card-yellow: 230 190 80;
+  --c-card-red: 222 104 92;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Scrollbar personalizzata */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-line));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-ink) / 0.4);
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-pitch text-on-pitch font-display font-bold text-lg rounded-sm transition-colors duration-150;
+    @apply hover:bg-pitch/90 focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+  }
+
+  .btn-bid {
+    @apply px-6 py-3 bg-peach text-on-peach font-display font-bold text-lg rounded-sm transition-colors duration-150;
+    @apply hover:bg-peach/80 focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+  }
+
+  .btn-ghost {
+    @apply px-6 py-3 bg-transparent border border-line-strong text-ink font-semibold rounded-sm transition-colors duration-150;
+    @apply hover:bg-surface focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+  }
+
+  .btn-primary:disabled,
+  .btn-bid:disabled,
+  .btn-ghost:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .role-tag {
+    @apply inline-flex items-center justify-center w-6 h-6 font-display font-bold text-sm rounded-none border bg-transparent;
+  }
+
+  .role-tag-P {
+    @apply text-role-P border-role-P;
+  }
+
+  .role-tag-D {
+    @apply text-role-D border-role-D;
+  }
+
+  .role-tag-C {
+    @apply text-role-C border-role-C;
+  }
+
+  .role-tag-A {
+    @apply text-role-A border-role-A;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2.5 bg-transparent border border-line-strong rounded-sm text-ink placeholder-ink-faint transition-colors duration-150;
+    @apply focus-visible:outline outline-2 outline-offset-2 outline-pitch focus-visible:border-pitch;
+  }
+
+  .input-error {
+    @apply border-danger;
+  }
+
+  .section-heading {
+    @apply font-display font-bold text-lg text-ink border-b border-line-strong pb-2;
+  }
+}

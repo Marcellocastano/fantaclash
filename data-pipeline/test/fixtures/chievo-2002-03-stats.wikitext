@@ -1,0 +1,39 @@
+=== Statistiche dei giocatori ===
+Sono in ''corsivo'' i calciatori che hanno lasciato la società a stagione in corso.
+
+<ref>{{cita|Melegari, 2003|pp. 333-335, 424-426, 913}}.</ref>
+{{Statistiche dei giocatori
+| Competizione1 = Serie A
+| Competizione2 = Coppa Italia
+| Competizione3 = Coppa UEFA
+| Totale =
+| {{Sortname|M.|Ambrosio|Marco Ambrosio}} {{Sommastat|8|-11|2|0|4|-6|0|0|-|-|-|-}}
+| {{Sortname|D.|Andersson|Daniel Andersson}} {{Sommastat|12|0|4|1|3|0|0|0|1|0|0|0}}
+| ''{{Sortname|G.|Aquaro|Giuseppe Aquaro}}'' {{Sommastat|-|-|-|-|1|0|0|0|-|-|-|-}}
+| {{Sortname|L.|Beghetto|Luigi Beghetto}} {{Sommastat|8|0|1|0|4|1|1|0|2|0|0|0}}
+| {{Sortname|O.|Bierhoff|Oliver Bierhoff}} {{Sommastat|26|7|1|1|2|0|0|0|2|0|0|0}}
+| {{Sortname|S.|Bjelanović|Saša Bjelanović}} {{Sommastat|12|4|2|0|-|-|-|-|-|-|-|-}}
+| {{Sortname|E.|Corini|Eugenio Corini}} {{Sommastat|30|5|8|1|1|0|0|0|2|0|1|0}}
+| {{Sortname|F.|Cossato|Federico Cossato}} {{Sommastat|26|9|5|0|1|0|0|0|2|0|1|0}}
+| ''{{Sortname|M.|D'Angelo|Maurizio D'Angelo}}'' {{Sommastat|1|0|0|0|3|0|0|0|-|-|-|-}}
+| {{Sortname|L.|D'Anna|Lorenzo D'Anna}} {{Sommastat|27|2|7|1|1|0|0|0|2|0|1|0}}
+| {{Sortname|I.|De Franceschi|Ivone De Franceschi}} {{Sommastat|6|2|1|0|-|-|-|-|-|-|-|-}}
+| {{Sortname|I.|Della Morte|Ivano Della Morte}} {{Sommastat|24|4|0|0|4|0|0|0|1|0|0|0}}
+| {{Sortname|M.|De Paula|Marcos Ariel de Paula}} {{Sommastat|2|0|0|0|1|1|0|0|-|-|-|-}}
+| {{Sortname|D.|Franceschini|Daniele Franceschini}} {{Sommastat|33|4|2|0|2|1|0|0|2|0|1|0}}
+| {{Sortname|G.|Grassadonia|Gianluca Grassadonia}} {{Sommastat|2|0|0|0|-|-|-|-|-|-|-|-}}
+| {{Sortname|S.|Lanna|Salvatore Lanna}} {{Sommastat|31|0|4|1|2|0|0|0|2|0|0|0}}
+| ''{{Sortname|N.|Lazetić|Nikola Lazetić}}'' {{Sommastat|11|0|2|0|4|0|0|0|-|-|-|-}}
+| {{Sortname|N.|Legrottaglie|Nicola Legrottaglie}} {{Sommastat|30|4|11|0|-|-|-|-|2|0|0|0}}
+| {{Sortname|S.|Lorenzi|Stefano Lorenzi}} {{Sommastat|10|0|2|0|4|0|0|0|-|-|-|-}}
+| {{Sortname||Luciano|Luciano Siqueira de Oliveira}} {{Sommastat|16|1|2|0|-|-|-|-|-|-|-|-}}
+| {{Sortname|C.|Lupatelli|Cristiano Lupatelli}} {{Sommastat|26|-28|2|0|-|-|-|-|2|-2|0|0}}
+| ''{{Sortname|M.|Marazzina|Massimo Marazzina}}'' {{Sommastat|15|3|0|0|-|-|-|-|2|0|0|0}}
+| {{Sortname|J.|Mensah|John Mensah}} {{Sommastat|11|0|4|0|3|0|0|0|-|-|-|-}}
+| {{Sortname|F.|Moro|Fabio Moro}} {{Sommastat|29|0|8|0|1|0|1|0|2|0|1|0}}
+| {{Sortname|L.|Nalis|Lilian Nalis}} {{Sommastat|8|0|1|0|4|0|0|0|-|-|-|-}}
+| ''{{Sortname|D.|Passoni|Dario Passoni}}'' {{Sommastat|6|0|0|0|3|0|0|0|1|0|0|0}}
+| {{Sortname|S.|Pellissier|Sergio Pellissier}} {{Sommastat|25|5|1|0|4|0|0|0|1|0|0|0}}
+| {{Sortname|S.|Perrotta|Simone Perrotta}} {{Sommastat|32|1|8|0|-|-|-|-|2|0|1|0}}
+| {{Sortname|E.|Pesaresi|Emanuele Pesaresi}} {{Sommastat|7|0|1|0|4|0|0|0|-|-|-|-}}
+}}

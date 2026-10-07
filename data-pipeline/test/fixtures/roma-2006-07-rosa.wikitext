@@ -1,0 +1,40 @@
+== Rosa ==
+Di seguito la rosa.<ref name="Rosa AS Roma - Saison 06/07">{{cita web|url=https://www.transfermarkt.it/as-roma/kader/verein/12/plus/0/galerie/0?saison_id=2006|titolo=Rosa AS Roma - Saison 06/07|accesso=15 aprile 2018}}</ref>
+{{Calciatore in rosa/inizio}}
+{{Calciatore in rosa|n=1|nazione=ITA|nome=[[Gianluca Curci]]|ruolo=P}}
+{{Calciatore in rosa|n=2|nazione=ITA|nome=[[Christian Panucci]]|ruolo=D|altro=v}}
+{{Calciatore in rosa|n=3|nazione=CRI|nome=[[Gilberto Martínez]]|ruolo=D}}
+{{Calciatore in rosa|n=4|nazione=SWE|nome=[[Christian Wilhelmsson]]|ruolo=C}}
+{{Calciatore in rosa|n=5|nazione=FRA|nome=[[Philippe Mexès]]|ruolo=D}}
+{{Calciatore in rosa|n=7|nazione=CHL|nome=[[David Pizarro]]|ruolo=C}}
+{{Calciatore in rosa|n=8|nazione=ITA|nome=[[Alberto Aquilani]]|ruolo=C}}
+{{Calciatore in rosa|n=''9''|nazione=ITA|nome=''[[Vincenzo Montella]]''|ruolo=A}}<ref name="ReferenceA">Ceduto nella sessione invernale di calciomercato</ref>
+{{Calciatore in rosa|n=10|nazione=ITA|nome=[[Francesco Totti]]|ruolo=A|altro=c}}
+{{Calciatore in rosa|n=11|nazione=BRA|nome=[[Rodrigo Taddei]]|ruolo=C}}
+{{Calciatore in rosa|n=12|nazione=ITA|nome=Pietro Pipolo|ruolo=P}}
+{{Calciatore in rosa|n=13|nazione=ROU|nome=[[Cristian Chivu]]|ruolo=D}}
+{{Calciatore in rosa|n=14|nazione=FRA|nome=[[Ricardo Faty]]|ruolo=C}}
+{{Calciatore in rosa|n=''15''|nazione=EGY|nome=''[[Mido]]''|ruolo=A}}<ref name=e>Ceduto nella sessione estiva di calciomercato dopo la prima partita ufficiale.</ref>
+{{Calciatore in rosa|n=16|nazione=ITA|nome=[[Daniele De Rossi]]|ruolo=C}}
+{{Calciatore in rosa|n=17|nazione=ITA|nome=[[Francesco Tavano]]|ruolo=A}}
+{{Calciatore in rosa|n=18|nazione=ITA|nome=[[Valerio Virga]]|ruolo=C}}
+{{Calciatore in rosa|n=19|nazione=BRA|nome=[[Rodrigo Defendi]]|ruolo=D}}
+{{Calciatore in rosa/medio}}
+{{Calciatore in rosa|n=20|nazione=ITA|nome=[[Simone Perrotta]]|ruolo=C}}
+{{Calciatore in rosa|n=21|nazione=ITA|nome=[[Matteo Ferrari]]|ruolo=D}}
+{{Calciatore in rosa|n=22|nazione=ITA|nome=[[Max Tonetto]]|ruolo=D}}
+{{Calciatore in rosa|n=23|nazione=MNE|nome=[[Mirko Vučinić]]|ruolo=A}}
+{{Calciatore in rosa|n=''24''|nazione=ITA|nome=''[[Carlo Zotti]]''|ruolo=P}}<ref name="ReferenceA"/>
+{{Calciatore in rosa|n=25|nazione=ARG|nome=[[Leandro Cufré]]|ruolo=D}}<ref name=e/>
+{{Calciatore in rosa|n=27|nazione=BRA|nome=[[Júlio Sérgio]]|ruolo=P}}
+{{Calciatore in rosa|n=28|nazione=ITA|nome=[[Aleandro Rosi]]|ruolo=C}}
+{{Calciatore in rosa|n=30|nazione=BRA|nome=[[Alessandro Faiolhe Amantino|Mancini]]|ruolo=C}}
+{{Calciatore in rosa|n=31|nazione=ITA|nome=[[Fabrizio Grillo]]|ruolo=D}}
+{{Calciatore in rosa|n=32|nazione=BRA|nome=[[Doniéber Alexander Marangon|Doni]]|ruolo=P}}
+{{Calciatore in rosa|n=33|nazione=ITA|nome=[[Gianluca Freddi]]|ruolo=D}}
+{{Calciatore in rosa|n=34|nazione=ITA|nome=Massimiliano Marsili|ruolo=C}}
+{{Calciatore in rosa|n=35|nazione=ITA|nome=[[Stefano Okaka]]|ruolo=A}}
+{{Calciatore in rosa|n=36|nazione=ITA|nome=[[Simone Palermo]]|ruolo=C}}
+{{Calciatore in rosa|n=37|nazione=ITA|nome=Andrea Giacomini|ruolo=C}}
+{{Calciatore in rosa|n=77|nazione=ITA|nome=[[Marco Cassetti]]|ruolo=D}}
+{{Calciatore in rosa/fine}}
