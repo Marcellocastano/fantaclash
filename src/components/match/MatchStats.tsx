@@ -2,6 +2,8 @@ import { LiveTeamStats, MatchSide } from '../../domain/match';
 
 interface MatchStatsProps {
   stats: Record<MatchSide, LiveTeamStats>;
+  homeName: string;
+  awayName: string;
 }
 
 const ROWS: { key: keyof LiveTeamStats; label: string }[] = [
@@ -12,28 +14,35 @@ const ROWS: { key: keyof LiveTeamStats; label: string }[] = [
   { key: 'redCards', label: 'Rossi' },
 ];
 
-/** Statistiche essenziali: possesso come barra, il resto a numeri */
-export function MatchStats({ stats }: MatchStatsProps) {
+/** Statistiche essenziali: possesso come barra, il resto a numeri con barra di confronto */
+export function MatchStats({ stats, homeName, awayName }: MatchStatsProps) {
   return (
     <div>
-      <h3 className="section-heading mb-2">Statistiche</h3>
-      <div className="flex items-center justify-between text-sm mb-1">
-        <span className="font-display font-bold tabular-nums">{stats.home.possession}%</span>
-        <span className="text-ink-muted">Possesso</span>
-        <span className="font-display font-bold tabular-nums">{stats.away.possession}%</span>
+      <div className="flex justify-between gap-4 text-sm font-bold text-ink-muted mb-3">
+        <span className="truncate">{homeName}</span>
+        <span className="truncate text-right">{awayName}</span>
       </div>
-      <div className="flex h-1.5 bg-line mb-3">
-        <div className="bg-ink-soft transition-[width] duration-500" style={{ width: `${stats.home.possession}%` }} />
+      <Row label="Possesso" home={stats.home.possession} away={stats.away.possession} suffix="%" />
+      {ROWS.map(({ key, label }) => (
+        <Row key={key} label={label} home={stats.home[key]} away={stats.away[key]} />
+      ))}
+    </div>
+  );
+}
+
+function Row({ label, home, away, suffix = '' }: { label: string; home: number; away: number; suffix?: string }) {
+  const total = home + away;
+  const share = total === 0 ? 50 : (home / total) * 100;
+  return (
+    <div className="py-2.5 border-b-2 border-line last:border-b-0">
+      <div className="flex items-baseline justify-between">
+        <span className="font-display text-2xl font-black tabular-nums leading-none">{home}{suffix}</span>
+        <span className="text-sm font-semibold text-ink-muted">{label}</span>
+        <span className="font-display text-2xl font-black tabular-nums leading-none">{away}{suffix}</span>
       </div>
-      <dl className="divide-y divide-line text-sm">
-        {ROWS.map(({ key, label }) => (
-          <div key={key} className="flex items-center justify-between py-1.5">
-            <dd className="font-display font-bold tabular-nums w-8">{stats.home[key]}</dd>
-            <dt className="text-ink-muted">{label}</dt>
-            <dd className="font-display font-bold tabular-nums w-8 text-right">{stats.away[key]}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="flex h-2 mt-1.5 border border-ink">
+        <span className="bg-ink transition-[width] duration-500" style={{ width: `${share}%` }} />
+      </div>
     </div>
   );
 }

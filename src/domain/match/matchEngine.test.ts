@@ -110,6 +110,18 @@ describe('motore partita — coerenza della timeline', () => {
     expect(results.some(r => r.shootout)).toBe(true);
   });
 
+  it('ordine dei rigoristi scelto: cambia solo la lotteria, i 90 minuti restano identici', () => {
+    const base = results.find(r => r.shootout)!;
+    const chosen = [...base.shootoutOrder!.home].reverse();
+    const r = simulateMatch({ home: MID, away: OPP, seed: base.seed, options: { shootoutOrder: { home: chosen } } });
+    const regulation = (x: MatchResult) => x.events.filter(e => e.tick <= x.fullTimeTick && e.type !== 'full_time');
+    expect(regulation(r)).toEqual(regulation(base));
+    expect(r.shootoutOrder!.home).toEqual(chosen);
+    expect(r.shootoutOrder!.away).toEqual(base.shootoutOrder!.away);
+    const homeKicks = r.events.filter(e => e.type === 'shootout_kick' && e.side === 'home');
+    homeKicks.forEach((k, i) => expect(k.playerId).toBe(chosen[i % chosen.length]));
+  });
+
   it('pagelle: gol individuali coerenti con il punteggio, MVP e peggiore definiti', () => {
     for (const r of results) {
       for (const side of ['home', 'away'] as MatchSide[]) {

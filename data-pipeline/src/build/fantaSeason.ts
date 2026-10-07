@@ -131,7 +131,7 @@ async function buildSeason(season: string, statsRows: FantaRow[]): Promise<void>
   const doc = {
     season: label,
     label: `Serie A ${label}`,
-    source: 'statistiche storiche fantacalcio (dati privati, uso interno)',
+    source: 'Statistiche storiche della Serie A elaborate da FantaClash',
     generatedAt: new Date().toISOString(),
     players,
   };

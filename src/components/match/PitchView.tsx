@@ -47,7 +47,7 @@ export function PitchView({ result, state }: PitchViewProps) {
   return (
     <div className="overflow-x-auto">
       <PitchSurface orientation="horizontal" className="min-w-[820px]">
-        <div className="absolute inset-0 grid grid-cols-8 gap-3 px-3 py-6">
+        <div className="absolute inset-0 grid grid-cols-8 gap-2 px-2 py-6">
           {HOME_COLUMNS.map(role => column('home', role))}
           {AWAY_COLUMNS.map(role => column('away', role))}
         </div>

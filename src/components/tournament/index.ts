@@ -5,4 +5,3 @@ export { TournamentDraw } from './TournamentDraw';
 export { TournamentHub } from './TournamentHub';
 export { TournamentSummaryCard } from './TournamentSummaryCard';
 export { TeamBadge } from './TeamBadge';
-export { MatchSimSummary } from './MatchSimSummary';

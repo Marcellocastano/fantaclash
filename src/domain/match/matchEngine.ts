@@ -547,6 +547,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
 
   // Lotteria dei rigori in caso di parità
   let shootout: ShootoutResult | null = null;
+  let shootoutOrder: Record<MatchSide, string[]> | null = null;
   const fullTime = score();
   if (fullTime.home === fullTime.away) {
     emit('shootout_start', 'home', `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}. Si va ai rigori!`, 2);
@@ -568,12 +569,21 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   function runShootout(): ShootoutResult {
     const rng = createRng(hashSeed(seed, 'shootout'));
     const result = { home: 0, away: 0 };
-    const kickers = (s: SideState) => {
+    const kickers = (s: SideState, side: MatchSide) => {
       const outfield = active(s).filter(p => p.player.role !== 'P').sort((a, b) => b.quality - a.quality);
       const gk = keeper(s);
-      return gk ? [...outfield, gk] : outfield;
+      const auto = gk ? [...outfield, gk] : outfield;
+      // Ordine scelto: i giocatori non elencati restano in coda nell'ordine automatico
+      const chosen = options.shootoutOrder?.[side];
+      if (!chosen) return auto;
+      const rank = (id: string) => {
+        const i = chosen.indexOf(id);
+        return i < 0 ? chosen.length : i;
+      };
+      return auto.map((p, i) => ({ p, i })).sort((a, b) => rank(a.p.player.id) - rank(b.p.player.id) || a.i - b.i).map(x => x.p);
     };
-    const order = { home: kickers(sides.home), away: kickers(sides.away) };
+    const order = { home: kickers(sides.home, 'home'), away: kickers(sides.away, 'away') };
+    shootoutOrder = { home: order.home.map(p => p.player.id), away: order.away.map(p => p.player.id) };
     const taken = { home: 0, away: 0 };
     const last = schedule.ticks[schedule.fullTimeTick];
     let round = 0;
@@ -645,6 +655,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     homeScore: fullTime.home,
     awayScore: fullTime.away,
     shootout,
+    shootoutOrder,
     winnerId: sides[winnerSide].id,
     events,
     ticks,

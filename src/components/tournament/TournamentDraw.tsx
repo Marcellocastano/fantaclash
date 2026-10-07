@@ -1,195 +1,196 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawOrder, ROUND_LABELS, TournamentState, TournamentTeam } from '../../domain/tournament';
-import { LogoMark } from '../Logo';
-import { Icon } from '../Icon';
+import { drawOrder, TournamentState, TournamentTeam } from '../../domain/tournament';
+import { playSound } from '../../services/sound';
 import { TeamBadge } from './TeamBadge';
-import { TournamentBracket } from './TournamentBracket';
 
 interface TournamentDrawProps {
   tournament: TournamentState;
-  /** Registra il sorteggio nello stato (chiamata a fine animazione) */
+  /** Registra il sorteggio nello stato (a fine animazione) */
   onDrawn: (order: string[]) => void;
-  /** CTA finale: inizia i quarti */
-  onStart: () => void;
+  /** Animazione finita: si va al tabellone */
+  onDone: () => void;
 }
 
-/** Durata dell'estrazione di ogni squadra e pausa tra le estrazioni (ms) */
-const ROLL_MS = 900;
-const ROLL_STEP_MS = 70;
-const PAUSE_MS = 350;
-/** Attesa prima della prima estrazione: si vede l'urna piena e il tabellone vuoto */
-const INTRO_MS = 1200;
+/** Tempi dell'estrazione (ms) */
+const INTRO_MS = 900;
+const RISE_MS = 550;
+const SHOW_MS = 800;
+const USER_MOMENT_MS = 1800;
+const OUTRO_MS = 900;
 
-type DrawStage = 'intro' | 'drawing' | 'done';
+/** Posizioni delle palline nella boccia (% del contenitore) */
+const BALL_SPOTS = [
+  [30, 70], [50, 74], [70, 70], [20, 52], [40, 55], [60, 54], [80, 52], [50, 36],
+];
+
+type Stage = 'intro' | 'rise' | 'show' | 'user' | 'outro';
 
 /**
- * Sorteggio dei quarti come evento: urna con le 8 squadre, estrazioni una
- * alla volta con il nome che "gira" prima di fermarsi, accoppiamenti
- * rivelati progressivamente. Parte da solo appena si entra nel torneo;
- * l'ordine è deciso al montaggio (drawOrder) e registrato nello stato solo
- * a fine animazione.
+ * Sorteggio stile UEFA: le palline escono una alla volta dalla boccia, si
+ * aprono e la squadra finisce nel suo posto dei quarti. Quando il tuo
+ * accoppiamento è completo c'è un momento dedicato al tuo avversario.
+ * L'ordine è deciso al montaggio e registrato nello stato solo alla fine.
  */
-export function TournamentDraw({ tournament, onDrawn, onStart }: TournamentDrawProps) {
-  const alreadyDrawn = tournament.status !== 'draw';
-  const [stage, setStage] = useState<DrawStage>(alreadyDrawn ? 'done' : 'intro');
-  const [order] = useState<string[]>(() => (alreadyDrawn ? [] : drawOrder(tournament, Math.random)));
-  const [revealed, setRevealed] = useState(0);
-  const [rolling, setRolling] = useState<string | null>(null);
-  const committed = useRef(alreadyDrawn);
+export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawProps) {
+  const [order] = useState(() => drawOrder(tournament, Math.random));
+  const [placed, setPlaced] = useState(0);
+  const [stage, setStage] = useState<Stage>('intro');
+  const committed = useRef(false);
+  // Callback sempre aggiornati senza riavviare i timer quando il genitore si ridisegna
+  const callbacks = useRef({ onDrawn, onDone });
+  callbacks.current = { onDrawn, onDone };
+  const team = (id: string | undefined) => tournament.teams.find(t => t.id === id);
+  const current = team(order[placed]);
+  const userPair = Math.floor(order.indexOf(tournament.userTeamId) / 2);
 
-  const teamById = (id: string | undefined) => tournament.teams.find(t => t.id === id);
-
-  // Avvio automatico del sorteggio dopo una breve presentazione
   useEffect(() => {
-    if (stage !== 'intro') return;
-    const t = setTimeout(() => setStage('drawing'), INTRO_MS);
-    return () => clearTimeout(t);
-  }, [stage]);
-
-  // Estrazione progressiva: ad ogni passo il nome gira tra le squadre ancora nell'urna
-  useEffect(() => {
-    if (stage !== 'drawing') return;
-    if (revealed >= order.length) {
-      if (!committed.current) {
-        committed.current = true;
-        onDrawn(order);
+    const next = (s: Stage, ms: number, after?: () => void) =>
+      setTimeout(() => {
+        after?.();
+        setStage(s);
+      }, ms);
+    let t: ReturnType<typeof setTimeout>;
+    switch (stage) {
+      case 'intro':
+        t = next('rise', INTRO_MS);
+        break;
+      case 'rise':
+        playSound('draw-ball');
+        t = next('show', RISE_MS);
+        break;
+      case 'show': {
+        const done = placed + 1;
+        const pairComplete = done % 2 === 0 && Math.floor(placed / 2) === userPair;
+        t = next(done >= order.length ? 'outro' : pairComplete ? 'user' : 'rise', SHOW_MS, () => setPlaced(done));
+        break;
       }
-      const t = setTimeout(() => setStage('done'), 500);
-      return () => clearTimeout(t);
+      case 'user':
+        t = next('rise', USER_MOMENT_MS);
+        break;
+      case 'outro':
+        if (!committed.current) {
+          committed.current = true;
+          callbacks.current.onDrawn(order);
+        }
+        t = setTimeout(() => callbacks.current.onDone(), OUTRO_MS);
+        break;
     }
-    const pot = order.slice(revealed);
-    let i = 0;
-    let pause: ReturnType<typeof setTimeout> | undefined;
-    const roll = setInterval(() => {
-      i++;
-      setRolling(pot[i % pot.length]);
-    }, ROLL_STEP_MS);
-    const stop = setTimeout(() => {
-      clearInterval(roll);
-      setRolling(order[revealed]);
-      pause = setTimeout(() => {
-        setRolling(null);
-        setRevealed(r => r + 1);
-      }, PAUSE_MS);
-    }, ROLL_MS);
-    return () => {
-      clearInterval(roll);
-      clearTimeout(stop);
-      clearTimeout(pause);
-      setRolling(null);
-    };
-  }, [stage, revealed, order, onDrawn]);
+    return () => clearTimeout(t);
+  }, [stage, placed, order, userPair]);
 
   const skip = () => {
-    setStage('drawing');
-    setRevealed(order.length);
+    setPlaced(order.length);
+    setStage('outro');
   };
 
-  if (stage === 'done') {
-    const userTeam = tournament.teams.find(t => t.isUserTeam);
-    return (
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
-        <DrawHeader season={tournament.seasonId} />
-        <div className="motion-safe:animate-stamp mb-6">
-          <p className="font-display text-4xl font-extrabold text-ok leading-none">Sorteggio completato</p>
-          <p className="text-ink-soft mt-2">
-            Il percorso di <span className="font-semibold text-pitch">{userTeam?.name}</span> è evidenziato nel tabellone.
-          </p>
-        </div>
-        <TournamentBracket tournament={tournament} highlightUserPath />
-        <button onClick={onStart} className="btn-primary mt-8 w-full sm:w-auto inline-flex items-center justify-center gap-2">
-          <Icon name="play" className="w-4 h-4" />
-          Inizia i quarti
-        </button>
-      </div>
-    );
-  }
-
-  const drawnIds = new Set(order.slice(0, revealed));
-  const pairs = [0, 1, 2, 3].map(i => [order[i * 2], order[i * 2 + 1]]);
+  const inBowl = order.slice(placed + (stage === 'rise' || stage === 'show' ? 1 : 0));
+  const opponent = team(order[userPair * 2] === tournament.userTeamId ? order[userPair * 2 + 1] : order[userPair * 2]);
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 py-8">
-      <DrawHeader season={tournament.seasonId} />
+    <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-10">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
+        <div>
+          <h1 className="font-display text-6xl font-black text-ink leading-none">Il sorteggio</h1>
+          <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
+        </div>
+        {stage !== 'outro' && (
+          <button onClick={skip} className="link-action">
+            Salta il sorteggio
+          </button>
+        )}
+      </div>
 
-      <div className="grid grid-cols-12 gap-8">
-        {/* Urna */}
+      <div className="grid grid-cols-12 gap-10 items-start">
+        {/* Boccia + pallina estratta */}
         <div className="col-span-12 md:col-span-5">
-          <h3 className="section-heading mb-3">Squadre nell'urna</h3>
-          <ul className="divide-y divide-line">
-            {tournament.teams.map(team => {
-              const out = drawnIds.has(team.id);
-              const isRolling = rolling === team.id;
+          <div className="relative aspect-square max-w-[420px] mx-auto">
+            <div className="absolute inset-0 rounded-full border-4 border-ink bg-canvas" />
+            <div className="absolute inset-[6%] rounded-full border-2 border-line-strong" aria-hidden="true" />
+            {inBowl.map(id => {
+              const t = team(id);
+              const [x, y] = BALL_SPOTS[order.indexOf(id) % BALL_SPOTS.length];
               return (
-                <li
-                  key={team.id}
-                  className={`flex items-center gap-3 py-2.5 px-2 ${isRolling ? 'bg-surface' : ''} ${out ? 'text-ink-faint' : ''}`}
+                <span
+                  key={id}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${x}%`, top: `${y}%` }}
                 >
-                  <TeamBadge team={team} />
-                  <span className={`flex-1 truncate ${out ? 'line-through' : team.isUserTeam ? 'text-pitch font-semibold' : 'text-ink'}`}>
-                    {team.name}
-                    {team.isUserTeam && <span className="font-normal"> (tu)</span>}
+                  <span className={`block ${stage !== 'intro' ? 'motion-safe:animate-wobble' : ''}`} style={{ animationDelay: `${(order.indexOf(id) * 110) % 900}ms` }}>
+                    <Ball team={t} />
                   </span>
-                  <span className="text-xs text-ink-muted tabular-nums">Forza {team.rating}</span>
-                </li>
+                </span>
               );
             })}
-          </ul>
 
-          <div className="mt-6 flex items-center justify-between gap-4">
-            <p className="font-display text-2xl font-bold text-ink min-h-[2rem]" aria-live="polite">
-              {stage === 'intro'
-                ? 'Il sorteggio sta per iniziare'
-                : rolling
-                  ? teamById(rolling)?.name
-                  : revealed < order.length
-                    ? 'Estrazione...'
-                    : 'Fatto'}
-            </p>
-            <button onClick={skip} className="btn-ghost px-3 py-2 text-sm">
-              Salta animazione
-            </button>
+            {/* Pallina appena estratta, sopra la boccia */}
+            {current && (stage === 'rise' || stage === 'show') && (
+              <div key={current.id} className="absolute inset-0 flex items-center justify-center">
+                {stage === 'rise' ? (
+                  <span className="motion-safe:animate-ball-rise">
+                    <Ball team={current} big />
+                  </span>
+                ) : (
+                  <div className="panel shadow-block-lg px-6 py-4 flex items-center gap-4 motion-safe:animate-ball-open max-w-[90%]">
+                    <TeamBadge team={current} size="lg" />
+                    <span className="font-display text-4xl font-black leading-none text-ink break-words">{current.name}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+          <p className="text-center font-display text-2xl font-extrabold text-ink-soft mt-6 min-h-[2rem]" aria-live="polite">
+            {stage === 'intro' ? 'Si mescola…' : stage === 'outro' ? 'Sorteggio completato' : `Estrazione ${Math.min(placed + 1, 8)} di 8`}
+          </p>
         </div>
 
-        {/* Accoppiamenti */}
+        {/* Quarti */}
         <div className="col-span-12 md:col-span-7">
-          <h3 className="section-heading mb-3">{ROUND_LABELS.quarterfinals}</h3>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {pairs.map(([home, away], i) => (
-              <div key={i} className="border border-line-strong">
-                <p className="px-3 pt-2 text-xs font-medium text-ink-muted">Quarto {i + 1}</p>
-                <DrawSlot team={revealed > i * 2 ? teamById(home) : undefined} />
-                <p className="px-3 font-display font-bold text-ink-muted">vs</p>
-                <DrawSlot team={revealed > i * 2 + 1 ? teamById(away) : undefined} />
+          <h2 className="section-heading mb-6">Quarti di finale</h2>
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={`border-2 ${i === userPair && placed > i * 2 + 1 ? 'border-pitch shadow-block-sm' : 'border-ink'}`}>
+                <p className="px-3 py-1.5 text-sm font-bold text-ink-muted border-b-2 border-line">Quarto {i + 1}</p>
+                <Slot team={placed > i * 2 ? team(order[i * 2]) : undefined} />
+                <Slot team={placed > i * 2 + 1 ? team(order[i * 2 + 1]) : undefined} />
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Momento della tua squadra */}
+      {stage === 'user' && opponent && (
+        <div className="fixed inset-x-0 top-1/3 z-40 bg-highlight border-y-4 border-ink py-8 motion-safe:animate-stamp" role="status">
+          <div className="max-w-[1300px] mx-auto px-4 flex flex-wrap items-center justify-center gap-6 text-on-highlight">
+            <span className="font-display text-3xl font-extrabold">Il tuo avversario:</span>
+            <TeamBadge team={opponent} size="lg" />
+            <span className="font-display text-6xl font-black leading-none">{opponent.name}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function DrawHeader({ season }: { season: string }) {
+function Ball({ team, big = false }: { team: TournamentTeam | undefined; big?: boolean }) {
   return (
-    <header className="flex items-center gap-4 mb-8">
-      <LogoMark className="h-14 w-14" />
-      <div>
-        <h1 className="font-display text-5xl md:text-6xl font-extrabold text-pitch leading-none">FantaClash Cup</h1>
-        <p className="text-ink-soft mt-1">Serie A {season} · 8 squadre, eliminazione diretta</p>
-      </div>
-    </header>
+    <span
+      className={`flex items-center justify-center rounded-full border-2 border-ink font-display font-black leading-none shadow-block-sm ${
+        big ? 'w-32 h-32 text-5xl' : 'w-16 h-16 text-2xl'
+      } ${team?.isUserTeam ? 'bg-pitch text-on-pitch' : 'bg-highlight text-on-highlight'}`}
+    >
+      {team?.monogram}
+    </span>
   );
 }
 
-function DrawSlot({ team }: { team: TournamentTeam | undefined }) {
+function Slot({ team }: { team: TournamentTeam | undefined }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 min-h-[3rem]">
+    <div className="flex items-center gap-3 px-3 py-2.5 min-h-[3.75rem]">
       {team ? (
         <div key={team.id} className="flex items-center gap-3 min-w-0 motion-safe:animate-stamp">
           <TeamBadge team={team} size="md" />
-          <span className={`font-display text-xl font-extrabold truncate ${team.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
+          <span className={`font-display text-2xl font-extrabold leading-none truncate ${team.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
             {team.name}
           </span>
         </div>

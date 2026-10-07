@@ -1,4 +1,5 @@
 import { PlayerRole, Team } from '../../types';
+import { SITE_URL } from '../../config';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { shortName } from '../match/matchEvents';
 import { ROUND_SHORT, userPath } from './bracket';
@@ -133,5 +134,5 @@ export function shareText(summary: TournamentSummary): string {
       return `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst}${so} vs ${m.opponentName}`;
     })
     .join(', ');
-  return `${summary.teamName}: ${summary.placementLabel.toLowerCase()} della ${summary.tournamentName} (Serie A ${summary.seasonId}). ${results}. #FantaClash`;
+  return `${summary.teamName}: ${summary.placementLabel.toLowerCase()} della ${summary.tournamentName} (Serie A ${summary.seasonId}). ${results}. #FantaClash ${SITE_URL}/`;
 }

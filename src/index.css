@@ -1,59 +1,76 @@
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@500;700;800&family=Public+Sans:wght@400;500;600;700&display=swap');
+/* Font ospitati sul sito (licenza OFL, vedi public/fonts/): niente richieste a Google Fonts */
+@font-face {
+  font-family: 'Big Shoulders';
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src: url('/fonts/big-shoulders-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Big Shoulders';
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src: url('/fonts/big-shoulders-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/public-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Public Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/public-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Palette "figurine da stadio" (tema unico):
+ * carta crema, verde prato dominante, arancio fischietto per l'asta,
+ * giallo evidenziatore per "sei in testa" / gol / campione.
+ */
 :root {
-  --c-canvas: 245 243 238;
-  --c-surface: 232 228 218;
-  --c-ink: 52 58 56;
-  --c-ink-soft: 78 84 81;
-  --c-ink-muted: 94 100 97;
-  --c-ink-faint: 110 115 112;
-  --c-line: 222 220 213;
-  --c-line-strong: 189 185 175;
-  --c-pitch: 52 75 67;
-  --c-on-pitch: 245 243 238;
-  --c-peach: 231 191 168;
-  --c-on-peach: 52 58 56;
-  --c-ok: 71 120 92;
-  --c-danger: 185 79 69;
-  --c-role-p: 143 109 31;
-  --c-role-d: 76 139 95;
-  --c-role-c: 69 105 154;
-  --c-role-a: 176 80 63;
-  --c-card-yellow: 214 170 46;
-  --c-card-red: 196 64 52;
+  --c-canvas: 244 238 223;
+  --c-surface: 234 225 202;
+  --c-ink: 21 32 26;
+  --c-ink-soft: 58 70 63;
+  --c-ink-muted: 92 102 95;
+  --c-ink-faint: 125 133 127;
+  --c-line: 221 211 188;
+  --c-line-strong: 182 170 143;
+  --c-pitch: 11 122 67;
+  --c-pitch-deep: 7 73 42;
+  --c-on-pitch: 255 255 255;
+  --c-whistle: 226 74 18;
+  --c-whistle-deep: 178 55 10;
+  --c-on-whistle: 255 255 255;
+  --c-highlight: 255 210 63;
+  --c-on-highlight: 21 32 26;
+  --c-ok: 11 122 67;
+  --c-danger: 200 50 42;
+  --c-role-p: 224 138 0;
+  --c-role-d: 35 149 90;
+  --c-role-c: 47 109 207;
+  --c-role-a: 200 50 42;
+  --c-card-yellow: 240 190 30;
+  --c-card-red: 210 45 40;
   color-scheme: light;
 
   font-family: 'Public Sans', sans-serif;
-  line-height: 1.4;
+  line-height: 1.45;
   font-weight: 400;
-}
-
-:root[data-theme="dark"] {
-  --c-canvas: 28 34 32;
-  --c-surface: 35 42 39;
-  --c-ink: 236 232 223;
-  --c-ink-soft: 184 182 175;
-  --c-ink-muted: 157 157 150;
-  --c-ink-faint: 122 123 118;
-  --c-line: 54 64 60;
-  --c-line-strong: 86 98 92;
-  --c-pitch: 141 174 159;
-  --c-on-pitch: 28 34 32;
-  --c-peach: 231 191 168;
-  --c-on-peach: 28 34 32;
-  --c-ok: 111 166 132;
-  --c-danger: 217 120 110;
-  --c-role-p: 210 171 82;
-  --c-role-d: 116 173 133;
-  --c-role-c: 125 156 198;
-  --c-role-a: 210 125 110;
-  --c-card-yellow: 230 190 80;
-  --c-card-red: 222 104 92;
-  color-scheme: dark;
 }
 
 body {
@@ -69,10 +86,15 @@ body {
   min-height: 100vh;
 }
 
+::selection {
+  background: rgb(var(--c-highlight));
+  color: rgb(var(--c-ink));
+}
+
 /* Scrollbar personalizzata */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -80,65 +102,97 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--c-line));
+  background: rgb(var(--c-line-strong));
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--c-ink) / 0.4);
+  background: rgb(var(--c-ink-muted));
 }
 
 @layer components {
+  /* Bottoni "figurina": bordo inchiostro e ombra piena, scendono quando premuti */
+  .btn-primary,
+  .btn-bid,
+  .btn-ghost,
+  .btn-cta {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-ink font-display font-extrabold leading-none shadow-block-sm;
+    @apply transition-[transform,box-shadow,background-color,color] duration-100;
+    @apply focus-visible:outline outline-2 outline-offset-4 outline-ink;
+    @apply active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
+  }
+
   .btn-primary {
-    @apply px-6 py-3 bg-pitch text-on-pitch font-display font-bold text-lg rounded-sm transition-colors duration-150;
-    @apply hover:bg-pitch/90 focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+    @apply px-6 py-3 text-xl bg-pitch text-on-pitch hover:bg-pitch-deep;
   }
 
   .btn-bid {
-    @apply px-6 py-3 bg-peach text-on-peach font-display font-bold text-lg rounded-sm transition-colors duration-150;
-    @apply hover:bg-peach/80 focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+    @apply px-6 py-3 text-2xl bg-whistle text-on-whistle hover:bg-ink;
   }
 
   .btn-ghost {
-    @apply px-6 py-3 bg-transparent border border-line-strong text-ink font-semibold rounded-sm transition-colors duration-150;
-    @apply hover:bg-surface focus-visible:outline outline-2 outline-offset-2 outline-pitch;
+    @apply px-5 py-2.5 text-lg bg-canvas text-ink hover:bg-surface;
+  }
+
+  .btn-cta {
+    @apply px-10 py-5 text-3xl md:text-4xl bg-pitch text-on-pitch shadow-block hover:bg-pitch-deep;
+    @apply active:translate-x-[4px] active:translate-y-[4px];
   }
 
   .btn-primary:disabled,
   .btn-bid:disabled,
-  .btn-ghost:disabled {
-    @apply opacity-50 cursor-not-allowed;
+  .btn-ghost:disabled,
+  .btn-cta:disabled {
+    @apply opacity-40 cursor-not-allowed shadow-none translate-x-0 translate-y-0;
+  }
+
+  /* Link testuale per le azioni secondarie */
+  .link-action {
+    @apply inline-flex items-center gap-1.5 font-semibold text-ink-soft underline underline-offset-4 decoration-2 decoration-line-strong;
+    @apply hover:text-ink hover:decoration-ink transition-colors duration-150;
+    @apply focus-visible:outline outline-2 outline-offset-2 outline-ink;
+  }
+
+  /* Unico contenitore ammesso: mai annidato */
+  .panel {
+    @apply bg-canvas border-2 border-ink;
+  }
+
+  /* Etichetta piccola sopra un valore */
+  .label {
+    @apply block text-sm font-semibold text-ink-muted;
+  }
+
+  /* Titolo di sezione: filetto inchiostro sotto */
+  .section-heading {
+    @apply font-display font-extrabold text-2xl text-ink leading-none pb-2 border-b-2 border-ink;
   }
 
   .role-tag {
-    @apply inline-flex items-center justify-center w-6 h-6 font-display font-bold text-sm rounded-none border bg-transparent;
+    @apply inline-flex items-center justify-center w-6 h-6 font-display font-extrabold text-sm leading-none text-white;
   }
 
   .role-tag-P {
-    @apply text-role-P border-role-P;
+    @apply bg-role-P;
   }
 
   .role-tag-D {
-    @apply text-role-D border-role-D;
+    @apply bg-role-D;
   }
 
   .role-tag-C {
-    @apply text-role-C border-role-C;
+    @apply bg-role-C;
   }
 
   .role-tag-A {
-    @apply text-role-A border-role-A;
+    @apply bg-role-A;
   }
 
   .input-field {
-    @apply w-full px-3 py-2.5 bg-transparent border border-line-strong rounded-sm text-ink placeholder-ink-faint transition-colors duration-150;
-    @apply focus-visible:outline outline-2 outline-offset-2 outline-pitch focus-visible:border-pitch;
+    @apply w-full px-3 py-2.5 bg-canvas border-2 border-ink text-ink placeholder-ink-faint transition-colors duration-150;
+    @apply focus-visible:outline outline-2 outline-offset-2 outline-pitch;
   }
 
   .input-error {
     @apply border-danger;
-  }
-
-  .section-heading {
-    @apply font-display font-bold text-lg text-ink border-b border-line-strong pb-2;
   }
 }

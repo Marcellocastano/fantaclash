@@ -1,138 +1,139 @@
-import { formatMinute, MatchPlayerPerformance, MatchResult, shortName } from '../../domain/match';
+import { useEffect } from 'react';
+import { formatMinute, LineupPlayer, MatchPlayerPerformance, MatchResult, shortName } from '../../domain/match';
+import { TournamentRound } from '../../domain/tournament';
+import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
+import { OvrBadge } from '../player/OvrBadge';
 
 interface MatchEndProps {
   result: MatchResult;
   userTeamId: string;
+  round: TournamentRound;
   onContinue: () => void;
-  onViewResult: () => void;
   onConclude: () => void;
 }
 
-function signed(x: number): string {
-  return x > 0 ? `+${x}` : `${x}`;
-}
+const NEXT_LABEL: Record<TournamentRound, string> = {
+  quarterfinals: 'Avanti: semifinale',
+  semifinals: 'Avanti: finale',
+  final: 'Alla premiazione',
+};
+
+const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
 
 /**
- * Fischio finale: risultato, marcatori e assist, MVP, migliore e
- * peggiore, pagella della squadra utente con bonus e malus.
+ * Fischio finale: esito, marcatori, MVP e pagella della squadra
+ * dell'utente. Un solo pulsante: avanti se hai vinto, chiudi il torneo se
+ * hai perso.
  */
-export function MatchEnd({ result, userTeamId, onContinue, onViewResult, onConclude }: MatchEndProps) {
+export function MatchEnd({ result, userTeamId, round, onContinue, onConclude }: MatchEndProps) {
   const won = result.winnerId === userTeamId;
+  const champion = won && round === 'final';
   const userSide = result.homeTeamId === userTeamId ? 'home' : 'away';
-  const names = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, shortName(p.name)]));
+  const lineup = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, p]));
+  const name = (id: string | undefined) => shortName(lineup.get(id ?? '')?.name ?? '');
   const goals = result.events.filter(e => e.type === 'goal' || e.type === 'own_goal');
-  const perf = (id: string) => result.playerPerformances.find(p => p.playerId === id);
-  const mvp = perf(result.mvpId);
-  const worst = perf(result.worstId);
+  const mvp = result.playerPerformances.find(p => p.playerId === result.mvpId);
   const userPerf = result.playerPerformances.filter(p => p.side === userSide);
-  const best = [...userPerf].sort((a, b) => b.fantasyScore - a.fantasyScore)[0];
+
+  useEffect(() => {
+    playSound(champion ? 'cup' : won ? 'won' : 'whistle');
+  }, [champion, won]);
 
   return (
     <div className="motion-safe:animate-reveal">
-      <div className="flex items-center gap-3 mb-1">
-        <Icon name="whistle" className="w-6 h-6 text-ink-soft" />
-        <p className="font-display text-2xl font-bold text-ink-soft">Fischio finale</p>
+      {/* Esito */}
+      <div className={`border-2 border-ink shadow-block px-6 py-6 text-center ${won ? 'bg-highlight text-on-highlight' : 'bg-ink text-canvas'}`}>
+        <p className="font-display text-7xl md:text-8xl font-black leading-none motion-safe:animate-stamp">
+          {champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO'}
+        </p>
+        <p className="font-display text-3xl font-extrabold mt-3 tabular-nums">
+          {result.homeName} {result.homeScore}-{result.awayScore} {result.awayName}
+          {result.shootout && <span className="block text-xl">rigori {result.shootout.home}-{result.shootout.away}</span>}
+        </p>
       </div>
-      <p className={`font-display text-5xl font-extrabold leading-none mb-6 ${won ? 'text-ok' : 'text-ink'}`}>
-        {won ? 'Passi il turno!' : 'Eliminato'}
-      </p>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          <h3 className="section-heading mb-1">Marcatori</h3>
-          <ul className="divide-y divide-line">
-            {goals.length === 0 && <li className="py-2 text-sm text-ink-muted">Nessun gol nei regolamentari.</li>}
+      <div className="grid md:grid-cols-12 gap-10 mt-10">
+        {/* Marcatori */}
+        <section className="md:col-span-4">
+          <h3 className="section-heading mb-3">Marcatori</h3>
+          <ul className="space-y-2">
+            {goals.length === 0 && <li className="text-ink-muted">Nessun gol nei regolamentari.</li>}
             {goals.map(g => {
               const assist = result.events.find(e => e.type === 'assist' && e.tick === g.tick && e.relatedPlayerId === g.playerId);
               return (
-                <li key={g.id} className="flex items-baseline gap-3 py-2 text-sm">
-                  <span className="w-12 font-display font-bold tabular-nums text-ink-soft">{formatMinute(g.minute, g.extra)}</span>
-                  <span className={`flex-1 ${g.side === userSide ? 'text-pitch font-semibold' : 'text-ink'}`}>
-                    {names.get(g.playerId ?? '')}
+                <li key={g.id} className="flex items-baseline gap-3">
+                  <span className="w-12 font-display text-xl font-black tabular-nums text-ink-soft">{formatMinute(g.minute, g.extra)}</span>
+                  <span className={`flex-1 ${g.side === userSide ? 'font-bold text-pitch' : 'text-ink'}`}>
+                    {name(g.playerId)}
                     {g.type === 'own_goal' && ' (autogol)'}
                     {g.isPenalty && ' (rigore)'}
-                    {assist && <span className="text-ink-muted font-normal"> · assist {names.get(assist.playerId ?? '')}</span>}
+                    {assist && <span className="block text-sm text-ink-muted font-normal">assist {name(assist.playerId)}</span>}
                   </span>
-                  <span className="text-ink-muted tabular-nums">
-                    {g.score?.home} - {g.score?.away}
+                  <span className="font-display text-xl font-extrabold tabular-nums">
+                    {g.score?.home}-{g.score?.away}
                   </span>
                 </li>
               );
             })}
           </ul>
-          {result.shootout && (
-            <p className="mt-3 text-sm text-ink-soft">
-              Rigori: <span className="font-semibold text-ink tabular-nums">{result.shootout.home} - {result.shootout.away}</span>
-            </p>
-          )}
+        </section>
 
-          <dl className="mt-6 divide-y divide-line text-sm">
-            <Award label="MVP" p={mvp} />
-            <Award label="Migliore dei tuoi" p={best} />
-            <Award label="Peggiore in campo" p={worst} />
-          </dl>
-        </div>
+        {/* MVP */}
+        <section className="md:col-span-3">
+          <h3 className="section-heading mb-3">MVP</h3>
+          {mvp && <MvpCard perf={mvp} player={lineup.get(mvp.playerId)} />}
+        </section>
 
-        <div>
-          <h3 className="section-heading mb-1">Pagella</h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-ink-muted text-xs">
-                <th className="text-left font-medium py-1">Giocatore</th>
-                <th className="text-right font-medium">Voto</th>
-                <th className="text-right font-medium">Bonus</th>
-                <th className="text-right font-medium">Fantavoto</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {userPerf.map(p => (
-                <tr key={p.playerId}>
-                  <td className="py-1.5 text-ink">{shortName(p.name)}</td>
-                  <td className="text-right tabular-nums">{p.rating.toFixed(1)}</td>
-                  <td className={`text-right tabular-nums ${p.bonus > 0 ? 'text-ok' : p.bonus < 0 ? 'text-danger' : 'text-ink-muted'}`}>
-                    {p.bonus === 0 ? '-' : signed(p.bonus)}
-                  </td>
-                  <td className="text-right font-display font-bold tabular-nums">{p.fantasyScore.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-xs text-ink-muted mt-2 tabular-nums">
-            Totale squadra {result.teamPerformance[userSide].toFixed(1)}
+        {/* Pagella */}
+        <section className="md:col-span-5">
+          <h3 className="section-heading mb-3">La tua pagella</h3>
+          <ul className="divide-y-2 divide-line">
+            {userPerf.map(p => (
+              <li key={p.playerId} className="flex items-center gap-3 py-1.5">
+                <span className="flex-1 truncate">{shortName(p.name)}</span>
+                <span className="w-10 text-right tabular-nums text-ink-soft">{p.rating.toFixed(1)}</span>
+                <span className={`w-10 text-right tabular-nums font-semibold ${p.bonus > 0 ? 'text-pitch' : p.bonus < 0 ? 'text-danger' : 'text-ink-faint'}`}>
+                  {p.bonus === 0 ? '-' : signed(p.bonus)}
+                </span>
+                <span className="w-12 text-right font-display text-xl font-black tabular-nums">{p.fantasyScore.toFixed(1)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="flex justify-between text-sm text-ink-muted mt-2">
+            <span>Voto · bonus · fantavoto</span>
+            <span className="tabular-nums">Totale {result.teamPerformance[userSide].toFixed(1)}</span>
           </p>
-        </div>
+        </section>
       </div>
 
-      <div className="mt-8 flex flex-col sm:flex-row gap-3">
-        {won ? (
-          <button onClick={onContinue} className="btn-primary sm:min-w-[240px]">
-            Continua
-          </button>
-        ) : (
-          <>
-            <button onClick={onViewResult} className="btn-ghost sm:min-w-[200px]">
-              Vedi risultato
-            </button>
-            <button onClick={onConclude} className="btn-primary sm:min-w-[240px]">
-              Concludi torneo
-            </button>
-          </>
-        )}
+      <div className="mt-12 text-center">
+        <button onClick={won ? onContinue : onConclude} className="btn-cta">
+          {won ? NEXT_LABEL[round] : 'Concludi torneo'}
+          <Icon name="arrow" className="w-7 h-7" />
+        </button>
       </div>
     </div>
   );
 }
 
-function Award({ label, p }: { label: string; p: MatchPlayerPerformance | undefined }) {
-  if (!p) return null;
+function MvpCard({ perf, player }: { perf: MatchPlayerPerformance; player: LineupPlayer | undefined }) {
   return (
-    <div className="flex items-baseline justify-between py-2">
-      <dt className="text-ink-muted">{label}</dt>
-      <dd className="text-ink">
-        <span className="font-semibold">{shortName(p.name)}</span>
-        <span className="text-ink-muted tabular-nums"> · {p.fantasyScore.toFixed(1)}</span>
-      </dd>
+    <div className="panel shadow-block p-4">
+      <div className="flex items-center gap-3">
+        {player && <OvrBadge overall={player.overall} role={player.role} size="md" />}
+        <div className="min-w-0">
+          <p className="font-display text-3xl font-black leading-none truncate">{shortName(perf.name)}</p>
+          <p className="text-sm text-ink-muted mt-1">
+            {perf.goals > 0 && `${perf.goals} gol `}
+            {perf.assists > 0 && `${perf.assists} assist`}
+          </p>
+        </div>
+      </div>
+      <p className="mt-4 flex items-baseline justify-between border-t-2 border-line pt-3">
+        <span className="text-sm font-semibold text-ink-muted">Fantavoto</span>
+        <span className="font-display text-5xl font-black tabular-nums leading-none text-pitch">{perf.fantasyScore.toFixed(1)}</span>
+      </p>
     </div>
   );
 }

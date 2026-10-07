@@ -1,6 +1,8 @@
-import { PlaybackPhase, PlaybackState } from '../../domain/match';
+import { ReactNode } from 'react';
+import { PlaybackPhase, PlaybackState, Tactic, TACTIC_LABELS } from '../../domain/match';
 import { TournamentTeam } from '../../domain/tournament';
 import { TeamBadge } from '../tournament/TeamBadge';
+import { FiatoMeter } from './FiatoMeter';
 
 const PHASE_LABEL: Record<PlaybackPhase, string> = {
   prepartita: 'Prepartita',
@@ -16,51 +18,80 @@ interface ScoreboardProps {
   away: TournamentTeam | undefined;
   state: PlaybackState;
   roundLabel: string;
+  tactics: Record<'home' | 'away', Tactic>;
+  /** Fiato della squadra dell'utente (solo il suo lato lo mostra) */
+  userFiato: number;
+  userSide: 'home' | 'away';
+  /** Risultato dei rigori da mostrare (null finché la serie è in corso) */
+  shootout: { home: number; away: number } | null;
+  /** Indicatore d'attacco sul fondo della fascia */
+  indicator: ReactNode;
 }
 
-/** Tabellone in stile broadcast: squadre, punteggio, minuto */
-export function Scoreboard({ home, away, state, roundLabel }: ScoreboardProps) {
+/** Fascia tabellone in stile broadcast: squadre, punteggio, minuto, stile e fiato */
+export function Scoreboard({ home, away, state, roundLabel, tactics, userFiato, userSide, shootout, indicator }: ScoreboardProps) {
   const lastGoal = [...state.latest].reverse().find(e => e.type === 'goal' || e.type === 'own_goal');
+  const digit = (side: 'home' | 'away') => (
+    <span
+      key={`${side}${state.score[side]}`}
+      className={`inline-block ${lastGoal?.side === side ? 'text-highlight motion-safe:animate-stamp' : ''}`}
+    >
+      {state.score[side]}
+    </span>
+  );
+  const side = (s: 'home' | 'away', team: TournamentTeam | undefined) => (
+    <TeamSide team={team} alignRight={s === 'away'} tactic={tactics[s]} fiato={s === userSide ? userFiato : null} />
+  );
+
   return (
-    <div className="border-b border-line-strong pb-4">
-      <p className="text-center text-sm font-medium text-ink-muted mb-2">{roundLabel}</p>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <TeamName team={home} />
-        <div className="text-center">
-          <p className="font-display text-6xl md:text-7xl font-extrabold text-ink tabular-nums leading-none">
-            <span key={`h${state.score.home}`} className={lastGoal?.side === 'home' ? 'inline-block motion-safe:animate-stamp' : ''}>
-              {state.score.home}
-            </span>
-            <span className="text-ink-muted px-2">-</span>
-            <span key={`a${state.score.away}`} className={lastGoal?.side === 'away' ? 'inline-block motion-safe:animate-stamp' : ''}>
-              {state.score.away}
-            </span>
-          </p>
-          {state.shootout && (
-            <p className="font-display text-xl font-bold text-ink-soft tabular-nums">
-              Rigori {state.shootout.home} - {state.shootout.away}
+    <section className="bg-pitch-deep text-canvas border-b-4 border-ink">
+      <div className="max-w-[1500px] mx-auto px-4 pt-5 pb-6">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+          {side('home', home)}
+          <div className="text-center">
+            <p className="text-sm font-bold text-canvas/60">{roundLabel}</p>
+            <p className="font-display text-7xl md:text-8xl font-black tabular-nums leading-none mt-1">
+              {digit('home')}
+              <span className="text-canvas/40 px-3">-</span>
+              {digit('away')}
             </p>
-          )}
+            {shootout && (
+              <p className="font-display text-xl font-extrabold text-highlight tabular-nums">
+                Rigori {shootout.home} - {shootout.away}
+              </p>
+            )}
+            <p className="flex items-baseline justify-center gap-2 mt-1">
+              <span className="font-display text-3xl font-black tabular-nums">{state.tick.index === 0 ? "0'" : state.clock}</span>
+              <span className="text-sm font-semibold text-canvas/60">{PHASE_LABEL[state.phase]}</span>
+            </p>
+          </div>
+          {side('away', away)}
         </div>
-        <TeamName team={away} alignRight />
+        <div className="mt-5">{indicator}</div>
       </div>
-      <div className="flex items-baseline justify-center gap-3 mt-2">
-        <span className="font-display text-3xl font-bold tabular-nums text-ink">{state.tick.index === 0 ? "0'" : state.clock}</span>
-        <span className="text-sm font-medium text-ink-muted">{PHASE_LABEL[state.phase]}</span>
-      </div>
-    </div>
+    </section>
   );
 }
 
-function TeamName({ team, alignRight = false }: { team: TournamentTeam | undefined; alignRight?: boolean }) {
+interface TeamSideProps {
+  team: TournamentTeam | undefined;
+  alignRight: boolean;
+  tactic: Tactic;
+  fiato: number | null;
+}
+
+function TeamSide({ team, alignRight, tactic, fiato }: TeamSideProps) {
   return (
-    <div className={`flex items-center gap-3 min-w-0 ${alignRight ? 'flex-row-reverse text-right' : ''}`}>
+    <div className={`flex items-center gap-4 min-w-0 ${alignRight ? 'flex-row-reverse text-right' : ''}`}>
       <TeamBadge team={team} size="lg" />
       <div className="min-w-0">
-        <p className={`font-display text-2xl md:text-4xl font-extrabold leading-none truncate ${team?.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
-          {team?.name}
+        <p className={`font-display text-3xl md:text-4xl font-black leading-none truncate ${team?.isUserTeam ? 'text-highlight' : ''}`}>{team?.name}</p>
+        <p className={`flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm ${alignRight ? 'justify-end' : ''}`}>
+          <span className="text-canvas/70">
+            Stile <span className="font-bold text-canvas">{TACTIC_LABELS[tactic]}</span>
+          </span>
+          {fiato !== null && <FiatoMeter value={fiato} />}
         </p>
-        <p className="text-xs text-ink-muted mt-1">Forza {team?.rating}</p>
       </div>
     </div>
   );

@@ -1,0 +1,66 @@
+# Pubblicazione su Netlify: build con pre-rendering, dominio canonico
+# https://www.fantaclash.it, cache e header di sicurezza.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # scripts/prerender.ts viene eseguito nativamente da Node (>= 22.18)
+  NODE_VERSION = "24"
+
+# Un solo indirizzo canonico: tutto verso https://www.fantaclash.it (301)
+[[redirects]]
+  from = "https://fantaclash.it/*"
+  to = "https://www.fantaclash.it/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://fantaclash.it/*"
+  to = "https://www.fantaclash.it/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://www.fantaclash.it/*"
+  to = "https://www.fantaclash.it/:splat"
+  status = 301
+  force = true
+
+# Il sottodominio di Netlify non deve competere con il dominio vero
+# (sostituire "fantaclash" con il nome del sito su Netlify, se diverso)
+[[redirects]]
+  from = "https://fantaclash.netlify.app/*"
+  to = "https://www.fantaclash.it/:splat"
+  status = 301
+  force = true
+
+# Le pagine inesistenti ricevono dist/404.html con codice 404 (automatico su Netlify)
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://gc.zgo.at; connect-src 'self' https://*.goatcounter.com; img-src 'self' data: blob: https://*.goatcounter.com; style-src 'self' 'unsafe-inline'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# I JSON delle stagioni servono al gioco ma non devono comparire nelle ricerche
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
+    Cache-Control = "public, max-age=86400"

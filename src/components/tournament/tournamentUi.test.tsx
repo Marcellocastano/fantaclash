@@ -13,10 +13,8 @@ import {
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentHub } from './TournamentHub';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
+import { summaryAlt } from './useSummaryCard';
 import { MatchScreen } from '../match/MatchScreen';
-
-// ThemeToggle legge localStorage, non disponibile in modo affidabile in jsdom con Node recenti
-vi.mock('../ThemeToggle', () => ({ ThemeToggle: () => null }));
 
 const TEAMS = tournamentTeams();
 
@@ -34,26 +32,14 @@ describe('UI torneo (smoke)', () => {
     expect(screen.getByText('Da decidere')).toBeInTheDocument();
   });
 
-  it('hub: Gioca per la partita dell\'utente, Simula per le altre', () => {
+  it('hub: un solo pulsante principale per la partita dell\'utente', () => {
     const t = drawn();
     const onPlay = vi.fn();
-    const onSimulate = vi.fn();
-    render(
-      <TournamentHub
-        tournament={t}
-        onPlay={onPlay}
-        onSimulate={onSimulate}
-        onSimulateOthers={noop}
-        onSimulateRest={noop}
-        onConclude={noop}
-        onReset={noop}
-      />
-    );
-    expect(screen.getAllByRole('button', { name: /^Simula$/ })).toHaveLength(3);
-    fireEvent.click(screen.getAllByRole('button', { name: /Gioca/ })[0]);
+    render(<TournamentHub tournament={t} onPlay={onPlay} onCompleteRound={noop} onSummary={noop} />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /Gioca i quarti di finale/ }));
     expect(onPlay).toHaveBeenCalledWith(findUserMatch(t)!.id);
-    fireEvent.click(screen.getAllByRole('button', { name: /^Simula$/ })[0]);
-    expect(onSimulate).toHaveBeenCalled();
   });
 
   it('partita: al calcio d\'inizio chiede la tattica, poi arriva al fischio finale', () => {
@@ -67,20 +53,28 @@ describe('UI torneo (smoke)', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Fischio finale/ }));
     });
-    expect(screen.getByText(/Passi il turno!|Eliminato/)).toBeInTheDocument();
-    const cta = screen.queryByRole('button', { name: 'Continua' }) ?? screen.getByRole('button', { name: 'Concludi torneo' });
+    // In caso di pareggio ci si ferma ai rigori: si conferma l'ordine e si salta la lotteria
+    if (screen.queryByRole('dialog', { name: 'Ordine dei rigoristi' })) {
+      fireEvent.click(screen.getByRole('button', { name: 'Conferma e si tira' }));
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: /Fischio finale/ }));
+      });
+    }
+    expect(screen.getByText(/PASSI IL TURNO|ELIMINATO|CAMPIONE/)).toBeInTheDocument();
+    const cta = screen.getByRole('button', { name: /Avanti: semifinale|Concludi torneo/ });
     fireEvent.click(cta);
     expect(onFinish).toHaveBeenCalledTimes(1);
     expect(onFinish.mock.calls[0][0].decisionTicks).toHaveLength(3);
     vi.useRealTimers();
   });
 
-  it('card del torneo: posizione, squadra e formazione', () => {
+  it('card del torneo: descrizione accessibile con esito, squadra e risultati', () => {
     const t = simulateRemaining(drawn(), TEAMS);
     const summary = buildTournamentSummary(t, TEAMS);
-    render(<TournamentSummaryCard summary={summary} />);
-    expect(screen.getByText(summary.placementLabel)).toBeInTheDocument();
-    expect(screen.getByText(summary.teamName)).toBeInTheDocument();
-    expect(screen.getByText('POR')).toBeInTheDocument();
+    render(<TournamentSummaryCard summary={summary} url={null} failed />);
+    const alt = summaryAlt(summary);
+    expect(alt).toContain(summary.placementLabel);
+    expect(alt).toContain(summary.teamName);
+    expect(screen.getByRole('img', { name: alt })).toBeInTheDocument();
   });
 });

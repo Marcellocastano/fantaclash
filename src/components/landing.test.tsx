@@ -3,8 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Landing } from './Landing';
 import { BOT_TEAM_NAMES, MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/teamNames';
 
-vi.mock('./ThemeToggle', () => ({ ThemeToggle: () => null }));
-
 const SEASONS = ['2013-14', '2014-15', '2015-16'].map(season => ({
   season,
   label: `Serie A ${season}`,
@@ -25,7 +23,7 @@ describe('landing', () => {
     }
   });
 
-  it('nome precompilato, "Genera" lo cambia; annata più recente di default e frecce', async () => {
+  it('nome precompilato, "Genera" lo cambia; annata casuale e frecce', async () => {
     const onSubmit = vi.fn();
     render(<Landing onSubmit={onSubmit} />);
     const input = screen.getByLabelText('La tua squadra') as HTMLInputElement;
@@ -34,14 +32,17 @@ describe('landing', () => {
     fireEvent.click(screen.getByTitle('Genera un nome'));
     expect(input.value).not.toBe(first);
 
-    await waitFor(() => expect(screen.getByRole('group', { name: 'Annata' })).toHaveTextContent('2015-16'));
+    const group = await screen.findByRole('group', { name: 'Annata' });
+    const start = SEASONS.findIndex(s => group.textContent?.includes(s.season));
+    expect(start).toBeGreaterThanOrEqual(0);
     fireEvent.click(screen.getByLabelText('Annata precedente'));
-    expect(screen.getByRole('group', { name: 'Annata' })).toHaveTextContent('2014-15');
+    const expected = SEASONS[(start - 1 + SEASONS.length) % SEASONS.length].season;
+    expect(group).toHaveTextContent(expected);
     fireEvent.click(screen.getByRole('radio', { name: 'Difficile' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: '2014-15' });
+    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected });
   });
 
   it('mostra regole e footer con il bottone di supporto', () => {

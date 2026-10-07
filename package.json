@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --ssr src/entry-server.tsx --outDir dist-server && node scripts/prerender.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "seo:check": "node scripts/check-seo.ts"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -38,5 +39,8 @@
   },
   "overrides": {
     "eslint": "$eslint"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

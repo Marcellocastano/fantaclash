@@ -33,6 +33,12 @@ export interface MatchOptions {
   tactics?: Partial<Record<MatchSide, TacticChange[]>>;
   /** Vantaggio casalingo (default HOME_ADVANTAGE) */
   homeAdvantage?: number;
+  /**
+   * Ordine dei rigoristi per lato (id giocatore). Un lato senza ordine usa
+   * quello automatico: movimento per qualità decrescente, portiere ultimo.
+   * Influisce solo sulla lotteria (Rng separato): i 90' non cambiano.
+   */
+  shootoutOrder?: Partial<Record<MatchSide, string[]>>;
 }
 
 /** Giocatore schierato, con la forma del giorno (fotografia per la UI) */
@@ -188,6 +194,11 @@ export interface MatchResult {
   homeScore: number;
   awayScore: number;
   shootout: ShootoutResult | null;
+  /**
+   * Ordine effettivo dei rigoristi (solo giocatori in campo), se si è
+   * andati ai rigori. Opzionale: i risultati salvati prima non lo hanno.
+   */
+  shootoutOrder?: Record<MatchSide, string[]> | null;
   winnerId: string;
   events: MatchEvent[];
   ticks: MatchTick[];

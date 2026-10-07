@@ -25,6 +25,8 @@ const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: 
 interface SetupFormProps {
   /** Callback chiamata quando il form viene inviato con successo (può essere asincrona) */
   onSubmit: (config: GameConfig) => void | Promise<void>;
+  /** Annata selezionata (per mostrare l'album della stagione nella landing) */
+  onSeasonChange?: (season: string) => void;
 }
 
 /**
@@ -32,8 +34,9 @@ interface SetupFormProps {
  * Lega fissa a 8 squadre e 100 crediti: l'utente sceglie nome squadra
  * (con generatore), annata del listone (carosello + dado) e difficoltà.
  */
-export function SetupForm({ onSubmit }: SetupFormProps) {
-  const [teamName, setTeamName] = useState(() => randomTeamName());
+export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
+  // Valori casuali solo dopo il montaggio: il primo disegno coincide con l'HTML pre-renderizzato
+  const [teamName, setTeamName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
   const [season, setSeason] = useState<string>('');
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
@@ -41,16 +44,24 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    setTeamName(current => current || randomTeamName());
+  }, []);
+
   /**
-   * Carica l'indice delle stagioni storiche; il default è la più recente
+   * Carica l'indice delle stagioni storiche. Si parte dall'annata indicata
+   * nell'indirizzo (?annata=2015-16, dalle pagine Top 11) o da una a caso.
    */
   useEffect(() => {
     let cancelled = false;
+    const requested = new URLSearchParams(window.location.search).get('annata');
     loadSeasonIndex()
       .then(list => {
         if (cancelled) return;
         setSeasons(list);
-        if (list.length > 0) setSeason(list[list.length - 1].season);
+        if (list.length === 0) return;
+        const fromUrl = list.find(s => s.season === requested);
+        setSeason((fromUrl ?? list[Math.floor(Math.random() * list.length)]).season);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -63,6 +74,10 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (season) onSeasonChange?.(season);
+  }, [season, onSeasonChange]);
 
   /**
    * Valida il form e restituisce true se valido
@@ -118,10 +133,10 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
     <form onSubmit={handleSubmit} className="space-y-6" aria-label="Inizia a giocare">
       {/* Nome squadra con generatore */}
       <div>
-        <label htmlFor="teamName" className="block text-sm font-semibold text-ink mb-2">
+        <label htmlFor="teamName" className="block font-display text-xl font-extrabold text-ink mb-2">
           La tua squadra
         </label>
-        <div className="flex">
+        <div className="relative">
           <input
             type="text"
             id="teamName"
@@ -129,16 +144,17 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
             maxLength={MAX_TEAM_NAME_LENGTH + 10}
             onChange={(e) => setTeamName(e.target.value)}
             placeholder="Es. FC Campioni"
-            className={`input-field !border-2 font-display text-xl font-bold ${errors.teamName ? 'input-error' : ''}`}
+            className={`input-field pr-12 font-display text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
           />
+          {/* Generatore discreto dentro il campo: il dado giallo resta solo per l'annata */}
           <button
             type="button"
             onClick={() => setTeamName(current => randomTeamName(current))}
             title="Genera un nome"
-            className="shrink-0 inline-flex items-center gap-2 px-4 border-2 border-l-0 border-line-strong text-ink font-semibold text-sm hover:bg-surface transition-colors duration-150 focus-visible:outline outline-2 outline-offset-2 outline-pitch"
+            aria-label="Genera un nome"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
           >
-            <Icon name="dice" className="w-5 h-5" />
-            <span className="hidden sm:inline">Genera</span>
+            <Icon name="reset" className="w-5 h-5" />
           </button>
         </div>
         {errors.teamName && <p className="mt-2 text-sm text-danger">{errors.teamName}</p>}
@@ -146,11 +162,11 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
 
       {/* Annata */}
       <div>
-        <p className="block text-sm font-semibold text-ink mb-2">Annata del listone</p>
+        <p className="block font-display text-xl font-extrabold text-ink mb-2">Annata del listone</p>
         {seasonsReady ? (
           <SeasonPicker seasons={seasons} value={season} onChange={setSeason} disabled={submitting} />
         ) : (
-          <p className="border-2 border-line-strong px-4 py-5 text-ink-muted">
+          <p className="border-2 border-ink px-4 py-5 text-ink-muted">
             {seasonsError ?? 'Caricamento stagioni…'}
           </p>
         )}
@@ -160,8 +176,8 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
 
       {/* Difficoltà */}
       <div>
-        <p className="block text-sm font-semibold text-ink mb-2">Bot avversari</p>
-        <div className="grid grid-cols-2 border-2 border-line-strong" role="radiogroup" aria-label="Difficoltà dei bot">
+        <p className="block font-display text-xl font-extrabold text-ink mb-2">Bot avversari</p>
+        <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label="Difficoltà dei bot">
           {DIFFICULTY_OPTIONS.map((option, i) => (
             <button
               key={option.value}
@@ -170,8 +186,8 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
               aria-checked={difficulty === option.value}
               onClick={() => setDifficulty(option.value)}
               className={`py-2.5 font-display text-xl font-bold transition-colors duration-150 focus-visible:outline outline-2 outline-offset-[-2px] outline-pitch ${
-                i > 0 ? 'border-l-2 border-line-strong' : ''
-              } ${difficulty === option.value ? 'bg-pitch text-on-pitch' : 'text-ink hover:bg-surface'}`}
+                i > 0 ? 'border-l-2 border-ink' : ''
+              } ${difficulty === option.value ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
             >
               {option.label}
             </button>
@@ -184,12 +200,12 @@ export function SetupForm({ onSubmit }: SetupFormProps) {
         <button
           type="submit"
           disabled={submitting || !seasonsReady}
-          className="btn-primary w-full text-2xl py-4 inline-flex items-center justify-center gap-3"
+          className="btn-cta w-full"
         >
           {submitting ? 'Caricamento…' : (
             <>
               Gioca
-              <Icon name="arrow" className="w-6 h-6" />
+              <Icon name="arrow" className="w-7 h-7" />
             </>
           )}
         </button>

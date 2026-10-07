@@ -1,11 +1,10 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Team } from '../../types';
-import { MatchResult, TACTIC_LABELS } from '../../domain/match';
-import { findMatch, ROUND_LABELS, toMatchTeam, TournamentState } from '../../domain/tournament';
+import { MatchResult } from '../../domain/match';
+import { findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
 import { PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
+import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
-import { LogoMark } from '../Logo';
-import { ThemeToggle } from '../ThemeToggle';
 import { AttackIndicator } from './AttackIndicator';
 import { MatchEnd } from './MatchEnd';
 import { MatchEventBanner } from './MatchEventBanner';
@@ -13,9 +12,12 @@ import { MatchFeed } from './MatchFeed';
 import { MatchStats } from './MatchStats';
 import { PitchView } from './PitchView';
 import { Scoreboard } from './Scoreboard';
-import { TacticPanel } from './TacticPanel';
+import { ShootoutOrderPanel } from './ShootoutOrderPanel';
+import { ShootoutStage } from './ShootoutStage';
+import { TacticOverlay } from './TacticOverlay';
+import { useShootoutKick } from './useShootoutKick';
 
-export type MatchExit = 'continue' | 'view' | 'conclude';
+export type MatchExit = 'continue' | 'conclude';
 
 interface MatchScreenProps {
   tournament: TournamentState;
@@ -28,7 +30,8 @@ const SPEEDS: PlaybackSpeed[] = [1, 2, 4];
 
 /**
  * Schermata "Gioca": riproduce la partita generata dal motore, con
- * inerzia, animazioni degli eventi e tre momenti decisionali.
+ * inerzia, animazioni degli eventi, tre momenti decisionali e la lotteria
+ * dei rigori.
  */
 export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScreenProps) {
   const match = findMatch(tournament.bracket, matchId);
@@ -37,16 +40,7 @@ export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScree
   const home = useMemo(() => (homeTeam ? toMatchTeam(homeTeam) : null), [homeTeam]);
   const away = useMemo(() => (awayTeam ? toMatchTeam(awayTeam) : null), [awayTeam]);
   if (!match || !home || !away) return null;
-  return (
-    <MatchPlayer
-      tournament={tournament}
-      home={home}
-      away={away}
-      seed={match.seed}
-      roundLabel={ROUND_LABELS[match.round]}
-      onFinish={onFinish}
-    />
-  );
+  return <MatchPlayer tournament={tournament} home={home} away={away} seed={match.seed} round={match.round} onFinish={onFinish} />;
 }
 
 interface MatchPlayerProps {
@@ -54,120 +48,143 @@ interface MatchPlayerProps {
   home: ReturnType<typeof toMatchTeam>;
   away: ReturnType<typeof toMatchTeam>;
   seed: number;
-  roundLabel: string;
+  round: TournamentRound;
   onFinish: (result: MatchResult, exit: MatchExit) => void;
 }
 
-function MatchPlayer({ tournament, home, away, seed, roundLabel, onFinish }: MatchPlayerProps) {
+function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPlayerProps) {
   const userSide = home.id === tournament.userTeamId ? 'home' : 'away';
   const pb = useMatchPlayback({ home, away, seed, userSide });
   const { result, state } = pb;
-  const homeT = tournament.teams.find(t => t.id === home.id);
-  const awayT = tournament.teams.find(t => t.id === away.id);
-  const energy = result.ticks[state.tick.index].energy[userSide];
-  const opponentTactic = result.ticks[Math.max(1, state.tick.index)].tactic[userSide === 'home' ? 'away' : 'home'];
+  const [tab, setTab] = useState<'cronaca' | 'statistiche'>('cronaca');
+  const tick = result.ticks[state.tick.index];
+  const shoot = useShootoutKick(result, state.latest, pb.speed, pb.skipped);
+  const inShootout = !!result.shootout && state.tick.index >= result.fullTimeTick;
+  // Il fischio finale arriva insieme all'ultimo rigore: si aspetta che l'esito sia rivelato
+  const showEnd = state.finished && shoot.phase === 'done';
+  const kicks = state.events.filter(e => e.type === 'shootout_kick');
+  const shootoutScore = !inShootout ? null : shoot.revealed ? state.shootout : (kicks[kicks.length - 2]?.score ?? null);
+
+  // Suoni: gol e fischi (i rigori finali hanno i loro)
+  useEffect(() => {
+    if (state.latest.some(e => e.type === 'goal' || e.type === 'own_goal')) playSound('goal');
+    else if (state.latest.some(e => e.type === 'half_time' || (e.type === 'full_time' && !result.shootout))) playSound('whistle');
+  }, [state.latest, result.shootout]);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-line-strong">
-        <div className="max-w-[1500px] mx-auto px-4 py-3 flex items-center justify-between">
-          <p className="flex items-center gap-2.5 font-display text-2xl font-extrabold text-pitch leading-none">
-            <LogoMark className="h-8 w-8" />
-            {tournament.name}
-          </p>
-          <ThemeToggle />
-        </div>
-      </header>
+    <div className="flex-1">
+      <Scoreboard
+        home={tournament.teams.find(t => t.id === home.id)}
+        away={tournament.teams.find(t => t.id === away.id)}
+        state={state}
+        roundLabel={ROUND_LABELS[round]}
+        tactics={result.ticks[Math.max(1, state.tick.index)].tactic}
+        userFiato={tick.energy[userSide]}
+        userSide={userSide}
+        shootout={showEnd ? state.shootout : shootoutScore}
+        indicator={<AttackIndicator ball={state.tick.ball} transitionMs={pb.tickMs} homeIsUser={userSide === 'home'} />}
+      />
 
-      <main className="max-w-[1500px] mx-auto px-4 py-6">
-        <Scoreboard home={homeT} away={awayT} state={state} roundLabel={roundLabel} />
-        <AttackIndicator
-          homeName={home.name}
-          awayName={away.name}
-          ball={state.tick.ball}
-          transitionMs={pb.tickMs}
-          homeIsUser={userSide === 'home'}
-          awayIsUser={userSide === 'away'}
-        />
-
-        <div className="grid grid-cols-12 gap-6 mt-2">
-          <div className="col-span-12 lg:col-span-8 space-y-4">
-            {state.finished ? (
-              <MatchEnd
-                result={result}
-                userTeamId={tournament.userTeamId}
-                onContinue={() => onFinish(result, 'continue')}
-                onViewResult={() => onFinish(result, 'view')}
-                onConclude={() => onFinish(result, 'conclude')}
-              />
-            ) : (
-              <>
-                {/* Controlli di riproduzione */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => pb.setPlaying(!pb.playing)}
-                    className="p-2 border border-line-strong text-ink hover:bg-surface transition-colors duration-150 focus-visible:outline outline-2 outline-offset-2 outline-pitch"
-                    aria-label={pb.playing ? 'Pausa' : 'Riprendi'}
-                  >
-                    <Icon name={pb.playing ? 'pause' : 'play'} className="w-5 h-5" />
-                  </button>
-                  <div className="flex border border-line-strong" role="group" aria-label="Velocità">
-                    {SPEEDS.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => pb.setSpeed(s)}
-                        className={`px-3 py-2 font-display font-bold text-sm transition-colors duration-150 ${
-                          pb.speed === s ? 'bg-pitch text-on-pitch' : 'text-ink hover:bg-surface'
-                        }`}
-                      >
-                        {s}x
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={pb.skipToEnd} className="btn-ghost px-3 py-2 text-sm inline-flex items-center gap-2">
+      <div className="max-w-[1500px] mx-auto px-4 py-8">
+        {showEnd ? (
+          <MatchEnd
+            result={result}
+            userTeamId={tournament.userTeamId}
+            round={round}
+            onContinue={() => onFinish(result, 'continue')}
+            onConclude={() => onFinish(result, 'conclude')}
+          />
+        ) : (
+          <div className="grid grid-cols-12 gap-8">
+            <div className="col-span-12 lg:col-span-8">
+              {/* Controlli di riproduzione */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <button
+                  onClick={() => pb.setPlaying(!pb.playing)}
+                  disabled={pb.pendingDecision !== null || pb.pendingShootoutOrder}
+                  className="btn-ghost px-3 py-2"
+                  aria-label={pb.playing ? 'Pausa' : 'Riprendi'}
+                >
+                  <Icon name={pb.playing ? 'pause' : 'play'} className="w-5 h-5" />
+                </button>
+                <div className="flex border-2 border-ink" role="group" aria-label="Velocità">
+                  {SPEEDS.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => pb.setSpeed(s)}
+                      aria-pressed={pb.speed === s}
+                      className={`px-3 py-2 font-display font-extrabold text-lg leading-none ${pb.speed === s ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+                <div className="ml-auto flex items-center gap-5">
+                  {import.meta.env.DEV && !inShootout && (
+                    <button onClick={pb.jumpToShootout} className="link-action text-sm" title="Solo sviluppo: rigioca con un seme che finisce ai rigori">
+                      Test rigori
+                    </button>
+                  )}
+                  <button onClick={pb.skipToEnd} className="link-action">
                     <Icon name="skip" className="w-4 h-4" />
                     Fischio finale
                   </button>
-                  <div className="ml-auto flex items-center gap-4 text-sm">
-                    <span className="text-ink-muted">
-                      Tu: <span className="font-semibold text-pitch">{TACTIC_LABELS[pb.currentTactic]}</span>
-                    </span>
-                    <span className="text-ink-muted">
-                      Avversario: <span className="font-semibold text-ink">{TACTIC_LABELS[opponentTactic]}</span>
-                    </span>
-                    <span className="flex items-center gap-2 text-ink-muted">
-                      Energia
-                      <span className="w-20 h-1.5 bg-line inline-block">
-                        <span className="block h-full bg-pitch transition-[width] duration-500" style={{ width: `${energy}%` }} />
-                      </span>
-                    </span>
-                  </div>
                 </div>
+              </div>
 
-                {pb.pendingDecision !== null && (
-                  <TacticPanel
-                    decisionIndex={pb.decisionIndex}
-                    current={pb.currentTactic}
-                    energy={energy}
-                    scoreLine={`${home.name} ${state.score.home} - ${state.score.away} ${away.name}`}
-                    onChoose={pb.chooseTactic}
+              <div className="relative overflow-x-auto">
+                {inShootout ? (
+                  <ShootoutStage result={result} kicks={kicks} kick={shoot.kick} phase={shoot.phase} decisive={shoot.decisive} userSide={userSide} />
+                ) : (
+                  <>
+                    <PitchView result={result} state={state} />
+                    <MatchEventBanner latest={state.latest} result={result} />
+                  </>
+                )}
+                {pb.pendingShootoutOrder && (
+                  <ShootoutOrderPanel
+                    players={(result.shootoutOrder?.[userSide] ?? []).flatMap(id => result.lineups[userSide].filter(p => p.playerId === id))}
+                    onConfirm={pb.confirmShootoutOrder}
                   />
                 )}
+                {pb.pendingDecision !== null && (
+                  <TacticOverlay
+                    decisionIndex={pb.decisionIndex}
+                    current={pb.currentTactic}
+                    fiato={tick.energy[userSide]}
+                    scoreLine={`${state.score.home}-${state.score.away}`}
+                    onChoose={t => {
+                      if (pb.decisionIndex === 0) playSound('whistle');
+                      pb.chooseTactic(t);
+                    }}
+                  />
+                )}
+              </div>
+            </div>
 
-                <div className="relative">
-                  <PitchView result={result} state={state} />
-                  <MatchEventBanner latest={state.latest} result={result} />
-                </div>
-              </>
-            )}
+            <aside className="col-span-12 lg:col-span-4">
+              <div className="flex border-b-2 border-ink mb-4" role="tablist">
+                {(['cronaca', 'statistiche'] as const).map(t => (
+                  <button
+                    key={t}
+                    role="tab"
+                    aria-selected={tab === t}
+                    onClick={() => setTab(t)}
+                    className={`flex-1 py-2 font-display text-2xl font-extrabold capitalize ${tab === t ? 'bg-ink text-canvas' : 'text-ink-muted hover:text-ink'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {tab === 'cronaca' ? (
+                <MatchFeed events={state.events} userSide={userSide} hiddenId={shoot.revealed ? null : shoot.kick?.id} />
+              ) : (
+                <MatchStats stats={state.stats} homeName={home.name} awayName={away.name} />
+              )}
+            </aside>
           </div>
-
-          <aside className="col-span-12 lg:col-span-4 space-y-6">
-            <MatchStats stats={state.stats} />
-            <MatchFeed events={state.events} userSide={userSide} />
-          </aside>
-        </div>
-      </main>
+        )}
+      </div>
     </div>
   );
 }

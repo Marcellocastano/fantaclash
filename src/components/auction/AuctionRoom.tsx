@@ -1,30 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { useAuction } from '../../hooks/useAuction';
-import { PlayerCardFifa } from './PlayerCardFifa';
-import { BidControls } from './BidControls';
-import { SimulationControls } from './SimulationControls';
-import { BidHistory } from './BidHistory';
-import { TeamsRecap } from './TeamsRecap';
-import { PlayersDatabase } from './PlayersDatabase';
-import { ThemeToggle } from '../ThemeToggle';
+import { Player, PlayerRole } from '../../types';
 import { Icon } from '../Icon';
-import { LogoMark } from '../Logo';
-import { Player } from '../../types';
+import { BotThinking } from './BotThinking';
+import { FastForwardMenu } from './FastForwardMenu';
+import { LotStage } from './LotStage';
+import { PlayerList, SoldEntry } from './PlayerList';
+import { TeamsRecap } from './TeamsRecap';
+import { useAutoAdvance, useBidFeedback, useBotScanner } from './useAuctionFx';
+import { AdvanceButton } from './AutoAdvance';
+import { isBoolean, usePersistentState } from '../../hooks/usePersistentState';
 
 interface AuctionRoomProps {
   onComplete: () => void;
-  onReset: () => void;
 }
 
-const ROLE_NAMES = {
-  P: 'Portieri',
-  D: 'Difensori',
-  C: 'Centrocampisti',
-  A: 'Attaccanti',
+const ROLE_PLURAL: Record<PlayerRole, string> = {
+  P: 'portieri',
+  D: 'difensori',
+  C: 'centrocampisti',
+  A: 'attaccanti',
 };
 
-const ROLE_SINGULAR = {
+const ROLE_SINGULAR: Record<PlayerRole, string> = {
   P: 'portiere',
   D: 'difensore',
   C: 'centrocampista',
@@ -32,230 +31,172 @@ const ROLE_SINGULAR = {
 };
 
 /**
- * Stanza d'asta - stile tabellone dello stadio su carta
+ * Stanza d'asta: banco (giocatore chiamato, prezzo, rilanci), listone e
+ * squadre. Il banco cambia aspetto con lo stato del lotto.
  */
-export function AuctionRoom({ onComplete, onReset }: AuctionRoomProps) {
+export function AuctionRoom({ onComplete }: AuctionRoomProps) {
   const { state } = useGame();
-  const {
-    roundState,
-    currentRole,
-    currentPlayer,
-    currentBid,
-    currentBidderId,
-    bidHistory,
-    timeRemaining,
-    isUserCallingTurn,
-    availablePlayers,
-    remainingPlayersCount,
-    isComplete,
-    canUserBid,
-    userMaxBid,
-    canSimulateLot,
-    canSimulateRole,
-    startAuction,
-    userCallPlayer,
-    userBid,
-    confirmAssignment,
-    continueToNextRole,
-    simulateLot,
-    simulateRoleCompletion,
-    simulateAll,
-  } = useAuction();
-
-  const [showMobileTeams, setShowMobileTeams] = useState(false);
+  const a = useAuction();
+  const { roundState, currentRole, currentPlayer, currentBidderId } = a;
+  const [showTeams, setShowTeams] = useState(false);
+  const [autoAdvance, setAutoAdvance] = usePersistentState('fanta-fc-auto-advance-v2', true, isBoolean);
 
   const userTeam = state.teams.find(t => t.isUserTeam);
-  const isUserWinning = currentBidderId === userTeam?.id;
-  const currentWinner = currentBidderId ? state.teams.find(t => t.id === currentBidderId) : null;
+  const caller = state.teams.find(t => t.id === a.callerId);
+  const isUserWinning = !!userTeam && currentBidderId === userTeam.id;
+  const remaining = state.auction?.remainingPlayers ?? [];
 
-  const handlePlayerSelect = useCallback((player: Player) => {
-    if (isUserCallingTurn && roundState === 'calling') {
-      userCallPlayer(player);
-    }
-  }, [isUserCallingTurn, roundState, userCallPlayer]);
+  const sold: SoldEntry[] = useMemo(
+    () => state.teams.flatMap(t => t.roster.map(o => ({ player: o.player, team: t.name, price: o.purchasePrice }))),
+    [state.teams]
+  );
+
+  const { scanId, lockedId } = useBotScanner(roundState === 'bot_calling', currentRole, remaining, currentPlayer?.id ?? null);
+  const { outbid, outbidKey } = useBidFeedback({
+    active: roundState === 'auction_active',
+    bidderId: currentBidderId,
+    bid: a.currentBid,
+    userTeamId: userTeam?.id ?? '',
+    timeRemaining: a.timeRemaining,
+    sold: roundState === 'sold',
+    soldToUser: roundState === 'sold' && isUserWinning,
+  });
+
+  // Avanti automatico dopo l'aggiudicazione e alla chiusura del reparto
+  const advanceKey =
+    roundState === 'sold' ? `sold-${currentPlayer?.id}` : roundState === 'role_complete' ? `role-${currentRole}` : null;
+  const advance = roundState === 'role_complete' ? a.continueToNextRole : a.confirmAssignment;
+  useAutoAdvance(autoAdvance, advanceKey, advance);
+
+  const handlePlayerSelect = useCallback(
+    (player: Player) => {
+      if (a.isUserCallingTurn && roundState === 'calling') a.userCallPlayer(player);
+    },
+    [a, roundState]
+  );
 
   // Asta completata: si passa subito al torneo (il sorteggio parte da solo)
   useEffect(() => {
-    if (isComplete || roundState === 'auction_complete') onComplete();
-  }, [isComplete, roundState, onComplete]);
-  if (isComplete || roundState === 'auction_complete') return null;
+    if (a.isComplete || roundState === 'auction_complete') onComplete();
+  }, [a.isComplete, roundState, onComplete]);
+  if (a.isComplete || roundState === 'auction_complete') return null;
+
+  const stageTitle =
+    roundState === 'idle'
+      ? 'Pronti?'
+      : roundState === 'calling'
+        ? 'Tocca a te'
+        : roundState === 'bot_calling'
+          ? 'Chiama un bot'
+          : roundState === 'role_complete'
+            ? 'Reparto chiuso'
+            : roundState === 'sold'
+              ? isUserWinning
+                ? 'Colpo tuo!'
+                : 'Aggiudicato'
+              : 'All\'asta';
 
   return (
-    <div className="min-h-screen lg:h-screen flex flex-col">
-      {/* Header */}
-      <header className="bg-canvas border-b border-line-strong sticky top-0 z-20">
-        <div className="max-w-[1600px] mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Logo */}
-            <h1 className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold text-pitch leading-none">
-              <LogoMark className="h-8 w-8" />
-              FantaClash
-            </h1>
-
-            {/* Info centrali */}
-            <div className="hidden md:flex items-stretch divide-x divide-line">
-              <div className="px-6 first:pl-0">
-                <span className="block text-xs font-medium text-ink-muted">Fase</span>
-                <p className="font-display text-xl font-bold text-pitch leading-tight">{ROLE_NAMES[currentRole]}</p>
-              </div>
-              <div className="px-6">
-                <span className="block text-xs font-medium text-ink-muted">Budget</span>
-                <p className="font-display text-xl font-bold leading-tight tabular-nums">
-                  {userTeam?.credits}
-                  <span className="text-ink-muted text-base font-medium"> / {userTeam?.initialCredits} Cr</span>
-                </p>
-              </div>
-              <div className="px-6">
-                <span className="block text-xs font-medium text-ink-muted">Giocatori rimasti</span>
-                <p className="font-display text-xl font-bold leading-tight tabular-nums">{remainingPlayersCount}</p>
-              </div>
-            </div>
-
-            {/* Azioni */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowMobileTeams(!showMobileTeams)}
-                className="lg:hidden p-2 border border-line-strong rounded-sm text-ink hover:bg-surface transition-colors duration-150 focus-visible:outline outline-2 outline-offset-2 outline-pitch"
-                aria-label="Mostra squadre"
-              >
-                <Icon name="teams" className="w-5 h-5" />
-              </button>
-              <ThemeToggle />
-              <button
-                onClick={onReset}
-                className="p-2 border border-danger/50 rounded-sm text-danger hover:bg-danger/10 transition-colors duration-150 focus-visible:outline outline-2 outline-offset-2 outline-danger"
-                aria-label="Reset"
-                title="Reset"
-              >
-                <Icon name="reset" className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <div className="flex-1 min-h-0 max-w-[1600px] mx-auto w-full p-4">
-        <div className="grid grid-cols-12 lg:divide-x lg:divide-line lg:h-full">
-          
-          {/* Colonna sinistra - Card giocatore e controlli */}
-          <div className="col-span-12 lg:col-span-5 xl:col-span-4 lg:min-h-0 lg:overflow-y-auto space-y-6 lg:pr-6">
-
-            {/* Simulazioni: giocatore, reparto, intera asta */}
-            <SimulationControls
+    <div className="flex-1 min-h-0 lg:h-[calc(100vh-4rem)] w-full max-w-[1600px] mx-auto px-4">
+      <div className="grid grid-cols-12 lg:h-full">
+        {/* Banco d'asta */}
+        <section className="col-span-12 lg:col-span-5 xl:col-span-4 lg:min-h-0 lg:overflow-y-auto py-6 lg:pr-6 lg:border-r-2 lg:border-ink">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <h1 className="font-display text-4xl xl:text-5xl font-black text-ink leading-none">{stageTitle}</h1>
+            <FastForwardMenu
               currentRole={currentRole}
-              canSimulateLot={canSimulateLot}
-              canSimulateRole={canSimulateRole}
-              onSimulateLot={simulateLot}
-              onSimulateRole={simulateRoleCompletion}
-              onSimulateAll={simulateAll}
-            />
-
-            {/* Stato: Idle */}
-            {roundState === 'idle' && (
-              <div>
-                <h2 className="font-display text-4xl font-extrabold text-ink mb-2">Pronto?</h2>
-                <p className="text-ink-soft mb-6">Si parte con i {ROLE_NAMES[currentRole].toLowerCase()}.</p>
-                <button onClick={startAuction} className="btn-primary w-full">
-                  Inizia asta
-                </button>
-              </div>
-            )}
-
-            {/* Stato: Calling */}
-            {roundState === 'calling' && isUserCallingTurn && (
-              <div>
-                <h2 className="font-display text-4xl font-extrabold text-pitch mb-2">Tocca a te</h2>
-                <p className="text-ink-soft">
-                  Seleziona un <span className="text-pitch font-semibold">{ROLE_SINGULAR[currentRole]}</span> dal database.
-                </p>
-              </div>
-            )}
-
-            {/* Stato: Bot calling */}
-            {roundState === 'bot_calling' && (
-              <div>
-                <h2 className="font-display text-3xl font-extrabold text-ink mb-2">Un bot sta scegliendo</h2>
-              </div>
-            )}
-
-            {/* Stato: Role complete */}
-            {roundState === 'role_complete' && (
-              <div>
-                <h2 className="font-display text-4xl font-extrabold text-ok mb-2">Reparto completo</h2>
-                <p className="text-ink-soft mb-6">Si passa ai {ROLE_NAMES[currentRole].toLowerCase()}.</p>
-                <button onClick={continueToNextRole} className="btn-primary w-full">
-                  Continua
-                </button>
-              </div>
-            )}
-
-            {/* Card giocatore attivo */}
-            {currentPlayer && (roundState === 'auction_active' || roundState === 'sold') && (
-              <>
-                <PlayerCardFifa
-                  player={currentPlayer}
-                  currentBid={currentBid}
-                  timeRemaining={timeRemaining}
-                  isActive={roundState === 'auction_active'}
-                />
-
-                {/* Controlli offerta */}
-                {roundState === 'auction_active' && (
-                  <BidControls
-                    currentBid={currentBid}
-                    userCredits={userTeam?.credits || 0}
-                    userMaxBid={userMaxBid}
-                    canBid={canUserBid}
-                    isUserWinning={isUserWinning}
-                    onBid={userBid}
-                  />
-                )}
-
-                {/* Risultato: Venduto */}
-                {roundState === 'sold' && (
-                  <div>
-                    <p className="text-sm font-medium text-ink-muted mb-1">Venduto a</p>
-                    <p className="font-display text-4xl font-extrabold text-ok leading-none mb-1">
-                      {currentWinner?.name}
-                    </p>
-                    <p className="font-display text-3xl font-bold text-ink tabular-nums mb-6">{currentBid} Cr</p>
-                    <button onClick={confirmAssignment} className="btn-primary w-full">
-                      Prossimo
-                    </button>
-                  </div>
-                )}
-
-                {/* Cronologia rilanci */}
-                <BidHistory
-                  bids={bidHistory}
-                  userTeamId={userTeam?.id || ''}
-                  teams={state.teams}
-                />
-              </>
-            )}
-          </div>
-
-          {/* Colonna centrale - Database giocatori */}
-          <div className="col-span-12 lg:col-span-4 xl:col-span-5 lg:min-h-0 lg:overflow-y-auto lg:px-6 mt-6 lg:mt-0">
-            <PlayersDatabase
-              players={availablePlayers}
-              allPlayers={state.auction?.remainingPlayers || []}
-              currentRole={currentRole}
-              isSelectable={isUserCallingTurn && roundState === 'calling'}
-              onSelectPlayer={handlePlayerSelect}
+              canSimulateLot={a.canSimulateLot}
+              canSimulateRole={a.canSimulateRole}
+              onSimulateLot={a.simulateLot}
+              onSimulateRole={a.simulateRoleCompletion}
+              onSimulateAll={a.simulateAll}
+              autoAdvance={autoAdvance}
+              onAutoAdvanceChange={setAutoAdvance}
             />
           </div>
 
-          {/* Colonna destra - Recap squadre */}
-          <div className={`col-span-12 lg:col-span-3 lg:min-h-0 lg:overflow-y-auto lg:pl-6 mt-6 lg:mt-0 ${showMobileTeams ? '' : 'hidden lg:block'}`}>
-            <TeamsRecap
+          {roundState === 'idle' && (
+            <div className="py-10 text-center">
+              <p className="text-xl text-ink-soft">
+                Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
+              </p>
+              <button onClick={a.startAuction} className="btn-cta mt-10">
+                Inizia l'asta
+              </button>
+            </div>
+          )}
+
+          {roundState === 'calling' && a.isUserCallingTurn && (
+            <div className="py-6">
+              <p className="text-2xl text-ink leading-snug">
+                Scegli un <span className="font-bold text-pitch">{ROLE_SINGULAR[currentRole]}</span> dal listone e chiamalo all'asta.
+              </p>
+              <p className="flex items-center gap-2 text-ink-muted mt-4">
+                <Icon name="arrow" className="w-5 h-5 text-pitch" />
+                Clicca su una riga: parte da 1 credito.
+              </p>
+            </div>
+          )}
+
+          {roundState === 'bot_calling' && <BotThinking team={caller} role={currentRole} />}
+
+          {roundState === 'role_complete' && (
+            <div className="py-10 text-center">
+              <p className="text-xl text-ink-soft">
+                Ora tocca ai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
+              </p>
+              <AdvanceButton auto={autoAdvance} onClick={a.continueToNextRole} className="btn-cta mt-10">
+                Avanti
+                <Icon name="arrow" className="w-7 h-7" />
+              </AdvanceButton>
+            </div>
+          )}
+
+          {currentPlayer && (roundState === 'auction_active' || roundState === 'sold') && (
+            <LotStage
+              player={currentPlayer}
+              currentBid={a.currentBid}
+              bidderId={currentBidderId}
+              bids={a.bidHistory}
               teams={state.teams}
-              userTeamId={userTeam?.id || ''}
-              currentBidderId={currentBidderId}
+              userTeam={userTeam}
+              timeRemaining={a.timeRemaining}
+              active={roundState === 'auction_active'}
+              canBid={a.canUserBid}
+              userMaxBid={a.userMaxBid}
+              outbid={outbid}
+              outbidKey={outbidKey}
+              autoAdvance={autoAdvance}
+              onBid={a.userBid}
+              onNext={a.confirmAssignment}
             />
+          )}
+        </section>
+
+        {/* Listone */}
+        <section className="col-span-12 lg:col-span-4 xl:col-span-5 lg:min-h-0 py-6 lg:px-6 lg:border-r-2 lg:border-ink border-t-2 border-ink lg:border-t-0 h-[80vh] lg:h-auto">
+          <PlayerList
+            available={remaining}
+            sold={sold}
+            currentRole={currentRole}
+            season={state.config?.season}
+            isSelectable={a.isUserCallingTurn && roundState === 'calling'}
+            onSelectPlayer={handlePlayerSelect}
+            scanId={scanId}
+            lockedId={lockedId}
+          />
+        </section>
+
+        {/* Squadre */}
+        <section className="col-span-12 lg:col-span-3 lg:min-h-0 py-6 lg:pl-6 border-t-2 border-ink lg:border-t-0">
+          <button onClick={() => setShowTeams(s => !s)} className="lg:hidden btn-ghost w-full mb-4">
+            <Icon name="teams" className="w-5 h-5" />
+            {showTeams ? 'Nascondi squadre' : 'Mostra squadre'}
+          </button>
+          <div className={`${showTeams ? '' : 'hidden'} lg:block lg:h-full`}>
+            <TeamsRecap teams={state.teams} userTeamId={userTeam?.id ?? ''} currentBidderId={currentBidderId} callerId={roundState === 'bot_calling' ? a.callerId : null} />
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

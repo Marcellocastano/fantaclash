@@ -1,13 +1,6 @@
 import { LineupPlayer, MatchPlayerPerformance, shortName } from '../../domain/match';
-import { PlayerRole } from '../../types';
 import { Icon } from '../Icon';
-
-const ROLE_TAG: Record<PlayerRole, string> = {
-  P: 'role-tag role-tag-P',
-  D: 'role-tag role-tag-D',
-  C: 'role-tag role-tag-C',
-  A: 'role-tag role-tag-A',
-};
+import { OvrBadge } from '../player/OvrBadge';
 
 interface PlayerMatchCardProps {
   player: LineupPlayer;
@@ -20,39 +13,38 @@ interface PlayerMatchCardProps {
 }
 
 /**
- * Giocatore in campo: nome, ruolo, overall e solo gli eventi che contano
- * (gol, assist, cartellini, parate). Il voto live cambia con gli eventi.
+ * Giocatore in campo: overall per fascia, cognome e solo gli eventi che
+ * contano (gol, assist, cartellini, parate). Il voto live cambia con gli
+ * eventi.
  */
 export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, showRating }: PlayerMatchCardProps) {
-  const ratingColor = !p ? 'text-ink' : p.rating >= 7 ? 'text-ok' : p.rating <= 5.5 ? 'text-ink-muted' : 'text-ink';
+  const ratingTone = !p ? 'text-ink' : p.rating >= 7 ? 'text-pitch' : p.rating <= 5.5 ? 'text-danger' : 'text-ink';
   return (
     <div
       key={highlighted ? 'evidenziato' : 'normale'}
-      className={`w-full px-2 py-1.5 border ${highlighted ? 'border-pitch motion-safe:animate-flash' : 'border-line'} bg-canvas ${
+      className={`w-full flex items-stretch bg-canvas border-2 border-ink ${highlighted ? 'shadow-block-sm motion-safe:animate-flash' : ''} ${
         sentOff ? 'opacity-40' : ''
       }`}
     >
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span className={`${ROLE_TAG[player.role]} !w-5 !h-5 !text-xs`}>{player.role}</span>
-        <span className={`flex-1 min-w-0 truncate text-sm font-semibold text-ink ${sentOff ? 'line-through' : ''}`} title={player.name}>
+      <OvrBadge overall={player.overall} role={player.role} size="xs" />
+      {/* Nome su tutta la larghezza; eventi e voto live sulla riga sotto */}
+      <div className="flex-1 min-w-0 px-1.5 py-0.5">
+        <p className={`text-[13px] font-bold text-ink leading-tight line-clamp-2 break-words ${sentOff ? 'line-through' : ''}`} title={player.name}>
           {shortName(player.name)}
-        </span>
-      </div>
-      <div className="flex items-center justify-between gap-1 mt-1">
-        <span className="text-xs text-ink-muted tabular-nums">{player.overall}</span>
-        <span className="flex items-center gap-1">
-          {p && p.goals > 0 && <Badge icon="ball" count={p.goals} className="text-ok" />}
-          {p && p.assists > 0 && <Badge icon="assist" count={p.assists} className="text-pitch" />}
-          {p && p.saves > 0 && player.role === 'P' && <Badge icon="glove" count={p.saves} className="text-pitch" />}
+        </p>
+        <p className="flex items-center gap-1 h-4">
+          {p && p.goals > 0 && <Badge icon="ball" count={p.goals} className="text-pitch" />}
+          {p && p.assists > 0 && <Badge icon="assist" count={p.assists} className="text-ink" />}
+          {p && p.saves > 0 && player.role === 'P' && <Badge icon="glove" count={p.saves} className="text-ink" />}
           {p && p.yellowCards > 0 && p.redCards === 0 && <Icon name="card" className="w-3 h-3 text-card-yellow" />}
           {p && p.redCards > 0 && <Icon name="card" className="w-3 h-3 text-card-red" />}
           {p && p.injured && <Icon name="injury" className="w-3 h-3 text-ink-muted" />}
           {showRating && p && (
-            <span className={`font-display font-bold text-base tabular-nums leading-none ${ratingColor}`} title="Voto live">
+            <span className={`ml-auto font-display font-black text-base tabular-nums leading-none ${ratingTone}`} title="Voto live">
               {p.rating.toFixed(1)}
             </span>
           )}
-        </span>
+        </p>
       </div>
     </div>
   );
@@ -60,8 +52,8 @@ export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, 
 
 function Badge({ icon, count, className }: { icon: 'ball' | 'assist' | 'glove'; count: number; className: string }) {
   return (
-    <span className={`inline-flex items-center text-xs font-semibold ${className}`}>
-      <Icon name={icon} className="w-3 h-3" />
+    <span className={`inline-flex items-center text-xs font-bold ${className}`}>
+      <Icon name={icon} className="w-3.5 h-3.5" />
       {count > 1 && <span className="tabular-nums">{count}</span>}
     </span>
   );

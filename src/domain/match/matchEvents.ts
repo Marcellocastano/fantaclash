@@ -6,23 +6,7 @@ import { ChanceKind, MatchTick, Tactic } from './matchTypes';
  * l'Rng del tick, quindi la cronaca è deterministica come il resto.
  */
 
-/** Cognome leggibile: "HIGUAIN Gonzalo" -> "Higuain", "Mike Maignan" -> "Maignan" */
-export function shortName(name: string): string {
-  const words = name.trim().split(/\s+/);
-  const isUpper = (w: string) => w.length > 1 && w === w.toUpperCase() && /[A-Z]/.test(w);
-  if (isUpper(words[0])) {
-    const surname: string[] = [];
-    for (const w of words) {
-      if (!isUpper(w)) break;
-      surname.push(w);
-    }
-    return surname
-      .join(' ')
-      .toLowerCase()
-      .replace(/(^|[\s'-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
-  }
-  return words[words.length - 1];
-}
+export { shortName } from '../../utils/playerName';
 
 /** Etichetta del minuto: 32', 45+2' */
 export function formatMinute(minute: number, extra: number): string {

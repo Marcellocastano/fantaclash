@@ -6,8 +6,17 @@ export type IconName =
   | 'reset'
   | 'teams'
   | 'chevron'
-  | 'sun'
-  | 'moon'
+  | 'menu'
+  | 'sound'
+  | 'mute'
+  | 'stamina'
+  | 'goal'
+  | 'search'
+  | 'grid'
+  | 'list'
+  | 'attack'
+  | 'balance'
+  | 'shield'
   | 'ball'
   | 'card'
   | 'glove'
@@ -51,13 +60,43 @@ const paths: Record<IconName, ReactElement> = {
     </>
   ),
   chevron: <path d="M5 8l5 5 5-5" />,
-  sun: (
+  menu: <path d="M3 5h14M3 10h14M3 15h14" />,
+  sound: (
     <>
-      <circle cx="10" cy="10" r="3.5" />
-      <path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.3 4.3l1.8 1.8M13.9 13.9l1.8 1.8M4.3 15.7l1.8-1.8M13.9 6.1l1.8-1.8" />
+      <path d="M3 8h3l5-4v12l-5-4H3z" />
+      <path d="M14 7a4 4 0 0 1 0 6M16 4.5a7.5 7.5 0 0 1 0 11" />
     </>
   ),
-  moon: <path d="M15 3.5A7 7 0 1 0 16.5 15 5.5 5.5 0 0 1 15 3.5z" />,
+  mute: (
+    <>
+      <path d="M3 8h3l5-4v12l-5-4H3z" />
+      <path d="M14 8l4 4M18 8l-4 4" />
+    </>
+  ),
+  stamina: (
+    <>
+      <path d="M3 6h12v8H3z" />
+      <path d="M17 9v2" />
+      <path d="M5.5 8.5v3M8.5 8.5v3" />
+    </>
+  ),
+  goal: (
+    <>
+      <path d="M2 16V5h16v11" />
+      <path d="M2 9h16M2 12.5h16M6 5v11M10 5v11M14 5v11" strokeWidth={1} />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="8.5" cy="8.5" r="5" />
+      <path d="M12.5 12.5L17 17" />
+    </>
+  ),
+  grid: <path d="M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z" />,
+  list: <path d="M3 4h14M3 8h14M3 12h14M3 16h14" />,
+  attack: <path d="M3 5l5 5-5 5M10 5l5 5-5 5" />,
+  balance: <path d="M3 7h14M3 13h14" />,
+  shield: <path d="M10 2.5l6.5 2.5v4.5c0 4-2.8 6.8-6.5 8-3.7-1.2-6.5-4-6.5-8V5z" />,
   ball: (
     <>
       <circle cx="10" cy="10" r="7" />
