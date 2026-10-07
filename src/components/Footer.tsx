@@ -50,7 +50,7 @@ export function Footer({ linkGroups = FOOTER_LINK_GROUPS }: { linkGroups?: { tit
 
 /** Bottone "Supporta": attivo solo se SUPPORT_URL è configurato */
 export function SupportButton() {
-  const base = 'btn-primary bg-whistle text-on-whistle hover:bg-highlight hover:text-on-highlight text-2xl px-6 py-4';
+  const base = 'btn-primary bg-whistle text-on-whistle hover:bg-highlight hover:text-on-highlight text-xl sm:text-2xl px-4 sm:px-6 py-3 sm:py-4';
   if (!SUPPORT_URL) {
     return (
       <span className={`${base} opacity-60 cursor-not-allowed hover:bg-whistle hover:text-on-whistle`} aria-disabled="true" title="Link di supporto in arrivo">

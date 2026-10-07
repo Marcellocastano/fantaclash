@@ -66,13 +66,13 @@ export function Landing({ onSubmit }: LandingProps) {
                 <span className="absolute inset-y-3 left-1/2 border-l-2 border-dashed border-canvas/40" />
               </span>
 
-              <div className="p-8 lg:pr-12">
+              <div className="p-5 sm:p-8 lg:pr-12">
                 <p className="font-semibold text-ink-soft">Serie A · 23 annate, dal 2003-04 al 2025-26</p>
                 <h1 className="mt-3">
                   <span className="block font-display text-2xl md:text-3xl font-extrabold text-ink leading-tight">
-                    Il fantacalcio ad asta con la Serie A di ieri
+                    L'asta del fantacalcio nostalgico
                   </span>
-                  <span className="block font-display text-7xl md:text-8xl font-black leading-[0.85] mt-2 break-words">
+                  <span className="block font-display text-5xl sm:text-7xl md:text-8xl font-black leading-[0.85] mt-2 break-words">
                     FANTA<span className="text-pitch">CLASH</span>
                   </span>
                 </h1>
@@ -81,15 +81,14 @@ export function Landing({ onSubmit }: LandingProps) {
                 </p>
 
                 {/* Etichetta dell'album: il form */}
-                <div className="mt-8 border-2 border-ink p-1.5 bg-canvas">
-                  <div className="border-2 border-dashed border-line-strong p-5">
-                    <p className="font-display text-sm font-extrabold text-ink-muted mb-4">Album FantaClash · proprietà di</p>
+                <div className="mt-6 sm:mt-8 border-2 border-ink p-1 sm:p-1.5 bg-canvas">
+                  <div className="border-2 border-dashed border-line-strong p-3 sm:p-5">
                     <SetupForm onSubmit={onSubmit} onSeasonChange={setSeason} />
                   </div>
                 </div>
               </div>
 
-              <div className="p-8 lg:pl-12 border-t-4 lg:border-t-0 border-ink">
+              <div className="p-5 sm:p-8 lg:pl-12 border-t-4 lg:border-t-0 border-ink">
                 <StickerAlbum season={season} />
               </div>
             </div>
@@ -100,7 +99,7 @@ export function Landing({ onSubmit }: LandingProps) {
         <section id="come-si-gioca" className="scroll-mt-20">
           <div className="max-w-[1250px] mx-auto px-4 py-20">
             <h2 className="font-display text-6xl font-black text-ink leading-none">Come si gioca</h2>
-            <div className="grid grid-cols-12 gap-8 mt-12">
+            <div className="grid grid-cols-12 gap-x-0 gap-y-8 sm:gap-x-8 mt-12">
               <Preview className="col-span-12 lg:col-span-7 lg:row-span-2" n="1" title="Asta" text="A turno si chiama un giocatore. Rilancia, resisti allo scadere e prenditi i migliori.">
                 <AuctionPreview />
               </Preview>
@@ -146,10 +145,10 @@ export function Landing({ onSubmit }: LandingProps) {
                   <li key={r.term} className={`relative ${t.bg} ${t.ink} border-2 border-ink shadow-block p-5 ${r.tilt}`}>
                     {elite && <span className="absolute inset-1.5 border border-tier-elite-ink/60 pointer-events-none" aria-hidden="true" />}
                     <p className="flex items-baseline gap-2">
-                      <span className="font-display text-6xl font-black leading-none tabular-nums">{r.value}</span>
+                      <span className="font-display text-5xl sm:text-6xl font-black leading-none tabular-nums">{r.value}</span>
                       <span className={`text-sm font-bold ${t.muted}`}>{r.unit}</span>
                     </p>
-                    <h3 className={`font-display text-4xl font-black leading-none mt-5 ${elite ? 'text-canvas' : ''}`}>{r.term}</h3>
+                    <h3 className={`font-display text-3xl sm:text-4xl font-black leading-none mt-5 ${elite ? 'text-canvas' : ''}`}>{r.term}</h3>
                     <p className={`mt-3 pt-3 border-t-2 ${elite ? 'border-canvas/25 text-canvas/85' : 'border-ink/20 text-ink'}`}>{r.text}</p>
                   </li>
                 );
@@ -223,10 +222,10 @@ function Preview({ n, title, text, className, children }: PreviewProps) {
       <div className="flex-1 bg-canvas border-b-2 border-ink p-6 flex items-center justify-center overflow-hidden" aria-hidden="true">
         {children}
       </div>
-      <div className="p-6 flex items-baseline gap-4">
-        <span className="font-display text-5xl font-black text-whistle leading-none">{n}</span>
+      <div className="p-4 sm:p-6 flex items-baseline gap-3 sm:gap-4">
+        <span className="font-display text-4xl sm:text-5xl font-black text-whistle leading-none">{n}</span>
         <div>
-          <h3 className="font-display text-4xl font-black text-ink leading-none">{title}</h3>
+          <h3 className="font-display text-3xl sm:text-4xl font-black text-ink leading-none">{title}</h3>
           <p className="text-ink-soft mt-2">{text}</p>
         </div>
       </div>
@@ -236,22 +235,68 @@ function Preview({ n, title, text, className, children }: PreviewProps) {
 
 function AuctionPreview() {
   return (
-    <div className="w-full max-w-xl grid grid-cols-[minmax(0,1fr)_auto] gap-8 items-center pointer-events-none">
-      <PlayerCard player={SAMPLE_PLAYER} size="lg" publicStats className="-rotate-2" />
-      <div className="w-48 space-y-3">
-        <div className="bg-highlight border-2 border-ink px-4 py-3 shadow-block-sm">
-          <span className="block text-sm font-bold">Sei in testa</span>
-          <span className="font-display text-7xl font-black leading-none tabular-nums">23</span>
-          <span className="font-display text-xl font-extrabold"> Cr</span>
+    <div className="w-full max-w-2xl pointer-events-none space-y-3 sm:space-y-4">
+      {/* Intestazione del lotto: reparto, numero e timer che si svuota */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-display text-sm sm:text-base font-extrabold text-ink-muted uppercase tracking-wide">Centrocampisti · lotto 38</span>
+        <span className="flex items-center gap-2">
+          <span className="hidden sm:inline text-xs font-bold text-ink-muted">Scade tra</span>
+          <span className="block w-16 sm:w-28 h-3 border-2 border-ink bg-canvas">
+            <span className="block h-full w-2/5 bg-whistle" />
+          </span>
+          <span className="font-display text-2xl font-black text-whistle-deep leading-none">3"</span>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-4 sm:gap-8 items-center">
+        <div className="relative">
+          {/* Coda del listone: altre card impilate dietro quella in chiamata */}
+          <span className="absolute inset-y-3 inset-x-1 border-2 border-ink bg-tier-bronze-bg rotate-1" aria-hidden="true" />
+          <span className="absolute inset-y-4 inset-x-2 border-2 border-ink bg-tier-silver-bg rotate-2" aria-hidden="true" />
+          <PlayerCard player={SAMPLE_PLAYER} publicStats className="relative -rotate-2" />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {['+1', '+5', '+10'].map(b => (
-            <span key={b} className="bg-whistle text-on-whistle border-2 border-ink shadow-block-sm text-center font-display text-2xl font-black py-3">
-              {b}
-            </span>
-          ))}
+        <div className="w-36 sm:w-48 space-y-2 sm:space-y-3">
+          <div className="bg-highlight border-2 border-ink px-3 sm:px-4 py-2 sm:py-3 shadow-block-sm">
+            <span className="block text-xs sm:text-sm font-bold">Sei in testa</span>
+            <span className="font-display text-5xl sm:text-7xl font-black leading-none tabular-nums">23</span>
+            <span className="font-display text-lg sm:text-xl font-extrabold"> Cr</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 sm:gap-2">
+            {['+1', '+5', '+10'].map(b => (
+              <span key={b} className="bg-whistle text-on-whistle border-2 border-ink shadow-block-sm text-center font-display text-xl sm:text-2xl font-black py-2 sm:py-3">
+                {b}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Storico dei rilanci del lotto */}
+      <ul className="flex flex-wrap items-center gap-1.5 sm:gap-2 font-display text-sm sm:text-base font-extrabold">
+        {['RM 12', 'PB 15', 'US 18', 'RM 21'].map(b => (
+          <li key={b} className="border-2 border-line-strong px-2 py-0.5 text-ink-soft">{b}</li>
+        ))}
+        <li className="border-2 border-ink bg-pitch px-2 py-0.5 text-on-pitch shadow-block-sm">TU 23</li>
+      </ul>
+
+      {/* Crediti residui delle otto squadre */}
+      <ul className="flex flex-wrap gap-1.5 border-t-2 border-line pt-3" aria-hidden="true">
+        {([
+          ['TS', '77', true],
+          ['PM', '64', false],
+          ['US', '70', false],
+          ['OL', '55', false],
+          ['PB', '81', false],
+          ['RM', '68', false],
+          ['AM', '60', false],
+          ['FS', '74', false],
+        ] as [string, string, boolean][]).map(([m, cr, me]) => (
+          <li key={m} className={`flex items-center gap-1.5 border-2 px-1.5 py-0.5 text-xs font-bold ${me ? 'border-ink bg-highlight' : 'border-line-strong text-ink-soft'}`}>
+            <span className="w-5 h-5 border border-ink bg-canvas flex items-center justify-center font-display font-black text-[10px]">{m}</span>
+            {cr} Cr
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

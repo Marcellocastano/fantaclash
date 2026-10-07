@@ -56,7 +56,7 @@ export function LotStage(props: LotStageProps) {
         {!active && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span
-              className={`motion-safe:animate-stamp-tilt -rotate-12 border-4 px-6 py-2 font-display font-black text-6xl md:text-7xl leading-none shadow-block ${
+              className={`motion-safe:animate-stamp-tilt -rotate-12 border-4 px-6 py-2 font-display font-black text-4xl sm:text-6xl md:text-7xl leading-none shadow-block ${
                 userLeads ? 'bg-highlight text-on-highlight border-ink' : 'bg-canvas text-whistle border-whistle'
               }`}
             >
@@ -81,7 +81,7 @@ export function LotStage(props: LotStageProps) {
             </span>
           </div>
           <div className="px-4 py-2 border-l-2 border-ink flex items-baseline gap-1 shrink-0">
-            <span key={currentBid} className="font-display font-black text-7xl leading-none tabular-nums inline-block motion-safe:animate-stamp">
+            <span key={currentBid} className="font-display font-black text-5xl sm:text-7xl leading-none tabular-nums inline-block motion-safe:animate-stamp">
               {currentBid}
             </span>
             <span className="font-display text-2xl font-extrabold">Cr</span>
@@ -103,7 +103,7 @@ export function LotStage(props: LotStageProps) {
             <span className="label">Tempo</span>
             <span
               key={lowTime ? Math.ceil(seconds) : 'ok'}
-              className={`font-display font-black text-4xl tabular-nums leading-none inline-block ${lowTime ? 'text-whistle motion-safe:animate-tick-pulse' : 'text-ink'}`}
+              className={`font-display font-black text-3xl sm:text-4xl tabular-nums leading-none inline-block ${lowTime ? 'text-whistle motion-safe:animate-tick-pulse' : 'text-ink'}`}
             >
               {seconds.toFixed(1)}
             </span>
@@ -116,7 +116,7 @@ export function LotStage(props: LotStageProps) {
                   const next = currentBid + inc;
                   return (
                     <button key={inc} onClick={() => onBid(next)} disabled={userLeads || next > userMaxBid} className="btn-bid flex-col py-3">
-                      <span className="text-3xl">+{inc}</span>
+                      <span className="text-2xl sm:text-3xl">+{inc}</span>
                       <span className="text-sm font-bold opacity-80">a {next}</span>
                     </button>
                   );

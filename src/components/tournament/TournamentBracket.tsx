@@ -65,8 +65,12 @@ export function TournamentBracket({ tournament, revealIds = [] }: TournamentBrac
   const [sfRight, qfRight] = half('right', qf.slice(2, 4), sf[1]);
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="relative min-w-[980px] bg-pitch-deep border-2 border-ink shadow-block px-6 pt-5 pb-7 text-canvas">
+    <>
+      {/* Mobile: tabellone verticale a blocchi, niente scroll orizzontale */}
+      <MobileBracket tournament={tournament} revealIds={revealIds} />
+      {/* Desktop: tabellone a specchio */}
+      <div className="hidden md:block overflow-x-auto pb-2">
+        <div className="relative min-w-[980px] bg-pitch-deep border-2 border-ink shadow-block px-6 pt-5 pb-7 text-canvas">
         {/* Linee del campo in trasparenza */}
         <span className="absolute inset-y-0 left-1/2 w-0.5 bg-canvas/10" aria-hidden="true" />
 
@@ -115,6 +119,7 @@ export function TournamentBracket({ tournament, revealIds = [] }: TournamentBrac
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -122,6 +127,53 @@ interface MatchBoxProps {
   match: BracketMatch;
   tournament: TournamentState;
   revealDelay: number | null;
+}
+
+/** Tabellone compatto per mobile: tre blocchi verticali (quarti, semifinali, finale) */
+function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
+  const qf = roundMatches(tournament.bracket, 'quarterfinals');
+  const sf = roundMatches(tournament.bracket, 'semifinals');
+  const final = roundMatches(tournament.bracket, 'final')[0];
+  const champion = tournament.teams.find(t => t.id === tournament.winnerId);
+  const box = (m: BracketMatch) => {
+    const order = revealIds.indexOf(m.id);
+    return <MatchBox key={m.id} match={m} tournament={tournament} revealDelay={order >= 0 ? order * REVEAL_STEP_MS : null} />;
+  };
+  return (
+    <div className="md:hidden bg-pitch-deep border-2 border-ink shadow-block p-4 text-canvas">
+      {champion && (
+        <div className="mb-4 flex items-center gap-3 border-2 border-ink bg-highlight px-3 py-2 text-on-highlight">
+          <Icon name="trophy" className="w-7 h-7 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide">Campione</p>
+            <p className="font-display text-2xl font-black leading-none truncate">{champion.name}</p>
+          </div>
+        </div>
+      )}
+
+      <section>
+        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">Quarti di finale</h3>
+        <div className="grid sm:grid-cols-2 gap-2">{qf.map(box)}</div>
+      </section>
+
+      <section className="mt-4">
+        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">Semifinali</h3>
+        <div className="grid sm:grid-cols-2 gap-2">{sf.map(box)}</div>
+      </section>
+
+      <section className="mt-4">
+        <h3 className="font-display text-lg font-extrabold text-highlight mb-2">Finale</h3>
+        <div>{box(final)}</div>
+      </section>
+
+      {!champion && (
+        <div className="mt-4 flex flex-col items-center justify-center text-canvas/60">
+          <Icon name="trophy" className="w-10 h-10 text-highlight" />
+          <span className="mt-1 text-sm font-semibold">Coppa da assegnare</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {

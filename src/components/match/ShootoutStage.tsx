@@ -38,7 +38,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
   const teamName = (s: MatchSide) => (s === 'home' ? result.homeName : result.awayName);
 
   return (
-    <div className="relative aspect-[105/68] min-w-[820px] bg-field-dark border-2 border-ink overflow-hidden select-none">
+    <div className="relative aspect-[105/68] md:min-w-[820px] bg-field-dark border-2 border-ink overflow-hidden select-none">
       {/* Strisce del prato */}
       <div className="absolute inset-0 grid grid-rows-6" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
@@ -79,7 +79,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
 
       {/* Pallone */}
       <span
-        className={`absolute w-10 h-10 -ml-5 -mt-5 rounded-full bg-canvas border-2 border-ink transition-[left,top] duration-300 ease-out ${
+        className={`absolute w-8 h-8 sm:w-10 sm:h-10 -ml-4 -mt-4 sm:-ml-5 sm:-mt-5 rounded-full bg-canvas border-2 border-ink transition-[left,top] duration-300 ease-out ${
           phase === 'runup' ? 'motion-safe:animate-beat' : ''
         }`}
         style={{ left: `${ballX}%`, top: `${ballY}%` }}
@@ -90,10 +90,10 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
       {kick && (
         <div className={`absolute inset-x-0 bottom-0 px-6 py-4 flex items-end justify-between gap-4 transition-colors duration-300 ${phase === 'runup' ? 'bg-ink/50' : ''}`}>
           <div className="text-canvas min-w-0">
-            <p className="text-sm font-bold text-canvas/70 truncate">{teamName(side)}</p>
-            <p className="font-display text-5xl font-black leading-none truncate">{names.get(kick.playerId ?? '')}</p>
+            <p className="text-xs sm:text-sm font-bold text-canvas/70 truncate">{teamName(side)}</p>
+            <p className="font-display text-3xl sm:text-5xl font-black leading-none truncate">{names.get(kick.playerId ?? '')}</p>
           </div>
-          <p className="font-display text-2xl font-extrabold text-highlight text-right">
+          <p className="font-display text-lg sm:text-2xl font-extrabold text-highlight text-right">
             {decisive ? 'Rigore decisivo' : phase === 'runup' ? 'Rincorsa…' : ''}
           </p>
         </div>
@@ -104,7 +104,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span
             key={kick.id}
-            className={`motion-safe:animate-stamp-tilt -rotate-12 border-4 border-ink px-8 py-3 font-display font-black text-7xl leading-none shadow-block ${
+            className={`motion-safe:animate-stamp-tilt -rotate-12 border-4 border-ink px-6 sm:px-8 py-2 sm:py-3 font-display font-black text-5xl sm:text-7xl leading-none shadow-block ${
               kick.scored ? 'bg-highlight text-on-highlight' : 'bg-card-red text-white'
             }`}
           >

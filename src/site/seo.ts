@@ -40,7 +40,7 @@ export function renderHead(route: SiteRoute): string {
     `<meta property="og:image" content="${OG_IMAGE}" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
-    `<meta property="og:image:alt" content="FantaClash, il fantacalcio ad asta con la Serie A di ieri" />`,
+    `<meta property="og:image:alt" content="FantaClash, l'asta del fantacalcio nostalgico" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${description}" />`,

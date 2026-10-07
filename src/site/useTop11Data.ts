@@ -9,24 +9,32 @@ import { buildSeasonData, indexEntry, Top11IndexEntry, Top11SeasonData } from '.
  */
 
 export function useTop11Index(initial: Top11IndexEntry[] | null) {
-  const [data, setData] = useState(initial);
+  const [entries, setEntries] = useState<Top11IndexEntry[]>(initial ?? []);
+  const [total, setTotal] = useState(0);
+  const [done, setDone] = useState(initial !== null);
   useEffect(() => {
-    if (data) return;
+    if (done) return;
     let alive = true;
     (async () => {
       try {
         const index = await loadSeasonIndex();
-        const entries: Top11IndexEntry[] = [];
-        for (const s of index) {
-          const players = await loadSeasonPlayers(s.season);
-          entries.push(indexEntry(s.season, players));
-        }
-        if (alive) setData(entries);
-      } catch { /* pagina senza lista, come senza dati */ }
+        if (!alive) return;
+        setTotal(index.length);
+        // Le annate arrivano in parallelo e compaiono appena pronte
+        const acc: (Top11IndexEntry | undefined)[] = new Array(index.length);
+        await Promise.all(
+          index.map(async (s, i) => {
+            const players = await loadSeasonPlayers(s.season);
+            acc[i] = indexEntry(s.season, players);
+            if (alive) setEntries(acc.filter((e): e is Top11IndexEntry => !!e));
+          })
+        );
+        if (alive) setDone(true);
+      } catch { if (alive) setDone(true); }
     })();
     return () => { alive = false; };
-  }, [data]);
-  return data;
+  }, [done]);
+  return { entries, loading: !done, total };
 }
 
 export function useTop11SeasonData(season: string, initial: Top11SeasonData | null) {

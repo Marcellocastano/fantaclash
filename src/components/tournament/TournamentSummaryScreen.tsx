@@ -85,7 +85,7 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
     <div className="flex-1 flex flex-col">
       {champion && <Confetti />}
       <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
-        <div className="grid grid-cols-12 gap-x-12 gap-y-10 items-start">
+        <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-12 items-start">
           {/* Card + condivisione */}
           <div className="col-span-12 md:col-span-6 lg:col-span-5">
             <div className="max-w-[460px] mx-auto motion-safe:animate-drop">
@@ -114,10 +114,10 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
 
           {/* Esito e numeri */}
           <div className="col-span-12 md:col-span-6 lg:col-span-7">
-            <p className={`inline-block px-4 py-2 border-2 border-ink shadow-block font-display text-6xl md:text-8xl font-black leading-none motion-safe:animate-stamp ${PLACEMENT_TONE[summary.placement]}`}>
+            <p className={`inline-block px-4 py-2 border-2 border-ink shadow-block font-display text-4xl sm:text-6xl md:text-8xl font-black leading-none motion-safe:animate-stamp ${PLACEMENT_TONE[summary.placement]}`}>
               {summary.placementLabel}
             </p>
-            <h1 className="font-display text-5xl md:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
+            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
             <p className="text-lg text-ink-soft mt-3">
               {summary.tournamentName} · Serie A {summary.seasonId}
               {summary.championName && !champion && <> · coppa a {summary.championName}</>}
@@ -155,7 +155,7 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex-1 min-w-[8rem] px-4 py-4 first:pl-0">
+    <div className="flex-1 min-w-[6rem] sm:min-w-[8rem] px-2 sm:px-4 py-4 first:pl-0">
       <dt className="text-sm font-semibold text-ink-muted">{label}</dt>
       <dd className="font-display text-5xl font-black tabular-nums text-ink leading-none mt-1">{value}</dd>
     </div>

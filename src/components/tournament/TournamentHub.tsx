@@ -73,7 +73,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
         <p className="font-display text-2xl font-extrabold text-ink-muted">{ROUND_TITLE[round]}</p>
         <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-8">
           <Side team={team(userMatch.homeId)} align="right" />
-          <span className="font-display text-5xl md:text-6xl font-black text-whistle leading-none">VS</span>
+          <span className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-whistle leading-none">VS</span>
           <Side team={team(userMatch.awayId)} align="left" />
         </div>
         <button onClick={() => onPlay(userMatch.id)} className="btn-cta mt-8">
@@ -108,7 +108,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
 function Hero({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="text-center motion-safe:animate-stamp">
-      <h1 className="font-display text-6xl md:text-7xl font-black text-ink leading-none">{title}</h1>
+      <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-black text-ink leading-none break-words">{title}</h1>
       <div className="mt-8">{children}</div>
     </section>
   );
@@ -119,7 +119,7 @@ function Side({ team, align }: { team: TournamentTeam | undefined; align: 'left'
     <div className={`flex items-center gap-4 min-w-0 ${align === 'right' ? 'flex-row-reverse text-right' : ''}`}>
       <TeamBadge team={team} size="lg" />
       <div className="min-w-0">
-        <p className={`font-display text-3xl md:text-4xl font-black leading-none break-words ${team?.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
+        <p className={`font-display text-2xl sm:text-3xl md:text-4xl font-black leading-none break-words ${team?.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
           {team?.name}
         </p>
         <p className="text-sm font-semibold text-ink-muted mt-1">Forza {team?.rating}</p>

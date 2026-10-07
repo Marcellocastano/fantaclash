@@ -5,7 +5,7 @@ type BadgeSize = 'sm' | 'md' | 'lg' | 'xl';
 const SIZE: Record<BadgeSize, string> = {
   sm: 'w-7 h-7 text-sm',
   md: 'w-10 h-10 text-lg',
-  lg: 'w-16 h-16 text-3xl',
+  lg: 'w-14 h-14 text-2xl sm:w-16 sm:h-16 sm:text-3xl',
   xl: 'w-24 h-24 text-5xl',
 };
 

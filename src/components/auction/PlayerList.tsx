@@ -92,7 +92,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
               aria-selected={active}
               title={r === 'TUTTI' ? 'Tutti i ruoli' : ROLE_LABEL[r]}
               onClick={() => setManual(r === currentRole ? null : { role: r, during: currentRole })}
-              className={`flex-1 py-2 font-display text-xl font-extrabold leading-none transition-colors duration-150 ${
+              className={`flex-1 py-2 font-display text-base sm:text-xl font-extrabold leading-none transition-colors duration-150 ${
                 active ? 'bg-ink text-canvas' : 'text-ink-muted hover:text-ink hover:bg-surface'
               }`}
             >

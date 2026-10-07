@@ -46,18 +46,18 @@ export function StickerAlbum({ season }: { season: string | null }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
-        <p className="font-display text-3xl font-black text-ink leading-none">Serie A {season ?? ''}</p>
+        <p className="font-display text-2xl sm:text-3xl font-black text-ink leading-none">Serie A {season ?? ''}</p>
       </div>
-      <ul key={season ?? 'vuoto'} className="grid grid-cols-3 gap-x-4 gap-y-5 pt-6 motion-safe:animate-pop" aria-label={`Figurine Serie A ${season ?? ''}`}>
+      <ul key={season ?? 'vuoto'} className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-5 pt-6 motion-safe:animate-pop" aria-label={`Figurine Serie A ${season ?? ''}`}>
         {Array.from({ length: SLOTS }, (_, i) => {
           const player = EMPTY_SLOTS.includes(i) ? undefined : players[next++];
           return (
-            <li key={i} className="flex flex-col">
+            <li key={i} className="flex flex-col min-w-0">
               {player ? (
                 <PlayerCard player={player} publicStats className={TILT[i]} />
               ) : (
                 <span className="flex-1 min-h-[10rem] border-2 border-dashed border-line-strong flex items-center justify-center text-center px-2">
-                  <span className="font-display text-xl font-extrabold text-ink-muted leading-tight">
+                  <span className="font-display text-base sm:text-xl font-extrabold text-ink-muted leading-tight">
                     {EMPTY_SLOTS.includes(i) ? 'Compralo all\'asta' : ''}
                   </span>
                 </span>

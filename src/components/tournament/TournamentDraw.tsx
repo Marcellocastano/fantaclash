@@ -87,10 +87,10 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
   const opponent = team(order[userPair * 2] === tournament.userTeamId ? order[userPair * 2 + 1] : order[userPair * 2]);
 
   return (
-    <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-10">
+    <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
         <div>
-          <h1 className="font-display text-6xl font-black text-ink leading-none">Il sorteggio</h1>
+          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none">Il sorteggio</h1>
           <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
         </div>
         {stage !== 'outro' && (
@@ -100,10 +100,10 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
         )}
       </div>
 
-      <div className="grid grid-cols-12 gap-10 items-start">
+      <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-10 items-start">
         {/* Boccia + pallina estratta */}
         <div className="col-span-12 md:col-span-5">
-          <div className="relative aspect-square max-w-[420px] mx-auto">
+          <div className="relative aspect-square max-w-[260px] sm:max-w-[420px] mx-auto">
             <div className="absolute inset-0 rounded-full border-4 border-ink bg-canvas" />
             <div className="absolute inset-[6%] rounded-full border-2 border-line-strong" aria-hidden="true" />
             {inBowl.map(id => {
@@ -132,13 +132,13 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
                 ) : (
                   <div className="panel shadow-block-lg px-6 py-4 flex items-center gap-4 motion-safe:animate-ball-open max-w-[90%]">
                     <TeamBadge team={current} size="lg" />
-                    <span className="font-display text-4xl font-black leading-none text-ink break-words">{current.name}</span>
+                    <span className="font-display text-2xl sm:text-4xl font-black leading-none text-ink break-words">{current.name}</span>
                   </div>
                 )}
               </div>
             )}
           </div>
-          <p className="text-center font-display text-2xl font-extrabold text-ink-soft mt-6 min-h-[2rem]" aria-live="polite">
+          <p className="text-center font-display text-lg sm:text-2xl font-extrabold text-ink-soft mt-4 sm:mt-6 min-h-[2rem]" aria-live="polite">
             {stage === 'intro' ? 'Si mescola…' : stage === 'outro' ? 'Sorteggio completato' : `Estrazione ${Math.min(placed + 1, 8)} di 8`}
           </p>
         </div>
@@ -164,7 +164,7 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
           <div className="max-w-[1300px] mx-auto px-4 flex flex-wrap items-center justify-center gap-6 text-on-highlight">
             <span className="font-display text-3xl font-extrabold">Il tuo avversario:</span>
             <TeamBadge team={opponent} size="lg" />
-            <span className="font-display text-6xl font-black leading-none">{opponent.name}</span>
+            <span className="font-display text-4xl sm:text-6xl font-black leading-none break-words">{opponent.name}</span>
           </div>
         </div>
       )}
@@ -176,7 +176,7 @@ function Ball({ team, big = false }: { team: TournamentTeam | undefined; big?: b
   return (
     <span
       className={`flex items-center justify-center rounded-full border-2 border-ink font-display font-black leading-none shadow-block-sm ${
-        big ? 'w-32 h-32 text-5xl' : 'w-16 h-16 text-2xl'
+        big ? 'w-24 h-24 text-4xl sm:w-32 sm:h-32 sm:text-5xl' : 'w-12 h-12 text-xl sm:w-16 sm:h-16 sm:text-2xl'
       } ${team?.isUserTeam ? 'bg-pitch text-on-pitch' : 'bg-highlight text-on-highlight'}`}
     >
       {team?.monogram}
@@ -190,7 +190,7 @@ function Slot({ team }: { team: TournamentTeam | undefined }) {
       {team ? (
         <div key={team.id} className="flex items-center gap-3 min-w-0 motion-safe:animate-stamp">
           <TeamBadge team={team} size="md" />
-          <span className={`font-display text-2xl font-extrabold leading-none truncate ${team.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
+          <span className={`font-display text-xl sm:text-2xl font-extrabold leading-none truncate ${team.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
             {team.name}
           </span>
         </div>

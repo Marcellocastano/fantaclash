@@ -35,7 +35,7 @@ export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoo
     <div className="absolute inset-0 z-20 bg-pitch-deep/95 flex overflow-y-auto px-8 py-10 motion-safe:animate-pop" role="dialog" aria-label="Scelta tattica">
       <div className="m-auto w-full max-w-3xl text-canvas">
         <div className="text-center">
-          <p className="font-display text-5xl font-black leading-none">{TITLES[decisionIndex] ?? 'Scelta tattica'}</p>
+          <p className="font-display text-4xl sm:text-5xl font-black leading-none">{TITLES[decisionIndex] ?? 'Scelta tattica'}</p>
           <p className="text-canvas/70 mt-3">{kickoff ? SUBTITLES[0] : `${scoreLine} · ${SUBTITLES[decisionIndex] ?? ''}`}</p>
         </div>
 
@@ -54,7 +54,7 @@ export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoo
                   <Icon name={o.icon} className="w-8 h-8 text-pitch" />
                   {inUse && <span className="text-xs font-bold bg-highlight px-1.5 py-0.5">In uso</span>}
                 </span>
-                <span className="block font-display text-3xl font-black leading-none mt-3">{TACTIC_LABELS[o.tactic]}</span>
+                <span className="block font-display text-2xl sm:text-3xl font-black leading-none mt-3">{TACTIC_LABELS[o.tactic]}</span>
                 <span className="block mt-4 space-y-1.5 text-sm">
                   <Meter label="Attacco" level={o.attack} />
                   <Meter label="Copertura" level={o.cover} />

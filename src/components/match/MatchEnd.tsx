@@ -44,10 +44,10 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude }: 
     <div className="motion-safe:animate-reveal">
       {/* Esito */}
       <div className={`border-2 border-ink shadow-block px-6 py-6 text-center ${won ? 'bg-highlight text-on-highlight' : 'bg-ink text-canvas'}`}>
-        <p className="font-display text-7xl md:text-8xl font-black leading-none motion-safe:animate-stamp">
+        <p className="font-display text-5xl md:text-8xl font-black leading-none motion-safe:animate-stamp break-words">
           {champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO'}
         </p>
-        <p className="font-display text-3xl font-extrabold mt-3 tabular-nums">
+        <p className="font-display text-2xl sm:text-3xl font-extrabold mt-3 tabular-nums break-words">
           {result.homeName} {result.homeScore}-{result.awayScore} {result.awayName}
           {result.shootout && <span className="block text-xl">rigori {result.shootout.home}-{result.shootout.away}</span>}
         </p>
@@ -123,7 +123,7 @@ function MvpCard({ perf, player }: { perf: MatchPlayerPerformance; player: Lineu
       <div className="flex items-center gap-3">
         {player && <OvrBadge overall={player.overall} role={player.role} size="md" />}
         <div className="min-w-0">
-          <p className="font-display text-3xl font-black leading-none truncate">{shortName(perf.name)}</p>
+          <p className="font-display text-2xl sm:text-3xl font-black leading-none truncate">{shortName(perf.name)}</p>
           <p className="text-sm text-ink-muted mt-1">
             {perf.goals > 0 && `${perf.goals} gol `}
             {perf.assists > 0 && `${perf.assists} assist`}

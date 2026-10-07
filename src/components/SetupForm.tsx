@@ -130,10 +130,10 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
   const selectedDifficulty = DIFFICULTY_OPTIONS.find(o => o.value === difficulty);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" aria-label="Inizia a giocare">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" aria-label="Inizia a giocare">
       {/* Nome squadra con generatore */}
       <div>
-        <label htmlFor="teamName" className="block font-display text-xl font-extrabold text-ink mb-2">
+        <label htmlFor="teamName" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">
           La tua squadra
         </label>
         <div className="relative">
@@ -144,7 +144,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
             maxLength={MAX_TEAM_NAME_LENGTH + 10}
             onChange={(e) => setTeamName(e.target.value)}
             placeholder="Es. FC Campioni"
-            className={`input-field pr-12 font-display text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
+            className={`input-field pr-10 sm:pr-12 py-2 sm:py-3 font-display text-xl sm:text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
           />
           {/* Generatore discreto dentro il campo: il dado giallo resta solo per l'annata */}
           <button
@@ -152,9 +152,9 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
             onClick={() => setTeamName(current => randomTeamName(current))}
             title="Genera un nome"
             aria-label="Genera un nome"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
+            className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
           >
-            <Icon name="reset" className="w-5 h-5" />
+            <Icon name="reset" className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
         {errors.teamName && <p className="mt-2 text-sm text-danger">{errors.teamName}</p>}
@@ -162,7 +162,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
 
       {/* Annata */}
       <div>
-        <p className="block font-display text-xl font-extrabold text-ink mb-2">Annata del listone</p>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Annata del listone</p>
         {seasonsReady ? (
           <SeasonPicker seasons={seasons} value={season} onChange={setSeason} disabled={submitting} />
         ) : (
@@ -176,7 +176,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
 
       {/* Difficoltà */}
       <div>
-        <p className="block font-display text-xl font-extrabold text-ink mb-2">Bot avversari</p>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Bot avversari</p>
         <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label="Difficoltà dei bot">
           {DIFFICULTY_OPTIONS.map((option, i) => (
             <button
@@ -185,7 +185,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
               role="radio"
               aria-checked={difficulty === option.value}
               onClick={() => setDifficulty(option.value)}
-              className={`py-2.5 font-display text-xl font-bold transition-colors duration-150 focus-visible:outline outline-2 outline-offset-[-2px] outline-pitch ${
+              className={`py-2 font-display text-sm sm:text-xl font-bold transition-colors duration-150 focus-visible:outline outline-2 outline-offset-[-2px] outline-pitch ${
                 i > 0 ? 'border-l-2 border-ink' : ''
               } ${difficulty === option.value ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
             >
@@ -193,24 +193,24 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
             </button>
           ))}
         </div>
-        <p className="mt-2 text-sm text-ink-soft">{selectedDifficulty?.description}</p>
+        <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selectedDifficulty?.description}</p>
       </div>
 
       <div>
         <button
           type="submit"
           disabled={submitting || !seasonsReady}
-          className="btn-cta w-full"
+          className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5"
         >
           {submitting ? 'Caricamento…' : (
             <>
               Gioca
-              <Icon name="arrow" className="w-7 h-7" />
+              <Icon name="arrow" className="w-5 h-5 sm:w-7 sm:h-7" />
             </>
           )}
         </button>
         {errors.submit && <p className="mt-2 text-sm text-danger">{errors.submit}</p>}
-        <p className="mt-3 text-sm text-ink-muted">
+        <p className="mt-3 text-xs sm:text-sm text-ink-muted leading-relaxed">
           {LEAGUE_SIZE} squadre (tu + {LEAGUE_SIZE - 1} bot) · {INITIAL_CREDITS} crediti · rosa da 8, modulo 1-2-3-2
         </p>
       </div>

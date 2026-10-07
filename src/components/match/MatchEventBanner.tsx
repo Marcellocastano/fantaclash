@@ -61,16 +61,16 @@ export function MatchEventBanner({ latest, result }: MatchEventBannerProps) {
     <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10">
       <div
         key={main.id}
-        className={`border-y-4 border-ink px-8 ${big ? 'py-6 motion-safe:animate-stamp' : 'py-3 motion-safe:animate-pop'} ${TONE[main.type] ?? 'bg-canvas text-ink'}`}
+        className={`border-y-4 border-ink px-4 sm:px-8 ${big ? 'py-4 sm:py-6 motion-safe:animate-stamp' : 'py-3 motion-safe:animate-pop'} ${TONE[main.type] ?? 'bg-canvas text-ink'}`}
       >
-        <div className="flex items-center justify-center gap-6 text-center">
+        <div className="flex items-center justify-center gap-3 sm:gap-6 text-center">
           {(!TONE[main.type] || main.type === 'goal' || main.type === 'own_goal') && (
-            <EventIcon event={main} className={big ? 'w-12 h-12' : 'w-8 h-8'} />
+            <EventIcon event={main} className={big ? 'w-8 h-8 sm:w-12 sm:h-12' : 'w-6 h-6 sm:w-8 sm:h-8'} />
           )}
-          <p className={`font-display font-black leading-none ${big ? 'text-8xl' : 'text-4xl'}`}>{title}</p>
+          <p className={`font-display font-black leading-none ${big ? 'text-5xl sm:text-8xl' : 'text-3xl sm:text-4xl'}`}>{title}</p>
           <div className="text-left">
-            {who && <p className={`font-display font-black leading-none ${big ? 'text-4xl' : 'text-2xl'}`}>{who}</p>}
-            <p className="text-sm font-semibold opacity-80 mt-1">
+            {who && <p className={`font-display font-black leading-none ${big ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl'}`}>{who}</p>}
+            <p className="text-xs sm:text-sm font-semibold opacity-80 mt-1">
               {team} · {formatMinute(main.minute, main.extra)}
               {main.type === 'goal' && assist && <> · assist {names.get(assist.playerId ?? '')}</>}
             </p>

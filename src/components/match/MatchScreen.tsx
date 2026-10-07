@@ -95,7 +95,7 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
             onConclude={() => onFinish(result, 'conclude')}
           />
         ) : (
-          <div className="grid grid-cols-12 gap-8">
+          <div className="grid grid-cols-12 gap-x-0 gap-y-8 lg:gap-x-8">
             <div className="col-span-12 lg:col-span-8">
               {/* Controlli di riproduzione */}
               <div className="flex flex-wrap items-center gap-3 mb-4">

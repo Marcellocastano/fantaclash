@@ -85,7 +85,7 @@ export function ShootoutOrderPanel({ players, onConfirm }: ShootoutOrderPanelPro
         </ol>
 
         <div className="mt-6 text-center">
-          <button onClick={() => onConfirm(order.map(p => p.playerId))} className="btn-cta px-8 py-4 text-3xl bg-highlight text-on-highlight hover:bg-canvas">
+          <button onClick={() => onConfirm(order.map(p => p.playerId))} className="btn-cta px-6 sm:px-8 py-3 sm:py-4 text-2xl sm:text-3xl bg-highlight text-on-highlight hover:bg-canvas">
             Conferma e si tira
           </button>
         </div>

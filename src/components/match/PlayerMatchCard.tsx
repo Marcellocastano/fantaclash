@@ -10,6 +10,8 @@ interface PlayerMatchCardProps {
   sentOff: boolean;
   /** Mostra il voto live (dopo il calcio d'inizio) */
   showRating: boolean;
+  /** Campo verticale su mobile: nome su una riga, tipografia più piccola */
+  compact?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface PlayerMatchCardProps {
  * contano (gol, assist, cartellini, parate). Il voto live cambia con gli
  * eventi.
  */
-export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, showRating }: PlayerMatchCardProps) {
+export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, showRating, compact = false }: PlayerMatchCardProps) {
   const ratingTone = !p ? 'text-ink' : p.rating >= 7 ? 'text-pitch' : p.rating <= 5.5 ? 'text-danger' : 'text-ink';
   return (
     <div
@@ -29,7 +31,7 @@ export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, 
       <OvrBadge overall={player.overall} role={player.role} size="xs" />
       {/* Nome su tutta la larghezza; eventi e voto live sulla riga sotto */}
       <div className="flex-1 min-w-0 px-1.5 py-0.5">
-        <p className={`text-[13px] font-bold text-ink leading-tight line-clamp-2 break-words ${sentOff ? 'line-through' : ''}`} title={player.name}>
+        <p className={`${compact ? 'text-[11px] truncate' : 'text-[13px] line-clamp-2 break-words'} font-bold text-ink leading-tight ${sentOff ? 'line-through' : ''}`} title={player.name}>
           {shortName(player.name)}
         </p>
         <p className="flex items-center gap-1 h-4">
@@ -40,7 +42,7 @@ export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, 
           {p && p.redCards > 0 && <Icon name="card" className="w-3 h-3 text-card-red" />}
           {p && p.injured && <Icon name="injury" className="w-3 h-3 text-ink-muted" />}
           {showRating && p && (
-            <span className={`ml-auto font-display font-black text-base tabular-nums leading-none ${ratingTone}`} title="Voto live">
+            <span className={`ml-auto font-display font-black ${compact ? 'text-sm' : 'text-base'} tabular-nums leading-none ${ratingTone}`} title="Voto live">
               {p.rating.toFixed(1)}
             </span>
           )}
