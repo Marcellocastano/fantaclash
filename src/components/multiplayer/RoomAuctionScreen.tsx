@@ -9,7 +9,6 @@ import { buildStartTournament } from '../../multiplayer/hostTournament';
 import { useRoom } from './RoomProvider';
 import { useRoomAuction } from './useRoomAuction';
 import { useRoomHostDriver } from './useRoomHostDriver';
-import { RoomTopBar } from './RoomTopBar';
 
 const ROLE_ORDER: PlayerRole[] = ['P', 'D', 'C', 'A'];
 /** ~20 azioni al secondo per restare nel budget di messaggi Realtime */
@@ -133,14 +132,13 @@ export function RoomAuctionScreen() {
 
   if (!state?.auction) return null;
   return (
-    <div className="px-1">
-      <RoomTopBar />
+    <>
       {state.auction.phase === 'complete' ? (
         <AuctionDoneScreen state={state} />
       ) : (
         <>
           {import.meta.env.DEV && room.isHost && (
-            <div className="text-right">
+            <div className="w-full max-w-[1600px] mx-auto px-4 text-right">
               <button
                 type="button"
                 onClick={() => setFlashing(f => !f)}
@@ -155,6 +153,6 @@ export function RoomAuctionScreen() {
           </AuctionControllerProvider>
         </>
       )}
-    </div>
+    </>
   );
 }

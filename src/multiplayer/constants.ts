@@ -34,3 +34,15 @@ export const NICKNAME_MAX = 20;
 
 /** Lunghezza massima del nome squadra (stessa del form singolo) */
 export const TEAM_NAME_MAX = MAX_TEAM_NAME_LENGTH;
+
+/** Velocità fissa delle partite live in stanza */
+export const MATCH_SPEED = 2;
+
+/** Attesa prima del calcio d'inizio di una partita live (ms) */
+export const MATCH_LEAD_MS = 3000;
+
+/** Timeout della scelta tattica a un punto di decisione (ms) */
+export const DECISION_TIMEOUT_MS = 15000;
+
+/** Timeout della scelta dell'ordine dei rigoristi (ms) */
+export const SHOOTOUT_ORDER_TIMEOUT_MS = 20000;

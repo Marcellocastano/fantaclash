@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { DifficultyLevel } from '../../types';
 import { MAX_PLAYERS, MIN_HUMANS } from '../../multiplayer/constants';
-import { DifficultyPicker } from '../DifficultyPicker';
 import { Icon } from '../Icon';
 import { useRoom } from './RoomProvider';
 
@@ -121,17 +119,6 @@ export function LobbyScreen({
         <div className="flex items-baseline gap-3">
           <span className="font-semibold text-ink-soft w-28">Annata</span>
           <span className="font-display font-extrabold text-ink text-xl">Serie A {state.settings.season}</span>
-        </div>
-        <div>
-          <p className="font-semibold text-ink-soft mb-1.5">Bot avversari</p>
-          {room.isHost ? (
-            <DifficultyPicker
-              value={state.settings.difficulty}
-              onChange={(d: DifficultyLevel) => room.updateSettings({ difficulty: d })}
-            />
-          ) : (
-            <p className="font-display font-extrabold text-ink text-xl capitalize">{state.settings.difficulty}</p>
-          )}
         </div>
         <label className={`flex items-center gap-3 font-semibold text-ink ${room.isHost ? 'cursor-pointer' : ''}`}>
           <input

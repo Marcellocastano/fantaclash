@@ -1,9 +1,12 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { TournamentControllerProvider } from '../../hooks/tournamentController';
-import { roundMatches } from '../../domain/tournament';
-import { buildDraw, buildRoundRecords } from '../../multiplayer/hostTournament';
+import { MatchSide } from '../../domain/match';
+import { findMatch, roundMatches, toMatchTeam } from '../../domain/tournament';
+import { MATCH_LEAD_MS } from '../../multiplayer/constants';
+import { buildBotRecords, buildDraw, buildRoundStart } from '../../multiplayer/hostTournament';
+import { MatchPlaybackView } from '../match/MatchScreen';
+import { useRoomMatchPlayback } from './useRoomMatchPlayback';
 import { Icon } from '../Icon';
-import { RoomTopBar } from './RoomTopBar';
 import { useRoom } from './RoomProvider';
 import { useRoomTournament } from './useRoomTournament';
 import { TournamentDraw } from '../tournament/TournamentDraw';
@@ -47,18 +50,67 @@ function RoomControls() {
     );
   }
 
-  // Simulare le partite costa: i record si calcolano solo al click
+  // Partite con umani -> MATCH_START (stesso startAt per tutte); solo
+  // bot -> MATCH_RECORD subito. Le partite tra bot dei turni misti le
+  // registra il driver dell'host a fine turno live.
   return (
     <button
       type="button"
       onClick={() => {
-        if (room.state) buildRoundRecords(room.state).forEach(a => room.dispatchRoomAction(a));
+        if (!room.state) return;
+        const starts = buildRoundStart(room.state, room.hostNow() + MATCH_LEAD_MS);
+        const actions = starts.length ? starts : buildBotRecords(room.state);
+        actions.forEach(a => room.dispatchRoomAction(a));
       }}
       className="btn-cta"
     >
       <Icon name="play" className="w-7 h-7" />
       Gioca il turno
     </button>
+  );
+}
+
+/**
+ * Una partita live della stanza: vista condivisa col singolo, velocità
+ * fissa 2x, niente controlli locali. Chi ha una squadra in campo decide;
+ * gli altri guardano senza interazioni.
+ */
+export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: () => void }) {
+  const controller = useRoomTournament();
+  const room = useRoom();
+  const t = controller.tournament;
+  const match = t ? findMatch(t.bracket, matchId) : undefined;
+  const myTeamId = controller.myTeamId;
+  const userSide: MatchSide | null = match
+    ? match.homeId === myTeamId ? 'home' : match.awayId === myTeamId ? 'away' : null
+    : null;
+  const pb = useRoomMatchPlayback(matchId, userSide);
+  const live = room.state?.live[matchId];
+  const teams = controller.teams;
+  const home = useMemo(() => (match ? teams.find(x => x.id === match.homeId) : undefined), [match, teams]);
+  const away = useMemo(() => (match ? teams.find(x => x.id === match.awayId) : undefined), [match, teams]);
+  if (!match || !t || !home || !away || !pb.result) return null;
+
+  // Ferma a uno stop senza una scelta da fare: attesa degli altri
+  const waiting =
+    pb.decisionDeadline !== null && pb.pendingDecision === null && !pb.pendingShootoutOrder;
+  const twoHumans = (live?.humanSides.length ?? 0) > 1;
+
+  return (
+    <MatchPlaybackView
+      tournament={t}
+      home={toMatchTeam(home)}
+      away={toMatchTeam(away)}
+      round={match.round}
+      pb={pb}
+      userSide={userSide ?? 'home'}
+      onFinish={() => {}}
+      room={{
+        onExit,
+        waitingText: waiting ? 'In attesa delle scelte…' : null,
+        sentLabel: twoHumans ? undefined : 'In attesa…',
+      }}
+    />
   );
 }
 
@@ -111,10 +163,49 @@ export function RoomTournamentScreen() {
     [t]
   );
 
+  // Partite live: la propria sempre; altrimenti si guarda la prima
+  const liveIds = Object.keys(room.state?.live ?? {});
+  const [watchId, setWatchId] = useState<string | null>(null);
+  const [backToHub, setBackToHub] = useState(false);
+  const liveKey = liveIds.join(',');
+  useEffect(() => {
+    setWatchId(null);
+    setBackToHub(false);
+  }, [liveKey]);
+  const myLive = liveIds.find(id => {
+    const m = t ? findMatch(t.bracket, id) : undefined;
+    return m && (m.homeId === controller.myTeamId || m.awayId === controller.myTeamId);
+  });
+  const activeLive = backToHub ? null : (watchId && liveIds.includes(watchId) ? watchId : myLive ?? liveIds[0] ?? null);
+
   if (!t) return null;
 
   let body: ReactNode;
-  if (sawDraw && !animDone) {
+  if (activeLive) {
+    body = (
+      <div className="flex-1 flex flex-col">
+        {liveIds.length > 1 && (
+          <div className="flex flex-wrap gap-2 justify-center pt-2">
+            {liveIds.map(id => {
+              const m = findMatch(t.bracket, id);
+              const name = (tid: string | null) => t.teams.find(x => x.id === tid)?.name ?? '?';
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setWatchId(id)}
+                  className={`btn-ghost !py-1 text-xs ${id === activeLive ? 'bg-ink text-canvas' : ''}`}
+                >
+                  {name(m?.homeId ?? null)} - {name(m?.awayId ?? null)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <RoomMatchScreen matchId={activeLive} onExit={() => setBackToHub(true)} />
+      </div>
+    );
+  } else if (sawDraw && !animDone) {
     body = order ? (
       <TournamentDraw tournament={t} order={order} onDone={() => setAnimDone(true)} />
     ) : (
@@ -135,12 +226,7 @@ export function RoomTournamentScreen() {
     );
   }
 
-  return (
-    <div className="px-1">
-      <RoomTopBar />
-      {body}
-    </div>
-  );
+  return body;
 }
 
 /** Fase 'final': riepilogo personale per i giocatori, campione+tabellone per gli spettatori */
@@ -153,7 +239,6 @@ export function RoomFinalScreen() {
     const champion = t.teams.find(x => x.id === t.winnerId);
     return (
       <div className="px-1">
-        <RoomTopBar />
         <div className="max-w-3xl mx-auto py-8 text-center">
           <p className="section-heading">Torneo concluso</p>
           <h1 className="font-display text-4xl sm:text-6xl font-black text-ink mt-4">
@@ -168,11 +253,8 @@ export function RoomFinalScreen() {
   }
 
   return (
-    <div className="px-1">
-      <RoomTopBar />
-      <TournamentControllerProvider value={controller}>
-        <TournamentSummaryScreen />
-      </TournamentControllerProvider>
-    </div>
+    <TournamentControllerProvider value={controller}>
+      <TournamentSummaryScreen />
+    </TournamentControllerProvider>
   );
 }

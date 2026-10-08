@@ -22,6 +22,12 @@ interface TacticOverlayProps {
   fiato: number;
   scoreLine: string;
   onChoose: (tactic: Tactic) => void;
+  /** Solo stanza: secondi rimasti per scegliere (conto alla rovescia) */
+  deadlineSec?: number;
+  /** Solo stanza: scelta già inviata, si aspetta l'avversario */
+  sent?: boolean;
+  /** Solo stanza: testo mostrato dopo l'invio (default: attesa avversario) */
+  sentLabel?: string;
 }
 
 /**
@@ -29,7 +35,7 @@ interface TacticOverlayProps {
  * calcio d'inizio la scelta è anche il fischio d'inizio. Ogni stile mostra
  * cosa dà in attacco, quanto copre dietro e quanto fiato consuma.
  */
-export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoose }: TacticOverlayProps) {
+export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoose, deadlineSec, sent, sentLabel }: TacticOverlayProps) {
   const kickoff = decisionIndex === 0;
   return (
     <div className="absolute inset-0 z-20 bg-pitch-deep/95 flex overflow-y-auto px-8 py-10 motion-safe:animate-pop" role="dialog" aria-label="Scelta tattica">
@@ -39,6 +45,16 @@ export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoo
           <p className="text-canvas/70 mt-3">{kickoff ? SUBTITLES[0] : `${scoreLine} · ${SUBTITLES[decisionIndex] ?? ''}`}</p>
         </div>
 
+        {deadlineSec !== undefined && !sent && (
+          <p className="mt-4 font-display text-2xl font-black tabular-nums text-whistle" role="timer">
+            {deadlineSec}s
+          </p>
+        )}
+        {sent ? (
+          <p className="mt-8 font-display text-2xl font-extrabold text-canvas">
+            {sentLabel ?? "Scelta inviata, in attesa dell'avversario…"}
+          </p>
+        ) : (
         <div className="grid sm:grid-cols-3 gap-4 mt-8">
           {OPTIONS.map(o => {
             const inUse = !kickoff && o.tactic === current;
@@ -69,6 +85,7 @@ export function TacticOverlay({ decisionIndex, current, fiato, scoreLine, onChoo
           })}
         </div>
 
+        )}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-canvas/80">
           <FiatoMeter value={fiato} />
           <span>Lo stile decide quanto fiato consumi: con meno fiato le occasioni sono meno pericolose.</span>

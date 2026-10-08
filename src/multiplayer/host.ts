@@ -21,6 +21,8 @@ import {
   TEAM_NAME_MAX,
 } from './constants';
 import { stateHash } from './hash';
+import { MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
+import { findMatch, simulateBracketMatch } from '../domain/tournament';
 import {
   ClientIntent,
   HostMessage,
@@ -37,15 +39,27 @@ import {
  * viene trasmesso per intero ai client.
  */
 
+export interface PendingMatchChoices {
+  /** Tattica scelta da un lato per lo stop corrente */
+  tactics: Partial<Record<MatchSide, { stopTick: number; tactic: Tactic }>>;
+  /** Ordine dei rigoristi scelto da un lato */
+  orders: Partial<Record<MatchSide, string[]>>;
+}
+
 export interface HostBook {
   /** Token segreto per giocatore (rilasciato al primo HELLO) */
   tokens: Record<string, string>;
   /** Giocatori espulsi: non possono rientrare */
   kicked: Set<string>;
+  /**
+   * Scelte delle partite live, segrete fino al MATCH_RESUME:
+   * restano in memoria dell'host, mai in RoomState.
+   */
+  matchChoices: Record<string, PendingMatchChoices>;
 }
 
 export function createHostBook(): HostBook {
-  return { tokens: {}, kicked: new Set() };
+  return { tokens: {}, kicked: new Set(), matchChoices: {} };
 }
 
 export interface HandleResult {
@@ -68,6 +82,30 @@ function auctionWorld(state: RoomState): AuctionWorld | null {
 
 function teamIdOf(state: RoomState, playerId: string): string | null {
   return state.teams.find(t => t.ownerId === playerId)?.id ?? null;
+}
+
+/** Lato della partita live occupato dal giocatore, null se non gioca */
+function liveSideOf(state: RoomState, matchId: string, playerId: string): MatchSide | null {
+  const match = state.tournament ? findMatch(state.tournament.bracket, matchId) : undefined;
+  const teamId = teamIdOf(state, playerId);
+  if (!match || !teamId) return null;
+  if (match.homeId === teamId) return 'home';
+  if (match.awayId === teamId) return 'away';
+  return null;
+}
+
+/** Risultato deterministico di una partita live con le opzioni correnti */
+function liveResult(state: RoomState, matchId: string): MatchResult | null {
+  const live = state.live[matchId];
+  if (!state.tournament || !live) return null;
+  return simulateBracketMatch(state.tournament, state.teams, matchId, {
+    tactics: live.plans,
+    shootoutOrder: live.shootoutOrder,
+  });
+}
+
+function choicesFor(book: HostBook, matchId: string): PendingMatchChoices {
+  return book.matchChoices[matchId] ?? { tactics: {}, orders: {} };
 }
 
 export function handleIntent(
@@ -165,6 +203,57 @@ export function handleIntent(
       };
       if (auctionReducer(world, action) === world) return ok();
       return ok([{ type: 'AUCTION', action }]);
+    }
+
+    case 'TACTIC': {
+      const live = state.live[intent.matchId];
+      const side = liveSideOf(state, intent.matchId, fromPlayerId);
+      if (!live || !side || !live.humanSides.includes(side)) return ok();
+      const result = liveResult(state, intent.matchId);
+      if (!result) return ok();
+      const stop = nextStop(result, live.anchorTick, live.resolvedStops, true);
+      // Vale solo la scelta per lo stop di decisione corrente
+      if (intent.stopTick !== stop || !result.decisionTicks.includes(stop + 1)) return ok();
+      const cur = choicesFor(book, intent.matchId);
+      return {
+        actions: [],
+        replies: [],
+        book: {
+          ...book,
+          matchChoices: {
+            ...book.matchChoices,
+            [intent.matchId]: {
+              ...cur,
+              tactics: { ...cur.tactics, [side]: { stopTick: stop, tactic: intent.tactic } },
+            },
+          },
+        },
+      };
+    }
+
+    case 'SHOOTOUT_ORDER': {
+      const live = state.live[intent.matchId];
+      const side = liveSideOf(state, intent.matchId, fromPlayerId);
+      if (!live || !side || !live.humanSides.includes(side)) return ok();
+      const result = liveResult(state, intent.matchId);
+      if (!result || !result.shootout) return ok();
+      const stop = nextStop(result, live.anchorTick, live.resolvedStops, true);
+      if (stop !== result.fullTimeTick) return ok();
+      const cur = choicesFor(book, intent.matchId);
+      return {
+        actions: [],
+        replies: [],
+        book: {
+          ...book,
+          matchChoices: {
+            ...book.matchChoices,
+            [intent.matchId]: {
+              ...cur,
+              orders: { ...cur.orders, [side]: intent.order },
+            },
+          },
+        },
+      };
     }
 
     case 'PING':

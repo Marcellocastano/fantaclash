@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Team } from '../../types';
-import { MatchResult } from '../../domain/match';
+import { MatchResult, MatchSide } from '../../domain/match';
 import { findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
-import { PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
+import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
 import { AttackIndicator } from './AttackIndicator';
@@ -43,6 +43,22 @@ export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScree
   return <MatchPlayer tournament={tournament} home={home} away={away} seed={match.seed} round={match.round} onFinish={onFinish} />;
 }
 
+function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPlayerProps) {
+  const userSide = home.id === tournament.userTeamId ? 'home' : 'away';
+  const pb = useMatchPlayback({ home, away, seed, userSide });
+  return (
+    <MatchPlaybackView
+      tournament={tournament}
+      home={home}
+      away={away}
+      round={round}
+      pb={pb}
+      userSide={userSide}
+      onFinish={onFinish}
+    />
+  );
+}
+
 interface MatchPlayerProps {
   tournament: TournamentState;
   home: ReturnType<typeof toMatchTeam>;
@@ -52,9 +68,39 @@ interface MatchPlayerProps {
   onFinish: (result: MatchResult, exit: MatchExit) => void;
 }
 
-function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPlayerProps) {
-  const userSide = home.id === tournament.userTeamId ? 'home' : 'away';
-  const pb = useMatchPlayback({ home, away, seed, userSide });
+export interface RoomMatchUi {
+  /** Stacca solo la vista locale, senza cambiare lo stato del torneo */
+  onExit: () => void;
+  /** Testo mostrato quando la partita è ferma per scelte altrui */
+  waitingText?: string | null;
+  /** Testo dopo l'invio della scelta (default: attesa avversario) */
+  sentLabel?: string;
+}
+
+/**
+ * Vista pura del playback: riceve l'oggetto del controller (locale o di
+ * stanza) e non decide COME avanza la partita. In `room` mode spariscono
+ * velocità, pausa e skip e i pulsanti di uscita del singolo.
+ */
+export function MatchPlaybackView({
+  tournament,
+  home,
+  away,
+  round,
+  pb,
+  userSide,
+  onFinish,
+  room,
+}: {
+  tournament: TournamentState;
+  home: ReturnType<typeof toMatchTeam>;
+  away: ReturnType<typeof toMatchTeam>;
+  round: TournamentRound;
+  pb: MatchPlayback;
+  userSide: MatchSide;
+  onFinish: (result: MatchResult, exit: MatchExit) => void;
+  room?: RoomMatchUi;
+}) {
   const { result, state } = pb;
   const [tab, setTab] = useState<'cronaca' | 'statistiche'>('cronaca');
   const tick = result.ticks[state.tick.index];
@@ -91,13 +137,15 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
             result={result}
             userTeamId={tournament.userTeamId}
             round={round}
-            onContinue={() => onFinish(result, 'continue')}
-            onConclude={() => onFinish(result, 'conclude')}
+            onContinue={() => (room ? room.onExit() : onFinish(result, 'continue'))}
+            onConclude={() => (room ? room.onExit() : onFinish(result, 'conclude'))}
+            exitLabel={room ? 'Torna al tabellone' : undefined}
           />
         ) : (
           <div className="grid grid-cols-12 gap-x-0 gap-y-8 lg:gap-x-8">
             <div className="col-span-12 lg:col-span-8">
-              {/* Controlli di riproduzione */}
+              {/* Controlli di riproduzione (solo gioco singolo) */}
+              {!room && (
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 <button
                   onClick={() => pb.setPlaying(!pb.playing)}
@@ -131,6 +179,7 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
                   </button>
                 </div>
               </div>
+              )}
 
               <div className="relative overflow-x-auto">
                 {inShootout ? (
@@ -145,6 +194,9 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
                   <ShootoutOrderPanel
                     players={(result.shootoutOrder?.[userSide] ?? []).flatMap(id => result.lineups[userSide].filter(p => p.playerId === id))}
                     onConfirm={pb.confirmShootoutOrder}
+                    deadlineSec={room ? pb.deadlineSec : undefined}
+                    sent={room ? pb.choiceSent : undefined}
+                    sentLabel={room?.sentLabel}
                   />
                 )}
                 {pb.pendingDecision !== null && (
@@ -157,7 +209,14 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
                       if (pb.decisionIndex === 0) playSound('whistle');
                       pb.chooseTactic(t);
                     }}
+                    deadlineSec={room ? pb.deadlineSec : undefined}
+                    sent={room ? pb.choiceSent : undefined}
                   />
+                )}
+                {room?.waitingText && pb.pendingDecision === null && !pb.pendingShootoutOrder && (
+                  <div className="absolute inset-x-0 bottom-0 z-10 bg-ink/85 text-canvas text-center py-2 text-sm font-semibold">
+                    {room.waitingText}
+                  </div>
                 )}
               </div>
             </div>

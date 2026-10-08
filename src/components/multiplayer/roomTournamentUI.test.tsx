@@ -6,7 +6,6 @@ import { RoomAction, RoomState } from '../../multiplayer/protocol';
 import { createInitialAuctionState } from '../../services/auction';
 import { buildRoster, createTestBotConfig, createTestPlayer, createTestTeam } from '../../test/testUtils';
 import { RoomContextValue } from './RoomProvider';
-import { ClientIntent } from '../../multiplayer/protocol';
 import { Team } from '../../types';
 import { RoomAuctionScreen } from './RoomAuctionScreen';
 import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
@@ -79,7 +78,7 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     createRoom: async () => {},
     joinRoom: async () => {},
     leave: async () => {},
-    sendIntent: (_i: ClientIntent) => {},
+    sendIntent: () => {},
     hostNow: () => Date.now(),
     kick: () => {},
     updateSettings: () => {},
@@ -118,15 +117,17 @@ describe('torneo in stanza (UI)', () => {
     expect(screen.queryByText('Avvia il torneo')).toBeNull();
   });
 
-  it("l'host vede 'Gioca il turno' e dispaccia i MATCH_RECORD, l'ospite aspetta", () => {
+  it("l'host vede 'Gioca il turno' e avvia le partite live, l'ospite aspetta", () => {
     const s = tournamentState();
     setRoom(s, 'h1', 'host');
     const { unmount } = render(<RoomTournamentScreen />);
-    // La propria partita non si gioca live: nessun "Gioca i quarti"
+    // La propria partita non si gioca dal tasto dell'hub: nessun "Gioca i quarti"
     expect(screen.queryByText(/Gioca i quarti/)).toBeNull();
     fireEvent.click(screen.getByText('Gioca il turno'));
-    expect(dispatched.every(a => a.type === 'MATCH_RECORD')).toBe(true);
-    expect(dispatched).toHaveLength(4); // i quarti
+    // Le partite con umani vanno live; i record dei bot li manda il driver
+    expect(dispatched.every(a => a.type === 'MATCH_START')).toBe(true);
+    expect(dispatched).toHaveLength(1); // th vs tc, gli altri quarti sono tra bot
+    expect(dispatched[0]).toMatchObject({ humanSides: ['home', 'away'], startAt: expect.any(Number) });
     unmount();
 
     dispatched.length = 0;

@@ -10,6 +10,12 @@ interface ShootoutOrderPanelProps {
   /** Giocatori in campo nell'ordine proposto (automatico) */
   players: LineupPlayer[];
   onConfirm: (order: string[]) => void;
+  /** Solo stanza: secondi rimasti per confermare */
+  deadlineSec?: number;
+  /** Solo stanza: ordine già inviato, si aspetta l'avversario */
+  sent?: boolean;
+  /** Solo stanza: testo mostrato dopo l'invio (default: attesa avversario) */
+  sentLabel?: string;
 }
 
 /** Sposta l'elemento da `from` a `to` restituendo un nuovo array */
@@ -25,7 +31,7 @@ function move<T>(list: T[], from: number, to: number): T[] {
  * righe (o con le frecce, che funzionano anche su touch e da tastiera).
  * I primi 5 tirano la serie regolare, gli altri ad oltranza.
  */
-export function ShootoutOrderPanel({ players, onConfirm }: ShootoutOrderPanelProps) {
+export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sentLabel }: ShootoutOrderPanelProps) {
   const [order, setOrder] = useState(players);
   const [dragging, setDragging] = useState<number | null>(null);
 
@@ -35,8 +41,19 @@ export function ShootoutOrderPanel({ players, onConfirm }: ShootoutOrderPanelPro
         <div className="text-center">
           <p className="font-display text-4xl font-black leading-none">Si va ai rigori</p>
           <p className="text-canvas/70 mt-2">Scegli l'ordine dei tuoi rigoristi: trascina le righe o usa le frecce.</p>
+          {deadlineSec !== undefined && !sent && (
+            <p className="mt-3 font-display text-2xl font-black tabular-nums text-whistle" role="timer">
+              {deadlineSec}s
+            </p>
+          )}
         </div>
 
+        {sent ? (
+          <p className="mt-8 text-center font-display text-2xl font-extrabold text-canvas">
+            {sentLabel ?? "Scelta inviata, in attesa dell'avversario…"}
+          </p>
+        ) : (
+          <>
         <ol className="mt-6 bg-canvas text-ink border-2 border-ink shadow-block">
           {order.map((p, i) => (
             <li
@@ -89,6 +106,8 @@ export function ShootoutOrderPanel({ players, onConfirm }: ShootoutOrderPanelPro
             Conferma e si tira
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

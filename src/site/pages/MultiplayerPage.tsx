@@ -24,11 +24,11 @@ export function MultiplayerPage() {
       </ContentLayout>
     );
   }
+  // Il layout è scelto dentro MultiplayerApp: ContentLayout per ingresso e
+  // lobby, guscio di gioco a piena larghezza da asta in poi.
   return (
     <RoomProvider>
-      <ContentLayout breadcrumbs={[{ name: 'Multiplayer', path: '/multiplayer/' }]}>
-        <MultiplayerApp />
-      </ContentLayout>
+      <MultiplayerApp />
     </RoomProvider>
   );
 }

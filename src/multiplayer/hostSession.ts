@@ -2,8 +2,15 @@ import { Player } from '../types';
 import { intervalTick, TickFn } from './clock/tick';
 import {
   ABSENT_AFTER_MS,
+  DECISION_TIMEOUT_MS,
+  MATCH_SPEED,
   MAX_SPECTATORS,
+  SHOOTOUT_ORDER_TIMEOUT_MS,
 } from './constants';
+import { computeTimeline, lastTick, MatchOptions, MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
+import { findMatch, simulateBracketMatch } from '../domain/tournament';
+import { resultHash } from './hash';
+import { buildBotRecords } from './hostTournament';
 import { stateHash } from './hash';
 import {
   buildStartAuction,
@@ -78,6 +85,8 @@ export function createHostSession({
   /** Spettatori nell'ultimo sync di presence (tetto MAX_SPECTATORS) */
   let spectatorCount = 0;
   const cleanups: (() => void)[] = [];
+  /** true quando il turno ha avuto partite live: i record dei bot partono a fine turno */
+  let liveRoundPending = false;
 
   const emit = () => listeners.forEach(cb => cb(state));
 
@@ -156,6 +165,94 @@ export function createHostSession({
     })
   );
 
+  /**
+   * Driver delle partite live (~200 ms): nessun tick viaggia in rete.
+   * Per ogni partita: allo stop corrente aspetta le scelte umane o il
+   * timeout e manda MATCH_RESUME; a fine partita manda MATCH_RECORD con
+   * le opzioni accumulate; a turno chiuso registra le partite tra bot.
+   */
+  // Simulare costa: il risultato cambia solo quando cambiano le opzioni
+  const resultCache = new Map<string, { key: string; result: MatchResult }>();
+
+  function checkLiveMatches() {
+    if (state.phase !== 'tournament' || !state.tournament) {
+      liveRoundPending = false;
+      resultCache.clear();
+      return;
+    }
+    const t = now();
+    for (const [matchId, live] of Object.entries(state.live)) {
+      const options: MatchOptions = { tactics: live.plans, shootoutOrder: live.shootoutOrder };
+      const key = JSON.stringify(options);
+      let result = resultCache.get(matchId)?.key === key ? resultCache.get(matchId)!.result : null;
+      if (!result) {
+        result = simulateBracketMatch(state.tournament, state.teams, matchId, options);
+        resultCache.set(matchId, { key, result });
+      }
+      const stop = nextStop(result, live.anchorTick, live.resolvedStops, live.humanSides.length > 0);
+      const { reachedStopAt } = computeTimeline({
+        result,
+        anchorTick: live.anchorTick,
+        anchorAt: live.anchorAt,
+        now: t,
+        speed: MATCH_SPEED,
+        stopTick: stop,
+      });
+      if (reachedStopAt === null) continue;
+      if (stop >= lastTick(result)) {
+        const rest = { ...book.matchChoices };
+        delete rest[matchId];
+        book = { ...book, matchChoices: rest };
+        dispatch({
+          type: 'MATCH_RECORD',
+          matchId,
+          seed: findMatch(state.tournament.bracket, matchId)!.seed,
+          options,
+          resultHash: resultHash(result),
+        });
+        continue;
+      }
+      const isShootoutStop = !!result.shootout && stop === result.fullTimeTick;
+      const timeout = isShootoutStop ? SHOOTOUT_ORDER_TIMEOUT_MS : DECISION_TIMEOUT_MS;
+      const choices = book.matchChoices[matchId];
+      const allChosen = live.humanSides.every(side =>
+        isShootoutStop ? !!choices?.orders[side] : choices?.tactics[side]?.stopTick === stop
+      );
+      if (!allChosen && t < reachedStopAt + timeout) continue;
+      // Riprende: pubblica le scelte raccolte (chi non ha scelto: invariato/automatico)
+      const tactics: Partial<Record<MatchSide, Tactic>> = {};
+      if (!isShootoutStop) {
+        for (const side of live.humanSides) {
+          const c = choices?.tactics[side];
+          if (c?.stopTick === stop) tactics[side] = c.tactic;
+        }
+      }
+      const orders = isShootoutStop ? choices?.orders : undefined;
+      const resume: RoomAction = {
+        type: 'MATCH_RESUME',
+        matchId,
+        stopTick: stop,
+        at: t,
+        tactics: Object.keys(tactics).length ? tactics : undefined,
+        shootoutOrder: orders && Object.keys(orders).length ? orders : undefined,
+      };
+      const pending = book.matchChoices[matchId];
+      if (pending) {
+        book = { ...book, matchChoices: { ...book.matchChoices, [matchId]: { tactics: {}, orders: {} } } };
+      }
+      dispatch(resume);
+    }
+    // Partite tra soli bot del turno: si registrano quando le live finiscono
+    if (Object.keys(state.live).length === 0) {
+      if (liveRoundPending) {
+        liveRoundPending = false;
+        for (const a of buildBotRecords(state)) dispatch(a);
+      }
+    } else {
+      liveRoundPending = true;
+    }
+  }
+
   // Assenza applicativa: chi non si fa sentire da troppo è disconnesso
   cleanups.push(
     tick(() => {
@@ -169,6 +266,9 @@ export function createHostSession({
       }
     }, 1000)
   );
+
+  // Partite live: scadenze delle decisioni e registrazione dei risultati
+  cleanups.push(tick(checkLiveMatches, 200));
 
   return {
     getState: () => state,

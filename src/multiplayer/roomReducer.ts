@@ -3,9 +3,11 @@ import { auctionReducer, AuctionWorld } from '../services/auction';
 import {
   createTournament,
   findMatch,
+  getMatchStatus,
   simulateBracketMatch,
   tournamentReducer,
 } from '../domain/tournament';
+import { MatchOptions, withTacticChange } from '../domain/match';
 import { resultHash } from './hash';
 import {
   MAX_PLAYERS,
@@ -55,6 +57,7 @@ export function createRoom({ code, hostId, host, settings, now }: CreateRoomInpu
     auction: null,
     tournament: null,
     callDeadline: null,
+    live: {},
   };
 }
 
@@ -126,7 +129,10 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
 
     case 'SETTINGS': {
       if (state.phase !== 'lobby') return state;
-      return { ...state, settings: { ...state.settings, ...action.settings } };
+      // La difficoltà dei bot non si cambia in stanza: fissa a 'normale'
+      const rest = { ...action.settings };
+      delete rest.difficulty;
+      return { ...state, settings: { ...state.settings, ...rest } };
     }
 
     case 'START_AUCTION': {
@@ -183,7 +189,13 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       const match = findMatch(state.tournament.bracket, action.matchId);
       // Il seme della partita vive nel tabellone: deve coincidere
       if (!match || match.seed !== action.seed) return state;
-      const result = simulateBracketMatch(state.tournament, state.teams, action.matchId, action.options);
+      // Per una partita live le opzioni autorevoli sono quelle accumulate
+      // nella stanza (piani tattici e ordini dei rigori dei lati umani)
+      const live = state.live[action.matchId];
+      const options: MatchOptions = live
+        ? { tactics: live.plans, shootoutOrder: live.shootoutOrder }
+        : action.options;
+      const result = simulateBracketMatch(state.tournament, state.teams, action.matchId, options);
       if (resultHash(result) !== action.resultHash) return state;
       const next = tournamentReducer(state.tournament, {
         type: 'RECORD_RESULT',
@@ -191,7 +203,59 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
         result,
       });
       if (next === state.tournament) return state;
-      return { ...state, tournament: next };
+      const live2 = { ...state.live };
+      delete live2[action.matchId];
+      return { ...state, tournament: next, live: live2 };
+    }
+
+    case 'MATCH_START': {
+      if (state.phase !== 'tournament' || !state.tournament) return state;
+      const match = findMatch(state.tournament.bracket, action.matchId);
+      if (!match || getMatchStatus(state.tournament, match) !== 'ready') return state;
+      if (state.live[action.matchId]) return state;
+      return {
+        ...state,
+        live: {
+          ...state.live,
+          [action.matchId]: {
+            matchId: action.matchId,
+            humanSides: action.humanSides,
+            // Ogni lato umano ha SEMPRE un piano (vuoto = niente IA)
+            plans: Object.fromEntries(action.humanSides.map(side => [side, []])),
+            shootoutOrder: {},
+            anchorTick: 0,
+            anchorAt: action.startAt,
+            resolvedStops: [],
+          },
+        },
+      };
+    }
+
+    case 'MATCH_RESUME': {
+      const live = state.live[action.matchId];
+      if (!live || action.stopTick < live.anchorTick) return state;
+      const plans = { ...live.plans };
+      for (const [side, tactic] of Object.entries(action.tactics ?? {})) {
+        if (!tactic) continue;
+        const s = side as 'home' | 'away';
+        plans[s] = withTacticChange(plans[s] ?? [], action.stopTick + 1, tactic);
+      }
+      return {
+        ...state,
+        live: {
+          ...state.live,
+          [action.matchId]: {
+            ...live,
+            plans,
+            shootoutOrder: { ...live.shootoutOrder, ...(action.shootoutOrder ?? {}) },
+            anchorTick: action.stopTick,
+            anchorAt: action.at,
+            resolvedStops: live.resolvedStops.includes(action.stopTick)
+              ? live.resolvedStops
+              : [...live.resolvedStops, action.stopTick],
+          },
+        },
+      };
     }
 
     case 'FINISH': {

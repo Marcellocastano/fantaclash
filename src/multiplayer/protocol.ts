@@ -1,7 +1,7 @@
 import { AuctionState, DifficultyLevel, Team } from '../types';
 import { AuctionAction } from '../services/auction';
 import { TournamentAction, TournamentState } from '../domain/tournament';
-import { MatchOptions } from '../domain/match';
+import { MatchOptions, MatchSide, Tactic, TacticChange } from '../domain/match';
 
 /**
  * Protocollo della stanza multiplayer (host autorevole).
@@ -47,6 +47,32 @@ export interface RoomState {
   tournament: TournamentState | null;
   /** Scadenza del turno di chiamata di un umano (host clock), null se assente */
   callDeadline: number | null;
+  /** Partite live del turno corrente (vuoto fuori dalle partite in corso) */
+  live: Record<string, LiveMatch>;
+}
+
+/**
+ * Stato di una partita live in stanza: nessun tick viaggia in rete.
+ * Ogni client ricalcola il tick dalla timeline ancorata a
+ * (anchorTick, anchorAt) sull'orologio dell'host; l'host pubblica solo
+ * inizio, riprese (con le scelte) e risultato.
+ */
+export interface LiveMatch {
+  matchId: string;
+  /** Lati con squadra controllata da un umano all'avvio */
+  humanSides: MatchSide[];
+  /**
+   * Piano tattico per lato umano: SEMPRE un array (anche vuoto) — con
+   * `undefined` il motore farebbe giocare l'IA al posto dell'umano.
+   */
+  plans: Partial<Record<MatchSide, TacticChange[]>>;
+  /** Ordine dei rigoristi scelto dai lati umani */
+  shootoutOrder: Partial<Record<MatchSide, string[]>>;
+  /** La timeline riparte da questo tick/istante (orologio host) */
+  anchorTick: number;
+  anchorAt: number;
+  /** Tick di arresto già superati */
+  resolvedStops: number[];
 }
 
 export type RoomAction =
@@ -62,6 +88,15 @@ export type RoomAction =
   | { type: 'START_TOURNAMENT'; seed: number }
   | { type: 'TOURNAMENT'; action: Exclude<TournamentAction, { type: 'RECORD_RESULT' }> }
   | { type: 'MATCH_RECORD'; matchId: string; seed: number; options: MatchOptions; resultHash: string }
+  | { type: 'MATCH_START'; matchId: string; startAt: number; humanSides: MatchSide[] }
+  | {
+      type: 'MATCH_RESUME';
+      matchId: string;
+      stopTick: number;
+      at: number;
+      tactics?: Partial<Record<MatchSide, Tactic>>;
+      shootoutOrder?: Partial<Record<MatchSide, string[]>>;
+    }
   | { type: 'FINISH' };
 
 export type ClientIntent =
@@ -70,7 +105,9 @@ export type ClientIntent =
   | { type: 'CALL'; footballerId: string }
   | { type: 'BID'; amount: number }
   | { type: 'PING'; t: number }
-  | { type: 'RESYNC'; fromRev: number };
+  | { type: 'RESYNC'; fromRev: number }
+  | { type: 'TACTIC'; matchId: string; stopTick: number; tactic: Tactic }
+  | { type: 'SHOOTOUT_ORDER'; matchId: string; order: string[] };
 
 export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_token' | 'invalid';
 
@@ -89,7 +126,7 @@ export interface Envelope<M> {
 }
 
 const CLIENT_INTENT_TYPES: readonly ClientIntent['type'][] = [
-  'HELLO', 'READY', 'CALL', 'BID', 'PING', 'RESYNC',
+  'HELLO', 'READY', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER',
 ];
 
 const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
@@ -99,7 +136,7 @@ const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
 const ROOM_ACTION_TYPES: readonly RoomAction['type'][] = [
   'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION', 'PLAYER_READY',
   'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE',
-  'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'FINISH',
+  'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'MATCH_START', 'MATCH_RESUME', 'FINISH',
 ];
 
 /** Guard minimo sulla forma del messaggio (type noto) */

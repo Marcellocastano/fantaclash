@@ -4,11 +4,15 @@ import { getRoomIdentity } from '../../multiplayer/identity';
 import { loadSeasonPlayers } from '../../services/seasons';
 import { buildAuctionPool } from '../../services/auction';
 import { RejectReason } from '../../multiplayer/protocol';
+import { ContentLayout } from '../../site/ContentLayout';
+import { RoomGameShell } from './RoomGameShell';
 import { EntryScreen } from './EntryScreen';
 import { LobbyScreen } from './LobbyScreen';
 import { RoomAuctionScreen } from './RoomAuctionScreen';
 import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
 import { useRoom } from './RoomProvider';
+
+const MP_BREADCRUMB = [{ name: 'Multiplayer', path: '/multiplayer/' }];
 
 const REJECT_TEXT: Record<RejectReason, string> = {
   protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
@@ -54,35 +58,41 @@ export function MultiplayerApp() {
     case 'connecting':
     case 'joining':
       return (
-        <div className="py-16 text-center" role="status">
-          <p className="font-display text-3xl font-extrabold text-ink">Entro nella stanza…</p>
-        </div>
+        <ContentLayout breadcrumbs={MP_BREADCRUMB}>
+          <div className="py-16 text-center" role="status">
+            <p className="font-display text-3xl font-extrabold text-ink">Entro nella stanza…</p>
+          </div>
+        </ContentLayout>
       );
 
     case 'rejected':
       return (
-        <div className="py-16 text-center max-w-md mx-auto">
-          <h1 className="font-display text-4xl font-black text-ink">Non sei entrato</h1>
-          <p className="text-lg text-ink-soft mt-4">
-            {room.rejectReason ? REJECT_TEXT[room.rejectReason] : 'Richiesta rifiutata.'}
-          </p>
-          <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
-            Torna indietro
-          </button>
-        </div>
+        <ContentLayout breadcrumbs={MP_BREADCRUMB}>
+          <div className="py-16 text-center max-w-md mx-auto">
+            <h1 className="font-display text-4xl font-black text-ink">Non sei entrato</h1>
+            <p className="text-lg text-ink-soft mt-4">
+              {room.rejectReason ? REJECT_TEXT[room.rejectReason] : 'Richiesta rifiutata.'}
+            </p>
+            <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
+              Torna indietro
+            </button>
+          </div>
+        </ContentLayout>
       );
 
     case 'closed':
       return (
-        <div className="py-16 text-center max-w-md mx-auto">
-          <h1 className="font-display text-4xl font-black text-ink">Stanza non trovata</h1>
-          <p className="text-lg text-ink-soft mt-4">
-            Stanza non trovata o host non raggiungibile. Controlla il codice e riprova.
-          </p>
-          <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
-            Riprova
-          </button>
-        </div>
+        <ContentLayout breadcrumbs={MP_BREADCRUMB}>
+          <div className="py-16 text-center max-w-md mx-auto">
+            <h1 className="font-display text-4xl font-black text-ink">Stanza non trovata</h1>
+            <p className="text-lg text-ink-soft mt-4">
+              Stanza non trovata o host non raggiungibile. Controlla il codice e riprova.
+            </p>
+            <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
+              Riprova
+            </button>
+          </div>
+        </ContentLayout>
       );
 
     case 'ready': {
@@ -90,22 +100,23 @@ export function MultiplayerApp() {
       if (!state) return null;
       if (state.phase === 'lobby') {
         return (
-          <>
+          <ContentLayout breadcrumbs={MP_BREADCRUMB}>
             <LobbyScreen spectatorCount={room.spectatorCount} onStart={() => void startAuction()} starting={starting} />
             {startError && <p className="mt-3 text-center text-sm text-danger" role="alert">{startError}</p>}
-          </>
+          </ContentLayout>
         );
       }
-      if (state.phase === 'auction') return <RoomAuctionScreen />;
-      if (state.phase === 'tournament') return <RoomTournamentScreen />;
-      if (state.phase === 'final') return <RoomFinalScreen />;
+      if (state.phase === 'auction') return <RoomGameShell><RoomAuctionScreen /></RoomGameShell>;
+      if (state.phase === 'tournament') return <RoomGameShell><RoomTournamentScreen /></RoomGameShell>;
+      if (state.phase === 'final') return <RoomGameShell><RoomFinalScreen /></RoomGameShell>;
       return null;
     }
 
     case 'idle':
     default:
       return (
-        <EntryScreen
+        <ContentLayout breadcrumbs={MP_BREADCRUMB}>
+          <EntryScreen
           initialView={codeParam ? 'entra' : vista === 'crea' ? 'crea' : vista === 'entra' ? 'entra' : 'crea'}
           initialCode={codeParam}
           initialSpectator={vista === 'spettatore'}
@@ -113,6 +124,7 @@ export function MultiplayerApp() {
           onCreate={room.createRoom}
           onJoin={room.joinRoom}
         />
+        </ContentLayout>
       );
   }
 }

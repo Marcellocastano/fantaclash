@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { DifficultyLevel } from '../../types';
 import { normalizeRoomCode } from '../../multiplayer/roomCode';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../../mock/teamNames';
 import { loadSeasonIndex, SeasonInfo } from '../../services/seasons';
 import { NICKNAME_MAX } from '../../multiplayer/constants';
-import { DifficultyPicker } from '../DifficultyPicker';
 import { SeasonPicker } from '../SeasonPicker';
 import { Icon } from '../Icon';
 import { loadSavedNickname, loadSavedTeamName, saveRoomProfile } from './storage';
@@ -32,7 +30,6 @@ export function EntryScreen({
   const [code, setCode] = useState(initialCode ?? '');
   const [season, setSeason] = useState('');
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
   const [fillWithBots, setFillWithBots] = useState(true);
   const [asSpectator, setAsSpectator] = useState(initialSpectator);
   const [busy, setBusy] = useState(false);
@@ -61,7 +58,7 @@ export function EntryScreen({
       await onCreate({
         nickname: nickname.trim(),
         teamName: teamName.trim(),
-        settings: { season, difficulty, fillWithBots },
+        settings: { season, difficulty: 'normale', fillWithBots },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore nella creazione della stanza');
@@ -165,10 +162,6 @@ export function EntryScreen({
               ) : (
                 <p className="border-2 border-ink px-4 py-5 text-ink-muted">Caricamento stagioni…</p>
               )}
-            </div>
-            <div>
-              <p className="block font-display text-lg font-extrabold text-ink mb-1.5">Bot avversari</p>
-              <DifficultyPicker value={difficulty} onChange={setDifficulty} disabled={busy} />
             </div>
             <label className="flex items-center gap-3 font-semibold text-ink cursor-pointer">
               <input
