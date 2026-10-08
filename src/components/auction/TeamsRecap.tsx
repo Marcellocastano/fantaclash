@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { TeamMeta } from '../../hooks/auctionController';
 import { Team, PlayerRole, ROSTER_REQUIREMENTS } from '../../types';
 import { shortName } from '../../utils/playerName';
 import { Icon } from '../Icon';
@@ -11,6 +12,8 @@ interface TeamsRecapProps {
   currentBidderId: string | null;
   /** Squadra che sta chiamando (bot che sceglie) */
   callerId: string | null;
+  /** In stanza: chi controlla ogni squadra (assente nel gioco singolo) */
+  teamMeta?: Record<string, TeamMeta>;
 }
 
 const ROLE_ORDER: PlayerRole[] = ['P', 'D', 'C', 'A'];
@@ -23,7 +26,7 @@ const ROLE_FILL: Record<PlayerRole, string> = {
 };
 
 /** Rose delle 8 squadre: crediti e 8 caselle colorate per ruolo */
-export function TeamsRecap({ teams, userTeamId, currentBidderId, callerId }: TeamsRecapProps) {
+export function TeamsRecap({ teams, userTeamId, currentBidderId, callerId, teamMeta }: TeamsRecapProps) {
   const [expanded, setExpanded] = useState<string | null>(userTeamId);
   const sorted = [...teams].sort((a, b) => (a.isUserTeam ? -1 : b.isUserTeam ? 1 : a.name.localeCompare(b.name)));
 
@@ -38,6 +41,7 @@ export function TeamsRecap({ teams, userTeamId, currentBidderId, callerId }: Tea
             isUser={team.id === userTeamId}
             isBidding={team.id === currentBidderId}
             isCalling={team.id === callerId}
+            meta={teamMeta?.[team.id]}
             expanded={expanded === team.id}
             onToggle={() => setExpanded(expanded === team.id ? null : team.id)}
           />
@@ -52,11 +56,12 @@ interface TeamRowProps {
   isUser: boolean;
   isBidding: boolean;
   isCalling: boolean;
+  meta?: TeamMeta;
   expanded: boolean;
   onToggle: () => void;
 }
 
-function TeamRow({ team, isUser, isBidding, isCalling, expanded, onToggle }: TeamRowProps) {
+function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle }: TeamRowProps) {
   const byRole = (role: PlayerRole) => team.roster.filter(o => o.player.role === role);
   const status = isBidding ? (isUser ? 'in testa' : 'rilancia') : isCalling ? 'chiama' : null;
   const tone = isBidding ? (isUser ? 'bg-highlight' : 'bg-whistle/15') : isCalling ? 'bg-surface' : '';
@@ -78,6 +83,24 @@ function TeamRow({ team, isUser, isBidding, isCalling, expanded, onToggle }: Tea
               <span className={`text-xs font-bold ${isBidding && !isUser ? 'text-whistle-deep' : 'text-ink'}`}>{status}</span>
             ) : (
               isUser && <span className="text-xs text-ink-muted truncate block">{team.name}</span>
+            )}
+            {/* Stanza: chi guida la squadra (nickname + stato) */}
+            {meta && (
+              <span className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                {meta.nickname && (
+                  <span className="text-xs text-ink-muted truncate">{meta.nickname}</span>
+                )}
+                {meta.controller !== 'human' && (
+                  <span className="shrink-0 text-[10px] font-black border border-ink px-1 py-px text-ink-soft">
+                    {meta.controller === 'autopilot' ? 'AUTO' : 'BOT'}
+                  </span>
+                )}
+                {!meta.connected && (
+                  <span className="shrink-0 text-[10px] font-black border border-danger text-danger px-1 py-px">
+                    OFFLINE
+                  </span>
+                )}
+              </span>
             )}
           </span>
           <span className="text-right leading-none shrink-0">

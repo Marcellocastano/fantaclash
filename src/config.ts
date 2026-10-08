@@ -15,3 +15,10 @@ export const SITE_URL = 'https://www.fantaclash.it';
 export const SITE_NAME = 'FantaClash';
 export const SUPPORT_URL: string = import.meta.env.VITE_SUPPORT_URL ?? '';
 export const GOATCOUNTER_CODE: string = import.meta.env.VITE_GOATCOUNTER_CODE ?? '';
+
+/**
+ * MULTIPLAYER_ENABLED: stanze multiplayer su Supabase Realtime.
+ * Attiva con VITE_MULTIPLAYER=1; spenta la pagina /multiplayer/ resta
+ * raggiungibile ma mostra solo un avviso (noindex).
+ */
+export const MULTIPLAYER_ENABLED: boolean = import.meta.env.VITE_MULTIPLAYER === '1';

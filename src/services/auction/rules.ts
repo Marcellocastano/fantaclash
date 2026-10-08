@@ -20,6 +20,20 @@ export const LOT_DURATION_MS = 5000;
 /** Offerta di apertura di ogni lotto, fatta dal chiamante */
 export const OPENING_BID = 1;
 
+/** Durata effettiva del timer del lotto: override dell'asta o default */
+export function getLotDuration(auction: { lotDurationMs?: number }): number {
+  return auction.lotDurationMs ?? LOT_DURATION_MS;
+}
+
+/**
+ * La squadra è guidata dal driver automatico (bot o autopilota)?
+ * Senza controller esplicito vale isUserTeam: nel gioco singolo i bot
+ * sono tutte le squadre non utente.
+ */
+export function isBotControlled(team: Team): boolean {
+  return team.controller ? team.controller !== 'human' : !team.isUserTeam;
+}
+
 /**
  * Cache degli slot residui per oggetto squadra: le squadre sono trattate
  * come immutabili (ogni azione crea nuovi oggetti), quindi il risultato

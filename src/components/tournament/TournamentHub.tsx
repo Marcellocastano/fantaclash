@@ -21,6 +21,11 @@ interface TournamentHubProps {
   onCompleteRound: () => void;
   /** Chiude il torneo e va al riepilogo */
   onSummary: () => void;
+  /**
+   * Controlli dell'hero al posto dei pulsanti (stanza multiplayer:
+   * niente "Gioca", l'host simula il turno, gli altri aspettano).
+   */
+  controls?: ReactNode;
 }
 
 const PLAY_LABEL: Record<TournamentRound, string> = {
@@ -40,7 +45,7 @@ const ROUND_TITLE: Record<TournamentRound, string> = {
  * principale, sotto il tabellone (solo da leggere). Le partite degli altri
  * si simulano da sole quando finisce la tua.
  */
-export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRound, onSummary }: TournamentHubProps) {
+export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRound, onSummary, controls }: TournamentHubProps) {
   const round = currentRound(tournament.status);
   const userMatch = findUserMatch(tournament);
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
@@ -53,18 +58,22 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   if (tournament.status === 'completed') {
     hero = (
       <Hero title={champion?.isUserTeam ? 'Campione!' : `Coppa a ${champion?.name ?? ''}`}>
-        <button onClick={onSummary} className="btn-cta">
-          Vai al riepilogo
-          <Icon name="arrow" className="w-7 h-7" />
-        </button>
+        {controls ?? (
+          <button onClick={onSummary} className="btn-cta">
+            Vai al riepilogo
+            <Icon name="arrow" className="w-7 h-7" />
+          </button>
+        )}
       </Hero>
     );
   } else if (isUserEliminated(tournament)) {
     hero = (
       <Hero title="Sei fuori dal torneo">
-        <button onClick={onSummary} className="btn-cta">
-          Vai al riepilogo
-        </button>
+        {controls ?? (
+          <button onClick={onSummary} className="btn-cta">
+            Vai al riepilogo
+          </button>
+        )}
       </Hero>
     );
   } else if (userMatch && round) {
@@ -76,20 +85,25 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
           <span className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-whistle leading-none">VS</span>
           <Side team={team(userMatch.awayId)} align="left" />
         </div>
-        <button onClick={() => onPlay(userMatch.id)} className="btn-cta mt-8">
-          <Icon name="play" className="w-7 h-7" />
-          {PLAY_LABEL[round]}
-        </button>
+        <div className="mt-8">
+          {controls ?? (
+            <button onClick={() => onPlay(userMatch.id)} className="btn-cta">
+              <Icon name="play" className="w-7 h-7" />
+              {PLAY_LABEL[round]}
+            </button>
+          )}
+        </div>
       </section>
     );
   } else {
     hero = (
       <Hero title="Gli altri devono ancora giocare">
-        {othersPending && (
-          <button onClick={onCompleteRound} className="btn-cta">
-            Completa il turno
-          </button>
-        )}
+        {(othersPending || controls) &&
+          (controls ?? (
+            <button onClick={onCompleteRound} className="btn-cta">
+              Completa il turno
+            </button>
+          ))}
       </Hero>
     );
   }

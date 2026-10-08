@@ -7,12 +7,10 @@ import { randomTournamentSeed } from './domain/tournament';
 import { GameProvider, useGame, useGamePhase } from './context/GameContext';
 import { PlayerRole } from './types';
 
-// Asta, torneo e riepilogo si scaricano solo quando servono: la landing resta leggera
-const AuctionRoom = lazy(() => import('./components/auction/AuctionRoom').then(m => ({ default: m.AuctionRoom })));
-const TournamentScreen = lazy(() => import('./components/tournament/TournamentScreen').then(m => ({ default: m.TournamentScreen })));
-const TournamentSummaryScreen = lazy(() =>
-  import('./components/tournament/TournamentSummaryScreen').then(m => ({ default: m.TournamentSummaryScreen }))
-);
+// Asta, torneo e riepilogo si scaricano solo quando servono (provider compresi)
+const AuctionPhase = lazy(() => import('./components/phases/AuctionPhase'));
+const TournamentPhase = lazy(() => import('./components/phases/TournamentPhase'));
+const FinalPhase = lazy(() => import('./components/phases/FinalPhase'));
 
 const ROLE_PLURAL: Record<PlayerRole, string> = {
   P: 'Portieri',
@@ -59,13 +57,13 @@ function GameContent() {
       return <Landing onSubmit={startGame} />;
     
     case 'ASTA':
-      return <AuctionRoom onComplete={handleAuctionComplete} />;
-    
+      return <AuctionPhase onComplete={handleAuctionComplete} />;
+
     case 'TORNEO':
-      return <TournamentScreen />;
+      return <TournamentPhase />;
 
     case 'FINALE':
-      return <TournamentSummaryScreen />;
+      return <FinalPhase />;
     
     default:
       // Mai una pagina vuota: fase sconosciuta -> possibilità di ripartire

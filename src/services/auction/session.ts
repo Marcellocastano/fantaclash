@@ -7,8 +7,8 @@ import {
   Team,
 } from '../../types';
 import {
-  LOT_DURATION_MS,
   OPENING_BID,
+  getLotDuration,
   ROLE_ORDER,
   canBid,
   getCurrentRole,
@@ -138,7 +138,7 @@ export function auctionReducer(world: AuctionWorld, action: AuctionAction): Auct
           currentBid: OPENING_BID,
           currentBidderId: caller.id,
           bidHistory: [openingBid],
-          deadline: action.now + LOT_DURATION_MS,
+          deadline: action.now + getLotDuration(auction),
           seed: action.seed,
         },
       });
@@ -165,7 +165,7 @@ export function auctionReducer(world: AuctionWorld, action: AuctionAction): Auct
           currentBid: action.amount,
           currentBidderId: team.id,
           bidHistory: [...lot.bidHistory, bid],
-          deadline: action.now + LOT_DURATION_MS,
+          deadline: action.now + getLotDuration(auction),
         },
       });
     }

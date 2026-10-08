@@ -13,7 +13,7 @@ import type { Rng } from './auction/rng';
  * archetipo e preferenze di ruolo casuali, pupilli solo per i cacciatori.
  * @param rng Sorgente di casualità (passare un Rng seedato per run riproducibili)
  */
-function generateBotConfig(
+export function generateBotConfig(
   difficulty: DifficultyLevel,
   archetype: BotConfig['archetype'],
   pool: Player[],
@@ -35,7 +35,7 @@ function generateBotConfig(
  * @param index Posizione della squadra nella lega (0 = utente)
  * @param rng Sorgente di casualità per la parte randomica dell'ID
  */
-function generateTeamId(index: number, rng: Rng = Math.random): string {
+export function generateTeamId(index: number, rng: Rng = Math.random): string {
   return `team-${index}-${rng().toString(36).substring(2, 9)}`;
 }
 
@@ -66,6 +66,7 @@ export function generateUserTeam(
  * @param pool Listone d'asta (per la scelta dei pupilli dei cacciatori)
  * @param userTeamName Nome della squadra utente (per evitare duplicati)
  * @param rng Sorgente di casualità (default Math.random)
+ * @param takenNames Altri nomi già presi da escludere (multiplayer)
  */
 export function generateBotTeams(
   count: number,
@@ -73,9 +74,10 @@ export function generateBotTeams(
   difficulty: DifficultyLevel,
   pool: Player[],
   userTeamName: string,
-  rng: Rng = Math.random
+  rng: Rng = Math.random,
+  takenNames: string[] = []
 ): Team[] {
-  const botNames = getRandomBotNames(count, userTeamName);
+  const botNames = getRandomBotNames(count, [userTeamName, ...takenNames]);
   const archetypes = assignArchetypes(count, rng);
 
   return Array.from({ length: count }, (_, index) => ({

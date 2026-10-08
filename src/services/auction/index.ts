@@ -13,6 +13,8 @@ export {
   INITIAL_CREDITS,
   LISTONE_FACTOR,
   buildAuctionPool,
+  getLotDuration,
+  isBotControlled,
   getRemainingSlots,
   getTotalRemainingSlots,
   needsRole,
@@ -70,6 +72,9 @@ export {
 
 export type { AuctionAction, AuctionWorld } from './session';
 export { createInitialAuctionState, getCurrentCallerId, auctionReducer } from './session';
+
+export type { AuctionRoundState, AuctionView } from './view';
+export { deriveAuctionView } from './view';
 
 export type { RunOptions } from './simulator';
 export { AUTOPILOT_BOT_CONFIG, runAuction } from './simulator';

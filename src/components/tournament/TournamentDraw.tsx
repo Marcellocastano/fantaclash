@@ -5,8 +5,13 @@ import { TeamBadge } from './TeamBadge';
 
 interface TournamentDrawProps {
   tournament: TournamentState;
+  /**
+   * Ordine già deciso (stanza multiplayer): lo anima così com'è e non
+   * chiama onDrawn. Senza la prop, l'ordine è generato con Math.random.
+   */
+  order?: string[];
   /** Registra il sorteggio nello stato (a fine animazione) */
-  onDrawn: (order: string[]) => void;
+  onDrawn?: (order: string[]) => void;
   /** Animazione finita: si va al tabellone */
   onDone: () => void;
 }
@@ -31,8 +36,8 @@ type Stage = 'intro' | 'rise' | 'show' | 'user' | 'outro';
  * accoppiamento è completo c'è un momento dedicato al tuo avversario.
  * L'ordine è deciso al montaggio e registrato nello stato solo alla fine.
  */
-export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawProps) {
-  const [order] = useState(() => drawOrder(tournament, Math.random));
+export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone }: TournamentDrawProps) {
+  const [order] = useState(() => fixedOrder ?? drawOrder(tournament, Math.random));
   const [placed, setPlaced] = useState(0);
   const [stage, setStage] = useState<Stage>('intro');
   const committed = useRef(false);
@@ -70,7 +75,7 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
       case 'outro':
         if (!committed.current) {
           committed.current = true;
-          callbacks.current.onDrawn(order);
+          callbacks.current.onDrawn?.(order);
         }
         t = setTimeout(() => callbacks.current.onDone(), OUTRO_MS);
         break;

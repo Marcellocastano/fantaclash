@@ -106,13 +106,16 @@ export const BOT_TEAM_NAMES = [
 /**
  * Seleziona nomi casuali per le squadre bot, escludendo il nome dell'utente
  */
-export function getRandomBotNames(count: number, userTeamName: string): string[] {
-  // Normalizza il nome utente per il confronto (case-insensitive)
-  const normalizedUserName = userTeamName.trim().toUpperCase();
-  
-  // Filtra i nomi che non corrispondono al nome utente
+export function getRandomBotNames(count: number, userTeamName: string | string[]): string[] {
+  // Nomi da escludere (case-insensitive): accetta uno o più nomi già presi
+  const taken = new Set(
+    (Array.isArray(userTeamName) ? userTeamName : [userTeamName])
+      .map(n => n.trim().toUpperCase())
+  );
+
+  // Filtra i nomi che non corrispondono a quelli già presi
   const availableNames = BOT_TEAM_NAMES.filter(
-    name => name.toUpperCase() !== normalizedUserName
+    name => !taken.has(name.toUpperCase())
   );
   
   // Mescola l'array

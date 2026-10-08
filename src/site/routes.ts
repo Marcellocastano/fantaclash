@@ -17,6 +17,7 @@ export type PageKind =
   | 'top11'
   | 'about'
   | 'privacy'
+  | 'multiplayer'
   | 'not-found';
 
 export interface Breadcrumb {
@@ -292,5 +293,21 @@ export function buildRoutes(seasonIds: string[] = [], top11JsonLd: Record<string
       "FantaClash è un progetto amatoriale nato per chi il fantacalcio d'asta lo ama davvero: storia del gioco, come è fatto e contatti.", 0.4),
     staticRoute('privacy', '/privacy/', 'Privacy · FantaClash',
       'FantaClash non raccoglie dati personali: nessun account, nessun cookie di profilazione e analytics anonime senza cookie.', 0.2),
+    MULTIPLAYER_ROUTE,
   ];
 }
+
+/** Ingresso alle stanze multiplayer: pagina interattiva, non indicizzata */
+export const MULTIPLAYER_ROUTE: SiteRoute = {
+  path: '/multiplayer/',
+  kind: 'multiplayer',
+  title: `Multiplayer · ${SITE_NAME}`,
+  description: 'Crea una stanza privata o entra con un codice: l’asta del fantacalcio con gli amici in diretta, con le stagioni storiche della Serie A.',
+  breadcrumbs: [home, { name: 'Multiplayer', path: '/multiplayer/' }],
+  indexable: false,
+  priority: 0,
+  changefreq: 'yearly',
+  lastmod: CONTENT_DATE,
+  ogType: 'website',
+  jsonLd: [],
+};

@@ -5,22 +5,7 @@ import { LEAGUE_SIZE, INITIAL_CREDITS } from '../services/auction';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/teamNames';
 import { Icon } from './Icon';
 import { SeasonPicker } from './SeasonPicker';
-
-/**
- * Opzioni disponibili per il livello di difficoltà
- */
-const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: string }[] = [
-  {
-    value: 'normale',
-    label: 'Normale',
-    description: 'Bot con valutazioni ragionevoli e un po\' di rumore nelle decisioni.',
-  },
-  {
-    value: 'difficile',
-    label: 'Difficile',
-    description: 'Valutazioni precise, chiamate tattiche per farti spendere.',
-  },
-];
+import { DifficultyPicker } from './DifficultyPicker';
 
 interface SetupFormProps {
   /** Callback chiamata quando il form viene inviato con successo (può essere asincrona) */
@@ -127,8 +112,6 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
   }, [teamName, difficulty, season, submitting, validateForm, onSubmit]);
 
   const seasonsReady = seasons !== null && seasons.length > 0 && !seasonsError;
-  const selectedDifficulty = DIFFICULTY_OPTIONS.find(o => o.value === difficulty);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" aria-label="Inizia a giocare">
       {/* Nome squadra con generatore */}
@@ -177,23 +160,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       {/* Difficoltà */}
       <div>
         <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Bot avversari</p>
-        <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label="Difficoltà dei bot">
-          {DIFFICULTY_OPTIONS.map((option, i) => (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={difficulty === option.value}
-              onClick={() => setDifficulty(option.value)}
-              className={`py-2 font-display text-sm sm:text-xl font-bold transition-colors duration-150 focus-visible:outline outline-2 outline-offset-[-2px] outline-pitch ${
-                i > 0 ? 'border-l-2 border-ink' : ''
-              } ${difficulty === option.value ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selectedDifficulty?.description}</p>
+        <DifficultyPicker value={difficulty} onChange={setDifficulty} disabled={submitting} />
       </div>
 
       <div>

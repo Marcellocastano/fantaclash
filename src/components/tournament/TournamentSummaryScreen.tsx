@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useGame } from '../../context/GameContext';
+import { useTournamentController } from '../../hooks/tournamentController';
 import { buildTournamentSummary, TournamentState, TournamentSummary } from '../../domain/tournament';
 import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, xShareUrl } from '../../services/shareCard';
 import { playSound } from '../../services/sound';
@@ -22,20 +22,20 @@ const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
  * Un solo pulsante: nuova partita.
  */
 export function TournamentSummaryScreen() {
-  const { state, resetGame } = useGame();
-  const tournament = state.tournament;
-  const summary = useMemo(() => (tournament ? buildTournamentSummary(tournament, state.teams) : null), [tournament, state.teams]);
+  const { tournament, teams, resetGame, finalLabel } = useTournamentController();
+  const summary = useMemo(() => (tournament ? buildTournamentSummary(tournament, teams) : null), [tournament, teams]);
   if (!tournament || !summary) return null;
-  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} />;
+  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} newGameLabel={finalLabel} />;
 }
 
 interface SummaryProps {
   summary: TournamentSummary;
   tournament: TournamentState;
   onNewGame: () => void;
+  newGameLabel?: string;
 }
 
-function Summary({ summary, tournament, onNewGame }: SummaryProps) {
+function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps) {
   const { card, failed } = useSummaryCard(summary);
   const [notice, setNotice] = useState<string | null>(null);
   const champion = summary.placement === 'campione';
@@ -137,7 +137,7 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
             )}
 
             <button onClick={onNewGame} className="btn-cta mt-12">
-              Nuova partita
+              {newGameLabel ?? 'Nuova partita'}
               <Icon name="arrow" className="w-7 h-7" />
             </button>
           </div>

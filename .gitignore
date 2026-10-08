@@ -12,6 +12,8 @@ dist
 dist-ssr
 dist-server
 *.local
+.env
+.env.*
 docs
 LISTE
 
