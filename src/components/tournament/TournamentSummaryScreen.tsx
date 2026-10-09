@@ -9,6 +9,7 @@ import { StreamerReserve } from '../layout/GameShell';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { useSummaryCard } from './useSummaryCard';
+import { useCountUp } from '../../hooks/useCountUp';
 
 const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
   campione: 'bg-highlight text-on-highlight',
@@ -125,20 +126,19 @@ function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps)
               {summary.championName && !champion && <> · coppa a {summary.championName}</>}
             </p>
 
-            <dl className="flex flex-wrap mt-10 border-y-2 border-ink divide-x-2 divide-line">
-              <Stat label="Vittorie" value={`${summary.stats.wins}/${summary.stats.played}`} />
-              <Stat label="Gol fatti" value={summary.stats.goalsFor} />
-              <Stat label="Gol subiti" value={summary.stats.goalsAgainst} />
-              <Stat label="Porte inviolate" value={summary.stats.cleanSheets} />
-            </dl>
+            <StatBlocks stats={summary.stats} />
             {summary.mvp && (
-              <p className="mt-6 text-lg text-ink">
-                MVP del torneo: <span className="font-bold">{summary.mvp.name}</span>
-                <span className="text-ink-muted"> · fantavoto medio {summary.mvp.avgFantasy.toFixed(1)}</span>
+              <p className="mt-6 flex w-fit max-w-full flex-wrap items-center gap-3 border-2 border-ink bg-canvas shadow-block-sm px-3 py-2">
+                <span className="bg-highlight text-on-highlight border-2 border-ink px-2 font-display font-black">MVP</span>
+                <span className="font-display text-2xl font-black text-ink">{summary.mvp.name}</span>
+                <span className="text-ink-muted">fantavoto medio {summary.mvp.avgFantasy.toFixed(1)}</span>
               </p>
             )}
 
-            <button onClick={onNewGame} className="btn-cta mt-12">
+            {newGameLabel === undefined && (
+              <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+            )}
+            <button onClick={onNewGame} className={`btn-cta text-2xl sm:text-3xl py-4 sm:py-5 px-8 ${newGameLabel === undefined ? 'mt-4' : 'mt-10'}`}>
               {newGameLabel ?? 'Nuova partita'}
               <Icon name="arrow" className="w-7 h-7" />
             </button>
@@ -156,12 +156,33 @@ function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps)
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+const STAT_STYLE = [
+  { label: 'Vittorie', cls: 'bg-pitch text-on-pitch', tilt: '-rotate-1' },
+  { label: 'Gol fatti', cls: 'bg-highlight text-on-highlight', tilt: 'rotate-1' },
+  { label: 'Gol subiti', cls: 'bg-whistle text-on-whistle', tilt: '-rotate-1' },
+  { label: 'Porte inviolate', cls: 'bg-ink text-canvas', tilt: 'rotate-1' },
+];
+
+function StatBlocks({ stats }: { stats: TournamentSummary['stats'] }) {
+  const wins = useCountUp(stats.wins);
+  const gf = useCountUp(stats.goalsFor);
+  const ga = useCountUp(stats.goalsAgainst);
+  const cs = useCountUp(stats.cleanSheets);
+  const values = [`${wins}/${stats.played}`, gf, ga, cs];
   return (
-    <div className="flex-1 min-w-[6rem] sm:min-w-[8rem] px-2 sm:px-4 py-4 first:pl-0">
-      <dt className="text-sm font-semibold text-ink-muted">{label}</dt>
-      <dd className="font-display text-5xl font-black tabular-nums text-ink leading-none mt-1">{value}</dd>
-    </div>
+    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-10">
+      {STAT_STYLE.map((s, i) => (
+        <div key={s.label} className={s.tilt}>
+          <div
+            className={`border-2 border-ink shadow-block p-3 sm:p-4 motion-safe:animate-drop ${s.cls}`}
+            style={{ animationDelay: `${i * 100}ms` }}
+          >
+            <dt className="text-sm font-bold opacity-80">{s.label}</dt>
+            <dd className="font-display text-5xl sm:text-6xl font-black tabular-nums leading-none mt-1">{values[i]}</dd>
+          </div>
+        </div>
+      ))}
+    </dl>
   );
 }
 

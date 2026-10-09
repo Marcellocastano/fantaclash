@@ -293,9 +293,9 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   ctx.textBaseline = 'middle';
   ctx.font = `800 50px ${DISPLAY}`;
   ctx.fillText('FantaClash', M + 82, M + 34);
-  ctx.font = `600 26px ${SANS}`;
-  ctx.fillStyle = 'rgba(244, 238, 223, 0.7)';
-  ctx.fillText(summary.tournamentName, M + 82, M + 76);
+  ctx.font = `800 46px ${DISPLAY}`;
+  ctx.fillStyle = YELLOW;
+  ctx.fillText(fitFont(ctx, summary.tournamentName, 680, 800, DISPLAY, 46, 28), M + 82, M + 90);
   drawSeasonStamp(ctx, W - M - 82, M + 88, summary.seasonId);
 
   // Esito e squadra

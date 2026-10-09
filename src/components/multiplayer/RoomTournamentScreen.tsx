@@ -242,7 +242,7 @@ export function RoomFinalScreen() {
     return (
       <div className="px-1">
         <div className="max-w-3xl mx-auto py-8 text-center">
-          <p className="section-heading">Torneo concluso</p>
+          <p className="section-heading">{t.name}</p>
           <h1 className="font-display text-4xl sm:text-6xl font-black text-ink mt-4">
             Campione: {champion?.name ?? '—'}
           </h1>

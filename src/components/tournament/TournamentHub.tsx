@@ -58,7 +58,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   let hero: ReactNode;
   if (tournament.status === 'completed') {
     hero = (
-      <Hero title={champion?.isUserTeam ? 'Campione!' : `Coppa a ${champion?.name ?? ''}`}>
+      <Hero kicker={tournament.name} title={champion?.isUserTeam ? 'Campione!' : `Coppa a ${champion?.name ?? ''}`}>
         {controls ?? (
           <button onClick={onSummary} className="btn-cta">
             Vai al riepilogo
@@ -69,7 +69,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
     );
   } else if (isUserEliminated(tournament)) {
     hero = (
-      <Hero title="Sei fuori dal torneo">
+      <Hero kicker={tournament.name} title="Sei fuori dal torneo">
         {controls ?? (
           <button onClick={onSummary} className="btn-cta">
             Vai al riepilogo
@@ -80,7 +80,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   } else if (userMatch && round) {
     hero = (
       <section className="text-center">
-        <p className="font-display text-2xl font-extrabold text-ink-muted">{ROUND_TITLE[round]}</p>
+        <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name} · {ROUND_TITLE[round]}</p>
         <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-8">
           <Side team={team(userMatch.homeId)} align="right" />
           <span className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-whistle leading-none">VS</span>
@@ -98,7 +98,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
     );
   } else {
     hero = (
-      <Hero title="Gli altri devono ancora giocare">
+      <Hero kicker={tournament.name} title="Gli altri devono ancora giocare">
         {(othersPending || controls) &&
           (controls ?? (
             <button onClick={onCompleteRound} className="btn-cta">
@@ -122,9 +122,12 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   );
 }
 
-function Hero({ title, children }: { title: string; children: ReactNode }) {
+function Hero({ kicker, title, children }: { kicker?: string; title: string; children: ReactNode }) {
   return (
     <section className="text-center motion-safe:animate-stamp">
+      {kicker && (
+        <p className="font-display text-2xl font-extrabold text-ink-muted mb-3">{kicker}</p>
+      )}
       <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-black text-ink leading-none break-words">{title}</h1>
       <div className="mt-8">{children}</div>
     </section>
@@ -148,27 +151,52 @@ function Side({ team, align }: { team: TournamentTeam | undefined; align: 'left'
 /** Risultati delle partite simulate mentre giocavi, rivelati uno alla volta */
 function RoundResults({ tournament, ids }: { tournament: TournamentState; ids: string[] }) {
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
+  const nameCls = (teamId: string | null, won: boolean) => {
+    const mine = teamId === tournament.userTeamId;
+    return `truncate text-sm sm:text-base ${won ? 'font-extrabold' : 'font-semibold'} ${mine ? 'text-highlight' : won ? 'text-canvas' : 'text-canvas/50'}`;
+  };
   return (
-    <section className="mt-8 flex flex-wrap items-baseline justify-center gap-x-8 gap-y-2" aria-label="Risultati degli altri campi">
-      <h2 className="font-display text-xl font-extrabold text-ink-muted">Intanto sugli altri campi</h2>
-      {ids.map((id, i) => {
-        const m = tournament.bracket.find(x => x.id === id);
-        const r = tournament.matches[id];
-        if (!m || !r) return null;
-        const name = (teamId: string | null) => (
-          <span className={m.winnerId === teamId ? 'font-bold text-ink' : 'text-ink-muted'}>{team(teamId)?.name}</span>
-        );
-        return (
-          <p key={id} className="flex items-baseline gap-2 motion-safe:animate-reveal" style={{ animationDelay: `${i * REVEAL_STEP_MS}ms` }}>
-            {name(m.homeId)}
-            <span className="font-display text-2xl font-black tabular-nums text-ink">
-              {r.homeScore}-{r.awayScore}
-            </span>
-            {name(m.awayId)}
-            {r.shootout && <span className="text-xs font-bold text-ink-muted">rig. {r.shootout.home}-{r.shootout.away}</span>}
-          </p>
-        );
-      })}
+    <section className="mt-10 max-w-4xl mx-auto bg-pitch-deep border-2 border-ink shadow-block" aria-label="Risultati degli altri campi">
+      <div className="flex items-center gap-3 px-4 py-3 border-b-2 border-canvas/15">
+        <span className="bg-whistle text-on-whistle border-2 border-ink px-2 py-0.5 font-display font-black text-lg">Flash</span>
+        <h2 className="font-display text-2xl font-extrabold text-canvas">Intanto sugli altri campi</h2>
+      </div>
+      <ul className="divide-y-2 divide-canvas/15">
+        {ids.map((id, i) => {
+          const m = tournament.bracket.find(x => x.id === id);
+          const r = tournament.matches[id];
+          if (!m || !r) return null;
+          const delay = i * REVEAL_STEP_MS;
+          return (
+            <li
+              key={id}
+              className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 motion-safe:animate-reveal"
+              style={{ animationDelay: `${delay}ms` }}
+            >
+              <span className="flex items-center justify-end gap-2 min-w-0">
+                <span className={nameCls(m.homeId, m.winnerId === m.homeId)}>{team(m.homeId)?.name}</span>
+                <TeamBadge team={team(m.homeId)} size="sm" />
+              </span>
+              <span className="flex flex-col items-center">
+                <span className="motion-safe:animate-stamp" style={{ animationDelay: `${delay}ms` }}>
+                  <span className="inline-block bg-highlight text-on-highlight border-2 border-ink shadow-block-sm px-3 py-1 font-display text-2xl sm:text-3xl font-black tabular-nums leading-none">
+                    {r.homeScore}-{r.awayScore}
+                  </span>
+                </span>
+                {r.shootout && (
+                  <span className="mt-1 bg-whistle text-on-whistle border border-ink px-1.5 text-xs font-bold">
+                    Rigori {r.shootout.home}-{r.shootout.away}
+                  </span>
+                )}
+              </span>
+              <span className="flex items-center gap-2 min-w-0">
+                <TeamBadge team={team(m.awayId)} size="sm" />
+                <span className={nameCls(m.awayId, m.winnerId === m.awayId)}>{team(m.awayId)?.name}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

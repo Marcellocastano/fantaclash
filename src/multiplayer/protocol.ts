@@ -17,6 +17,8 @@ export type RoomPhase = 'lobby' | 'auction' | 'tournament' | 'final';
 export interface RoomSettings {
   season: string;
   difficulty: DifficultyLevel;
+  /** Nome della coppa del torneo (default: FantaClash Cup) */
+  cupName?: string;
 }
 
 export interface RoomPlayer {

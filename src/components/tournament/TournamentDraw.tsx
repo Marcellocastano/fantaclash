@@ -97,7 +97,8 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
     <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
         <div>
-          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none">Il sorteggio</h1>
+          <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
+          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">Il sorteggio</h1>
           <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
         </div>
       </div>

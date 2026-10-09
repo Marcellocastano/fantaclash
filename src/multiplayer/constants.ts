@@ -35,6 +35,9 @@ export const NICKNAME_MAX = 20;
 /** Lunghezza massima del nome squadra (stessa del form singolo) */
 export const TEAM_NAME_MAX = MAX_TEAM_NAME_LENGTH;
 
+/** Lunghezza massima del nome della coppa della stanza */
+export const CUP_NAME_MAX = 30;
+
 /** Velocità fissa delle partite live in stanza */
 export const MATCH_SPEED = 2;
 

@@ -10,9 +10,11 @@ import {
 import { MatchOptions, withTacticChange } from '../domain/match';
 import { resultHash } from './hash';
 import {
+  CUP_NAME_MAX,
   MAX_PLAYERS,
   PROTOCOL_VERSION,
 } from './constants';
+import { isOffensiveName } from './moderation';
 import {
   RoomAction,
   RoomPlayer,
@@ -34,6 +36,16 @@ export interface CreateRoomInput {
   now: number;
 }
 
+/**
+ * Nome della coppa pronto per lo stato: spazi compressi, lunghezza
+ * limitata, nomi offensivi scartati (torna al default FantaClash Cup).
+ */
+function cleanCupName(name: string | undefined): string | undefined {
+  if (name === undefined) return undefined;
+  const clean = name.replace(/\s+/g, ' ').trim().slice(0, CUP_NAME_MAX);
+  return clean && !isOffensiveName(clean) ? clean : undefined;
+}
+
 /** Crea la stanza in lobby con l'host come primo giocatore */
 export function createRoom({ code, hostId, host, settings, now }: CreateRoomInput): RoomState {
   const hostPlayer: RoomPlayer = {
@@ -50,7 +62,7 @@ export function createRoom({ code, hostId, host, settings, now }: CreateRoomInpu
     rev: 0,
     phase: 'lobby',
     hostId,
-    settings,
+    settings: { ...settings, cupName: cleanCupName(settings.cupName) },
     players: [hostPlayer],
     teams: [],
     auction: null,
@@ -124,6 +136,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       // La difficoltà dei bot non si cambia in stanza: fissa a 'normale'
       const rest = { ...action.settings };
       delete rest.difficulty;
+      if ('cupName' in rest) rest.cupName = cleanCupName(rest.cupName);
       return { ...state, settings: { ...state.settings, ...rest } };
     }
 
@@ -165,6 +178,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           teams: state.teams,
           seasonId: state.settings.season,
           seed: action.seed,
+          name: state.settings.cupName,
         }),
       };
     }

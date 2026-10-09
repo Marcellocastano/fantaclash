@@ -43,14 +43,16 @@ export interface CreateTournamentInput {
   teams: Team[];
   seasonId: string;
   seed: number;
+  /** Nome della coppa (stanze multiplayer); default FantaClash Cup */
+  name?: string;
 }
 
 /** Torneo in stato 'draw', tabellone vuoto */
-export function createTournament({ teams, seasonId, seed }: CreateTournamentInput): TournamentState {
+export function createTournament({ teams, seasonId, seed, name }: CreateTournamentInput): TournamentState {
   const user = teams.find(t => t.isUserTeam);
   return {
     id: `cup-${seed.toString(36)}`,
-    name: TOURNAMENT_NAME,
+    name: name?.trim() || TOURNAMENT_NAME,
     seasonId,
     userTeamId: user?.id ?? '',
     teams: teams.map(toTournamentTeam),
