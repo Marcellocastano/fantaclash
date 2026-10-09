@@ -64,9 +64,9 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
   const uplinkChans = new Map<string, RealtimeChannel>();
 
   const emitPresence = (ch: RealtimeChannel) => {
-    const state = ch.presenceState<{ id: string; role: PresenceEntry['role'] }>();
+    const state = ch.presenceState<{ id: string; role: PresenceEntry['role']; pubKey?: JsonWebKey }>();
     const entries: PresenceEntry[] = Object.entries(state).flatMap(([key, metas]) =>
-      metas.map(m => ({ id: m.id ?? key, role: m.role }))
+      metas.map(m => ({ id: m.id ?? key, role: m.role, pubKey: m.pubKey }))
     );
     presenceCbs.forEach(cb => cb(entries));
   };
@@ -100,7 +100,7 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
       if (uplink) {
         await subscribeChannel(uplink, () => presenceCbs.forEach(cb => cb([])));
       }
-      await downlink.track({ id: opts.selfId, role: opts.role });
+      await downlink.track({ id: opts.selfId, role: opts.role, pubKey: opts.pubKey });
     },
 
     async close() {

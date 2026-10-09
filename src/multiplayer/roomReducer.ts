@@ -40,7 +40,6 @@ export function createRoom({ code, hostId, host, settings, now }: CreateRoomInpu
     id: hostId,
     nickname: host.nickname,
     teamName: host.teamName,
-    ready: false,
     connected: true,
     joinedAt: now,
     teamId: null,
@@ -112,13 +111,6 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
 
     case 'PLAYER_CONNECTION':
       return setConnected(state, action.playerId, action.connected);
-
-    case 'PLAYER_READY': {
-      if (state.phase !== 'lobby') return state;
-      const player = state.players.find(p => p.id === action.playerId);
-      if (!player || player.ready === action.ready) return state;
-      return updatePlayer(state, action.playerId, { ready: action.ready });
-    }
 
     case 'PLAYER_KICKED': {
       if (state.phase !== 'lobby') return state;
@@ -255,6 +247,28 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
               : [...live.resolvedStops, action.stopTick],
           },
         },
+      };
+    }
+
+    case 'TIME_SHIFT': {
+      // Pausa dell'host (ricarica): le scadenze slittano in avanti di `by`
+      if (action.by <= 0) return state;
+      const auction = state.auction?.lot
+        ? {
+            ...state.auction,
+            lot: { ...state.auction.lot, deadline: state.auction.lot.deadline + action.by },
+          }
+        : state.auction;
+      const live = Object.keys(state.live).length
+        ? Object.fromEntries(
+            Object.entries(state.live).map(([id, m]) => [id, { ...m, anchorAt: m.anchorAt + action.by }])
+          )
+        : state.live;
+      return {
+        ...state,
+        auction,
+        callDeadline: state.callDeadline !== null ? state.callDeadline + action.by : null,
+        live,
       };
     }
 

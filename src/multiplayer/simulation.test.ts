@@ -78,7 +78,7 @@ describe('simulazione stanza completa (host autorevole)', () => {
     let host = createRoom({
       code: 'ABCDE', hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
-      settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+      settings: { season: '2024-25', difficulty: 'normale' },
       now: T0,
     });
     for (const id of ['p2', 'p3']) {
@@ -91,8 +91,6 @@ describe('simulazione stanza completa (host autorevole)', () => {
       const joined = applyHostAction(host, ++rev, r.actions[0]);
       expect(joined).not.toBe(host);
       host = joined;
-      const ready = handleIntent(host, book, id, { type: 'READY', ready: true }, T0, rng);
-      host = applyHostAction(host, ++rev, ready.actions[0]);
     }
 
     // Avvio: il client parte dallo SNAPSHOT iniziale (clone JSON)

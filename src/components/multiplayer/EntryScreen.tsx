@@ -30,7 +30,6 @@ export function EntryScreen({
   const [code, setCode] = useState(initialCode ?? '');
   const [season, setSeason] = useState('');
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
-  const [fillWithBots, setFillWithBots] = useState(true);
   const [asSpectator, setAsSpectator] = useState(initialSpectator);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +57,7 @@ export function EntryScreen({
       await onCreate({
         nickname: nickname.trim(),
         teamName: teamName.trim(),
-        settings: { season, difficulty: 'normale', fillWithBots },
+        settings: { season, difficulty: 'normale' },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore nella creazione della stanza');
@@ -163,15 +162,7 @@ export function EntryScreen({
                 <p className="border-2 border-ink px-4 py-5 text-ink-muted">Caricamento stagioni…</p>
               )}
             </div>
-            <label className="flex items-center gap-3 font-semibold text-ink cursor-pointer">
-              <input
-                type="checkbox"
-                checked={fillWithBots}
-                onChange={e => setFillWithBots(e.target.checked)}
-                className="w-5 h-5 accent-[rgb(var(--c-pitch))]"
-              />
-              Completa con bot i posti liberi
-            </label>
+            <p className="text-sm text-ink-soft">I posti liberi vanno ai bot (difficoltà normale).</p>
             <button type="button" onClick={submitCreate} disabled={busy} className="btn-cta w-full text-xl py-3">
               {busy ? 'Creazione…' : 'Crea stanza'}
               <Icon name="arrow" className="w-5 h-5" />
@@ -197,10 +188,30 @@ export function EntryScreen({
                 <p className="mt-2 text-sm text-danger">Codice non valido</p>
               )}
             </div>
-            {hasIdentity && initialCode && (
-              <p className="text-sm text-ink-soft">
-                Hai già partecipato a questa stanza: entrando riprendi il tuo posto.
-              </p>
+            {hasIdentity && initialCode && initialCode === normalizeRoomCode(code) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setBusy(true);
+                  setError(null);
+                  try {
+                    await onJoin({
+                      code: initialCode,
+                      nickname: nickname.trim() || 'Giocatore',
+                      teamName: teamName.trim() || 'Squadra',
+                      role: 'player',
+                    });
+                    setBusy(false);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : 'Errore di connessione');
+                    setBusy(false);
+                  }
+                }}
+                disabled={busy}
+                className="btn-primary w-full text-lg py-2.5"
+              >
+                Rientra nella stanza
+              </button>
             )}
             <button
               type="button"

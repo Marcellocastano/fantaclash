@@ -53,7 +53,7 @@ function lobbyRoom(): RoomState {
   return createRoom({
     code: CODE, hostId: 'h1',
     host: { nickname: 'Host', teamName: 'Host FC' },
-    settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+    settings: { season: '2024-25', difficulty: 'normale' },
     now: Date.now(),
   });
 }

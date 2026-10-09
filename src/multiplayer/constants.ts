@@ -46,3 +46,6 @@ export const DECISION_TIMEOUT_MS = 15000;
 
 /** Timeout della scelta dell'ordine dei rigoristi (ms) */
 export const SHOOTOUT_ORDER_TIMEOUT_MS = 20000;
+
+/** Ogni quanto l'host ritrasmette l'hash di stato (riallinea le code perse) */
+export const HASH_INTERVAL_MS = 4000;

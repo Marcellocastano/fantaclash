@@ -17,15 +17,12 @@ export type RoomPhase = 'lobby' | 'auction' | 'tournament' | 'final';
 export interface RoomSettings {
   season: string;
   difficulty: DifficultyLevel;
-  /** true: gli slot liberi vanno a bot; false: servono 8 umani */
-  fillWithBots: boolean;
 }
 
 export interface RoomPlayer {
   id: string;
   nickname: string;
   teamName: string;
-  ready: boolean;
   connected: boolean;
   joinedAt: number;
   /** Squadra assegnata a START_AUCTION (null in lobby) */
@@ -79,7 +76,6 @@ export type RoomAction =
   | { type: 'PLAYER_JOINED'; player: RoomPlayer }
   | { type: 'PLAYER_LEFT'; playerId: string }
   | { type: 'PLAYER_CONNECTION'; playerId: string; connected: boolean }
-  | { type: 'PLAYER_READY'; playerId: string; ready: boolean }
   | { type: 'PLAYER_KICKED'; playerId: string }
   | { type: 'SETTINGS'; settings: Partial<RoomSettings> }
   | { type: 'START_AUCTION'; teams: Team[]; auction: AuctionState }
@@ -97,11 +93,11 @@ export type RoomAction =
       tactics?: Partial<Record<MatchSide, Tactic>>;
       shootoutOrder?: Partial<Record<MatchSide, string[]>>;
     }
-  | { type: 'FINISH' };
+  | { type: 'FINISH' }
+  | { type: 'TIME_SHIFT'; by: number };
 
 export type ClientIntent =
-  | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator' }
-  | { type: 'READY'; ready: boolean }
+  | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator'; pubKey?: JsonWebKey }
   | { type: 'CALL'; footballerId: string }
   | { type: 'BID'; amount: number }
   | { type: 'PING'; t: number }
@@ -113,30 +109,33 @@ export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_tok
 
 export type HostMessage =
   | { type: 'ACTION'; rev: number; action: RoomAction; hostNow: number }
-  | { type: 'SNAPSHOT'; rev: number; state: RoomState; hash: string; hostNow: number; to?: string }
+  | { type: 'SNAPSHOT'; rev: number; state: RoomState; hash: string; hostNow: number; to?: string; hostPubKey?: JsonWebKey }
+  | { type: 'ROOM_CLOSED' }
   | { type: 'HASH'; rev: number; hash: string }
   | { type: 'LISTENING'; to: string }
   | { type: 'PONG'; to: string; t: number; hostNow: number }
   | { type: 'REJECT'; to: string; reason: RejectReason };
 
-/** Busta di trasporto: la firma arriverà in F7 */
+/** Busta di trasporto: `sig` è la firma ECDSA di stableStringify(msg) */
 export interface Envelope<M> {
   from: string;
   msg: M;
+  sig?: string;
 }
 
 const CLIENT_INTENT_TYPES: readonly ClientIntent['type'][] = [
-  'HELLO', 'READY', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER',
+  'HELLO', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER',
 ];
 
 const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
-  'ACTION', 'SNAPSHOT', 'HASH', 'PONG', 'REJECT', 'LISTENING',
+  'ACTION', 'SNAPSHOT', 'HASH', 'PONG', 'REJECT', 'LISTENING', 'ROOM_CLOSED',
 ];
 
 const ROOM_ACTION_TYPES: readonly RoomAction['type'][] = [
-  'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION', 'PLAYER_READY',
+  'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION',
   'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE',
   'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'MATCH_START', 'MATCH_RESUME', 'FINISH',
+  'TIME_SHIFT',
 ];
 
 /** Guard minimo sulla forma del messaggio (type noto) */

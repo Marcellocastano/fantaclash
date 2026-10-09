@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useTournamentController } from '../../hooks/tournamentController';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { MatchResult } from '../../domain/match';
 import {
   simulateRound,
@@ -27,6 +28,7 @@ export function TournamentScreen() {
   } = useTournamentController();
   const [showDraw, setShowDraw] = useState(tournament?.status === 'draw');
   const [revealIds, setRevealIds] = useState<string[]>([]);
+  useScrollToTop(showDraw ? 'draw' : tournament?.currentMatchId ?? 'hub');
 
   const onDrawn = useCallback((order: string[]) => act({ type: 'DRAW', order }), [act]);
   const onDrawDone = useCallback(() => setShowDraw(false), []);

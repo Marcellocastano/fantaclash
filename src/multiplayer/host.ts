@@ -20,7 +20,9 @@ import {
   PROTOCOL_VERSION,
   TEAM_NAME_MAX,
 } from './constants';
+import { sameKey } from './crypto';
 import { stateHash } from './hash';
+import { isOffensiveName } from './moderation';
 import { MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
 import { findMatch, simulateBracketMatch } from '../domain/tournament';
 import {
@@ -52,6 +54,12 @@ export interface HostBook {
   /** Giocatori espulsi: non possono rientrare */
   kicked: Set<string>;
   /**
+   * Chiave pubblica JWK fissata al primo ingresso accettato di ogni
+   * partecipante: gli intenti successivi devono essere firmati con la
+   * privata corrispondente. Serializzabile, va nel salvataggio host.
+   */
+  publicKeys: Record<string, JsonWebKey>;
+  /**
    * Scelte delle partite live, segrete fino al MATCH_RESUME:
    * restano in memoria dell'host, mai in RoomState.
    */
@@ -59,7 +67,7 @@ export interface HostBook {
 }
 
 export function createHostBook(): HostBook {
-  return { tokens: {}, kicked: new Set(), matchChoices: {} };
+  return { tokens: {}, kicked: new Set(), publicKeys: {}, matchChoices: {} };
 }
 
 export interface HandleResult {
@@ -124,10 +132,18 @@ export function handleIntent(
       if (intent.protocol !== PROTOCOL_VERSION) {
         return ok([], [reject(fromPlayerId, 'protocol')]);
       }
+      // Chiave pubblica fissata al primo ingresso: un rientro con una
+      // chiave diversa è rifiutato anche se il token è giusto
+      const pinned = book.publicKeys[fromPlayerId];
+      if (pinned && (!intent.pubKey || !sameKey(pinned, intent.pubKey))) {
+        return ok([], [reject(fromPlayerId, 'bad_token')]);
+      }
+      const withKey = (b: HostBook): HostBook =>
+        pinned || !intent.pubKey ? b : { ...b, publicKeys: { ...b.publicKeys, [fromPlayerId]: intent.pubKey } };
       if (intent.role === 'spectator') {
         // Lo spettatore riceverà lo SNAPSHOT deciso dal trasporto:
-        // nessuna azione di stanza
-        return ok();
+        // nessuna azione di stanza, ma la chiave si fissa lo stesso
+        return { actions: [], replies: [], book: withKey(book) };
       }
       if (book.kicked.has(fromPlayerId)) {
         return ok([], [reject(fromPlayerId, 'kicked')]);
@@ -147,14 +163,13 @@ export function handleIntent(
       }
       const nickname = sanitize(intent.nickname, NICKNAME_MAX);
       const teamName = sanitize(intent.teamName, TEAM_NAME_MAX);
-      if (!nickname || !teamName) {
+      if (!nickname || !teamName || isOffensiveName(nickname) || isOffensiveName(teamName)) {
         return ok([], [reject(fromPlayerId, 'invalid')]);
       }
       const player = {
         id: fromPlayerId,
         nickname,
         teamName,
-        ready: false,
         connected: true,
         joinedAt: hostNow,
         teamId: null,
@@ -162,13 +177,8 @@ export function handleIntent(
       return {
         actions: [{ type: 'PLAYER_JOINED', player }],
         replies: [],
-        book: { ...book, tokens: { ...book.tokens, [fromPlayerId]: intent.token } },
+        book: withKey({ ...book, tokens: { ...book.tokens, [fromPlayerId]: intent.token } }),
       };
-    }
-
-    case 'READY': {
-      if (!state.players.some(p => p.id === fromPlayerId)) return ok();
-      return ok([{ type: 'PLAYER_READY', playerId: fromPlayerId, ready: intent.ready }]);
     }
 
     case 'CALL': {
@@ -279,10 +289,10 @@ export function handleIntent(
 
 /**
  * Costruisce il mondo iniziale dell'asta multiplayer.
- * Richiede almeno MIN_HUMANS giocatori; con fillWithBots=false servono
- * esattamente 8 umani. Ogni umano (in ordine di ingresso) ottiene una
- * squadra col suo teamName, controller 'human' e un botConfig
- * 'equilibrato' per l'autopilota in caso di disconnessione.
+ * Richiede almeno MIN_HUMANS giocatori; i posti liberi vanno sempre
+ * ai bot. Ogni umano (in ordine di ingresso) ottiene una squadra col
+ * suo teamName, controller 'human' e un botConfig 'equilibrato' per
+ * l'autopilota in caso di disconnessione.
  */
 export function buildStartAuction(
   state: RoomState,
@@ -293,7 +303,6 @@ export function buildStartAuction(
   // In sviluppo basta l'host, come promesso dal pulsante della lobby
   const minHumans = import.meta.env.DEV ? 1 : MIN_HUMANS;
   if (humans.length < minHumans) return null;
-  if (!state.settings.fillWithBots && humans.length < LEAGUE_SIZE) return null;
   if (state.phase !== 'lobby') return null;
 
   const difficulty = state.settings.difficulty;

@@ -7,7 +7,7 @@ import { LogoMark } from '../Logo';
 import { ConfirmDialog } from './ConfirmDialog';
 import { JOURNEY_STEPS } from './journey';
 
-interface AppNavbarProps {
+export interface AppNavbarProps {
   /** Tappa corrente del percorso (vedi journeyStep); null = nessun percorso */
   step?: number | null;
   /** Dati del momento a destra (crediti, annata...) */
@@ -16,18 +16,39 @@ interface AppNavbarProps {
   links?: { label: string; href: string }[];
   /** Partita in corso: il menu offre "Nuova partita" (con conferma) */
   onNewGame?: () => void;
+  /**
+   * Uscita da una sessione (stanza multiplayer): il clic sul logo apre
+   * questa conferma invece di portare alla home.
+   */
+  sessionExit?: {
+    title: string;
+    message: string;
+    confirmLabel: string;
+    action: () => void;
+  };
 }
 
 /**
  * Navbar comune: logo, percorso di gioco, dati del momento, audio e menu
  * (nuova partita con conferma, supporto).
  */
-export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarProps) {
+export function AppNavbar({ step = null, context, links, onNewGame, sessionExit }: AppNavbarProps) {
   const [muted, setMuted] = useSoundMuted();
   const [streamer, setStreamer] = useStreamerMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // In una sessione il logo chiede conferma come "Nuova partita" o l'uscita
+  // dalla stanza; fuori sessione resta un link alla home.
+  const logoSession = sessionExit ?? (onNewGame
+    ? {
+        title: 'Nuova partita?',
+        message: 'La partita in corso verrà cancellata: asta, rose e torneo ripartono da zero.',
+        confirmLabel: 'Cancella e ricomincia',
+        action: onNewGame,
+      }
+    : undefined);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -41,11 +62,24 @@ export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarP
   return (
     <header className="sticky top-0 z-30 bg-pitch-deep text-canvas border-b-4 border-ink">
       <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center gap-6">
-        <a href="/" aria-label="FantaClash — torna alla home" className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold leading-none shrink-0">
-          <LogoMark className="h-9 w-9" />
-          <span className="hidden sm:inline">FantaClash</span>
-          <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">ALPHA</span>
-        </a>
+        {logoSession ? (
+          <button
+            type="button"
+            onClick={() => setConfirmReset(true)}
+            aria-label="FantaClash"
+            className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold leading-none shrink-0"
+          >
+            <LogoMark className="h-9 w-9" />
+            <span className="hidden sm:inline">FantaClash</span>
+            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">ALPHA</span>
+          </button>
+        ) : (
+          <a href="/" aria-label="FantaClash — torna alla home" className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold leading-none shrink-0">
+            <LogoMark className="h-9 w-9" />
+            <span className="hidden sm:inline">FantaClash</span>
+            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">ALPHA</span>
+          </a>
+        )}
 
         {step !== null && <JourneyTrail step={step} />}
         {links && (
@@ -60,6 +94,18 @@ export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarP
 
         <div className="ml-auto flex items-center gap-4">
           {context && <div className="hidden md:flex items-center gap-5">{context}</div>}
+          {SUPPORT_URL && (
+            <a
+              href={SUPPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Supporta FantaClash su Ko-fi"
+              className="flex items-center gap-2 px-3 py-1.5 bg-highlight text-on-highlight font-display font-extrabold text-lg leading-none border-2 border-ink shadow-block-sm hover:brightness-110 transition-all duration-150"
+            >
+              <Icon name="heart" className="w-5 h-5 text-whistle motion-safe:animate-heartbeat" />
+              <span className="hidden sm:inline">Supporta</span>
+            </a>
+          )}
           <button
             onClick={() => setMuted(!muted)}
             aria-label={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
@@ -138,15 +184,15 @@ export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarP
         </div>
       </div>
 
-      {confirmReset && (
+      {confirmReset && logoSession && (
         <ConfirmDialog
-          title="Nuova partita?"
-          message="La partita in corso verrà cancellata: asta, rose e torneo ripartono da zero."
-          confirmLabel="Cancella e ricomincia"
+          title={logoSession.title}
+          message={logoSession.message}
+          confirmLabel={logoSession.confirmLabel}
           onCancel={() => setConfirmReset(false)}
           onConfirm={() => {
             setConfirmReset(false);
-            onNewGame?.();
+            logoSession.action();
           }}
         />
       )}

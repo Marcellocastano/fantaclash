@@ -40,12 +40,12 @@ function tournamentState(opts: { finish?: boolean } = {}): RoomState {
   let s = createRoom({
     code: 'ABCDE', hostId: 'h1',
     host: { nickname: 'Host', teamName: 'Host FC' },
-    settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+    settings: { season: '2024-25', difficulty: 'normale' },
     now: Date.now(),
   });
   s = roomReducer(s, {
     type: 'PLAYER_JOINED',
-    player: { id: 'c1', nickname: 'Guest', teamName: 'Guest FC', ready: true, connected: true, joinedAt: 1, teamId: null },
+    player: { id: 'c1', nickname: 'Guest', teamName: 'Guest FC', connected: true, joinedAt: 1, teamId: null },
   });
   s = roomReducer(s, {
     type: 'START_AUCTION',
@@ -74,6 +74,8 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     role,
     me,
     spectatorCount: 0,
+    hostOnline: true,
+    roomClosed: false,
     isHost: role === 'host',
     createRoom: async () => {},
     joinRoom: async () => {},
@@ -83,6 +85,8 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     kick: () => {},
     updateSettings: () => {},
     startAuction: () => {},
+    resumeRoom: async () => {},
+    closeRoom: async () => {},
     dispatchRoomAction: (a: RoomAction) => { dispatched.push(a); return true; },
   };
 }
@@ -96,7 +100,7 @@ describe('torneo in stanza (UI)', () => {
     const s = createRoom({
       code: 'ABCDE', hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
-      settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+      settings: { season: '2024-25', difficulty: 'normale' },
       now: Date.now(),
     });
     const done = roomReducer(s, {

@@ -4,7 +4,7 @@ import { Icon } from '../Icon';
 import { useRoom } from './RoomProvider';
 
 
-/** Lobby della stanza: codice, posti, impostazioni, ready, avvio */
+/** Lobby della stanza: codice, posti, impostazioni, avvio */
 export function LobbyScreen({
   spectatorCount,
   onStart,
@@ -17,8 +17,6 @@ export function LobbyScreen({
   const room = useRoom();
   const state = room.state!;
   const [copied, setCopied] = useState<string | null>(null);
-  const me = state.players.find(p => p.id === room.me);
-  const isPlayer = room.role === 'player' || room.isHost;
 
   const copy = async (label: string, text: string) => {
     try {
@@ -36,15 +34,11 @@ export function LobbyScreen({
   const humans = state.players.length;
   const canStart =
     room.isHost &&
-    (import.meta.env.DEV ? humans >= 1 : humans >= MIN_HUMANS) &&
-    (state.settings.fillWithBots || humans >= MAX_PLAYERS);
-  const startReason = !state.settings.fillWithBots && humans < MAX_PLAYERS
-    ? `Servono ${MAX_PLAYERS} giocatori oppure attiva "Completa con bot"`
-    : humans < (import.meta.env.DEV ? 1 : MIN_HUMANS)
+    (import.meta.env.DEV ? humans >= 1 : humans >= MIN_HUMANS);
+  const startReason =
+    humans < (import.meta.env.DEV ? 1 : MIN_HUMANS)
       ? `Servono almeno ${MIN_HUMANS} giocatori`
       : null;
-
-  const setReady = (ready: boolean) => room.sendIntent({ type: 'READY', ready });
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -88,14 +82,11 @@ export function LobbyScreen({
                 )}
               </span>
               <span className="text-sm text-ink-soft truncate">{p.teamName}</span>
-              {p.ready && (
-                <span className="ml-auto shrink-0 text-xs font-bold bg-pitch text-canvas px-2 py-0.5">Pronto</span>
-              )}
               {room.isHost && p.id !== state.hostId && (
                 <button
                   type="button"
                   onClick={() => room.kick(p.id)}
-                  className={`${p.ready ? '' : 'ml-auto '}shrink-0 text-xs font-bold text-danger hover:underline`}
+                  className="ml-auto shrink-0 text-xs font-bold text-danger hover:underline"
                 >
                   Espelli
                 </button>
@@ -103,12 +94,10 @@ export function LobbyScreen({
             </li>
           ))}
         </ul>
-        {/* Posti vuoti: una sola riga riassuntiva */}
+        {/* Posti vuoti: una sola riga riassuntiva (vanno sempre ai bot) */}
         {humans < MAX_PLAYERS && (
           <p className="mt-3 text-sm text-ink-faint font-semibold">
-            {state.settings.fillWithBots
-              ? `${MAX_PLAYERS - humans} ${MAX_PLAYERS - humans === 1 ? 'posto' : 'posti'} ai bot`
-              : `${MAX_PLAYERS - humans} ${MAX_PLAYERS - humans === 1 ? 'posto libero' : 'posti liberi'}`}
+            {MAX_PLAYERS - humans} {MAX_PLAYERS - humans === 1 ? 'posto' : 'posti'} ai bot
           </p>
         )}
       </div>
@@ -120,29 +109,10 @@ export function LobbyScreen({
           <span className="font-semibold text-ink-soft w-28">Annata</span>
           <span className="font-display font-extrabold text-ink text-xl">Serie A {state.settings.season}</span>
         </div>
-        <label className={`flex items-center gap-3 font-semibold text-ink ${room.isHost ? 'cursor-pointer' : ''}`}>
-          <input
-            type="checkbox"
-            checked={state.settings.fillWithBots}
-            disabled={!room.isHost}
-            onChange={e => room.updateSettings({ fillWithBots: e.target.checked })}
-            className="w-5 h-5 accent-[rgb(var(--c-pitch))]"
-          />
-          Completa con bot i posti liberi
-        </label>
       </div>
 
       {/* Azioni */}
       <div className="space-y-3">
-        {isPlayer && me && (
-          <button
-            type="button"
-            onClick={() => setReady(!me.ready)}
-            className={`${me.ready ? 'btn-ghost' : 'btn-primary'} w-full text-xl py-3`}
-          >
-            {me.ready ? 'Pronto — tocca per annullare' : 'Sono pronto'}
-          </button>
-        )}
         {room.isHost && (
           <div>
             <button

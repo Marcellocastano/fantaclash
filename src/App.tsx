@@ -7,6 +7,7 @@ import { NAV_LINKS } from './site/navigation';
 import { randomTournamentSeed } from './domain/tournament';
 import { GameProvider, useGame, useGamePhase } from './context/GameContext';
 import { PlayerRole } from './types';
+import { useScrollToTop } from './hooks/useScrollToTop';
 
 // Asta, torneo e riepilogo si scaricano solo quando servono (provider compresi)
 const AuctionPhase = lazy(() => import('./components/phases/AuctionPhase'));
@@ -45,6 +46,7 @@ function GameNavbar() {
 function GameContent() {
   const { dispatch, startGame, resetGame } = useGame();
   const phase = useGamePhase();
+  useScrollToTop(phase);
 
   /**
    * Gestisce il completamento dell'asta e passa al torneo (sorteggio)

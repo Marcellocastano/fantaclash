@@ -8,7 +8,7 @@ function makeRoom(overrides: Partial<RoomState> = {}): RoomState {
       code: 'ABCDE',
       hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
-      settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+      settings: { season: '2024-25', difficulty: 'normale' },
       now: 1000,
     }),
     ...overrides,

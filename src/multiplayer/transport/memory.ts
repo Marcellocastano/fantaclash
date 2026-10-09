@@ -18,6 +18,7 @@ export interface MemoryNetworkOptions {
 interface Participant {
   id: string;
   role: PresenceEntry['role'];
+  pubKey?: JsonWebKey;
   alive: boolean;
   intentCbs: Set<(env: Envelope<ClientIntent>) => void>;
   hostCbs: Set<(env: Envelope<HostMessage>) => void>;
@@ -103,7 +104,7 @@ export function createMemoryNetwork({ rng, latency, dropRate }: MemoryNetworkOpt
   function presenceEntries(): PresenceEntry[] {
     const byId = new Map<string, PresenceEntry>();
     for (const p of participants.values()) {
-      if (p.alive && !byId.has(p.id)) byId.set(p.id, { id: p.id, role: p.role });
+      if (p.alive && !byId.has(p.id)) byId.set(p.id, { id: p.id, role: p.role, pubKey: p.pubKey });
     }
     return [...byId.values()];
   }
@@ -124,6 +125,7 @@ export function createMemoryNetwork({ rng, latency, dropRate }: MemoryNetworkOpt
     const self: Participant = {
       id: opts.selfId,
       role: opts.role,
+      pubKey: opts.pubKey,
       alive: false,
       intentCbs: new Set(),
       hostCbs: new Set(),

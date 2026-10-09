@@ -3,6 +3,7 @@ import { intervalTick, TickFn } from './clock/tick';
 import {
   ABSENT_AFTER_MS,
   DECISION_TIMEOUT_MS,
+  HASH_INTERVAL_MS,
   MATCH_SPEED,
   MAX_SPECTATORS,
   SHOOTOUT_ORDER_TIMEOUT_MS,
@@ -11,6 +12,7 @@ import { computeTimeline, lastTick, MatchOptions, MatchResult, MatchSide, nextSt
 import { findMatch, simulateBracketMatch } from '../domain/tournament';
 import { resultHash } from './hash';
 import { buildBotRecords } from './hostTournament';
+import { RoomKeyPair, serialQueue, signPayload, verifyPayload } from './crypto';
 import { stateHash } from './hash';
 import {
   buildStartAuction,
@@ -43,6 +45,10 @@ export interface HostSessionOptions {
   initialState: RoomState;
   /** Token segreto dell'host-giocatore (stesso meccanismo dei client) */
   hostToken: string;
+  /** Coppia ECDSA dell'host: firma i messaggi e verifica gli intenti */
+  hostKey?: RoomKeyPair;
+  /** Libro di una stanza ripresa (token, espulsi, chiavi fissate) */
+  initialBook?: HostBook;
   now?: () => number;
   tick?: TickFn;
   rng?: () => number;
@@ -52,6 +58,8 @@ export interface HostSessionOptions {
 
 export interface HostSession {
   getState(): RoomState;
+  /** Libro dei segreti (token, espulsi, chiavi fissate): per il salvataggio */
+  getBook(): HostBook;
   subscribe(cb: (state: RoomState) => void): () => void;
   /** Intento del giocatore-host: passa dallo stesso handleIntent */
   submitLocal(intent: ClientIntent): void;
@@ -60,6 +68,8 @@ export interface HostSession {
   kick(playerId: string): void;
   updateSettings(settings: Partial<RoomSettings>): void;
   startAuction(pool: Player[]): void;
+  /** Uscita volontaria: ROOM_CLOSED a tutti, poi destroy */
+  closeRoom(): Promise<void>;
   destroy(): Promise<void>;
 }
 
@@ -67,15 +77,28 @@ export function createHostSession({
   transport,
   initialState,
   hostToken,
+  hostKey,
+  initialBook,
   now = Date.now,
   tick = intervalTick,
   rng = Math.random,
   hashEvery = 20,
 }: HostSessionOptions): HostSession {
   let state = initialState;
-  let book: HostBook = createHostBook();
+  let book: HostBook = initialBook ?? createHostBook();
   // L'host è un giocatore come gli altri: token registrato al via
   book.tokens[state.hostId] = hostToken;
+  if (hostKey) book.publicKeys[state.hostId] = hostKey.publicJwk;
+
+  // Firma in trasmissione e verifica in ricezione, serializzate per
+  // mantenere l'ordine (ACTION per rev, intenti per mittente)
+  const signQueue = serialQueue();
+  const verifyQueues = new Map<string, (fn: () => Promise<void>) => void>();
+  const queueFor = (id: string) => {
+    let q = verifyQueues.get(id);
+    if (!q) verifyQueues.set(id, (q = serialQueue()));
+    return q;
+  };
 
   const listeners = new Set<(s: RoomState) => void>();
   const lastSeen = new Map<string, number>();
@@ -91,11 +114,26 @@ export function createHostSession({
   const emit = () => listeners.forEach(cb => cb(state));
 
   function snapshotReply(to: string): HostMessage {
-    return { type: 'SNAPSHOT', rev: state.rev, state, hash: stateHash(state), hostNow: now(), to };
+    return {
+      type: 'SNAPSHOT',
+      rev: state.rev,
+      state,
+      hash: stateHash(state),
+      hostNow: now(),
+      to,
+      hostPubKey: hostKey?.publicJwk,
+    };
   }
 
   function broadcast(msg: HostMessage) {
-    transport.broadcast({ from: state.hostId, msg });
+    if (!hostKey) {
+      transport.broadcast({ from: state.hostId, msg });
+      return;
+    }
+    signQueue(async () => {
+      const sig = await signPayload(hostKey.privateJwk, msg);
+      transport.broadcast({ from: state.hostId, msg, sig });
+    });
   }
 
   function dispatch(action: RoomAction): boolean {
@@ -138,9 +176,27 @@ export function createHostSession({
     }
   }
 
-  // Intenti dagli uplink dei partecipanti
+  // Intenti dagli uplink dei partecipanti: verifica della firma con la
+  // chiave fissata per quel mittente (per HELLO quella auto-dichiarata);
+  // env.from è attribuito dal trasporto (uplink di provenienza) e deve
+  // coincidere con il proprietario della chiave.
   cleanups.push(
-    transport.onIntent((env: Envelope<ClientIntent>) => routeIntent(env.from, env.msg))
+    transport.onIntent((env: Envelope<ClientIntent>) => {
+      const from = env.from;
+      queueFor(from)(async () => {
+        try {
+          if (!hostKey) return routeIntent(from, env.msg);
+          // HELLO si autofirma con la chiave dichiarata nel messaggio
+          const key = env.msg.type === 'HELLO' ? env.msg.pubKey : book.publicKeys[from];
+          if (!key || !env.sig) return; // niente chiave/firma: scarta
+          if (!(await verifyPayload(key, env.sig, env.msg))) return;
+          routeIntent(from, env.msg);
+        } catch (e) {
+          // un intento malformato non deve bloccare la coda del mittente
+          console.error('[host] intento non gestito', e);
+        }
+      });
+    })
   );
 
   // Presence: nuovo partecipante -> listenTo + LISTENING; uscita -> disconnesso
@@ -270,8 +326,18 @@ export function createHostSession({
   // Partite live: scadenze delle decisioni e registrazione dei risultati
   cleanups.push(tick(checkLiveMatches, 200));
 
+  // HASH periodico: senza di esso un'azione persa in coda al flusso non
+  // verrebbe mai scoperta dal client (nessun rev successivo a rivelare il buco)
+  cleanups.push(
+    tick(() => {
+      broadcast({ type: 'HASH', rev: state.rev, hash: stateHash(state) });
+    }, HASH_INTERVAL_MS)
+  );
+
   return {
     getState: () => state,
+
+    getBook: () => book,
 
     subscribe(cb) {
       listeners.add(cb);
@@ -298,6 +364,16 @@ export function createHostSession({
       const start = buildStartAuction(state, pool, rng);
       if (!start || !dispatch(start)) return;
       dispatch(buildStartCalling(state, rng));
+    },
+
+    async closeRoom() {
+      const msg: HostMessage = { type: 'ROOM_CLOSED' };
+      // firmato e spedito in modo sincrono: il canale chiude subito dopo
+      const sig = hostKey ? await signPayload(hostKey.privateJwk, msg) : undefined;
+      transport.broadcast({ from: state.hostId, msg, sig });
+      // il broadcast è fire-and-forget: lascia al socket il tempo di spedire
+      await new Promise(r => setTimeout(r, 300));
+      await this.destroy();
     },
 
     async destroy() {

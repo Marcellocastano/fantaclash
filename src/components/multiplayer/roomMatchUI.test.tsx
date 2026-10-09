@@ -34,7 +34,7 @@ function liveState(): { state: RoomState; matchId: string } {
   let s = createRoom({
     code: 'ABCDE', hostId: 'h1',
     host: { nickname: 'H', teamName: 'T' },
-    settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+    settings: { season: '2024-25', difficulty: 'normale' },
     now: NOW,
   });
   s = roomReducer(s, {
@@ -62,6 +62,8 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     role,
     me,
     spectatorCount: 0,
+    hostOnline: true,
+    roomClosed: false,
     isHost: role === 'host',
     createRoom: async () => {},
     joinRoom: async () => {},
@@ -71,6 +73,8 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     kick: () => {},
     updateSettings: () => {},
     startAuction: () => {},
+    resumeRoom: async () => {},
+    closeRoom: async () => {},
     dispatchRoomAction: () => false,
   };
 }

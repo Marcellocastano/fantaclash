@@ -18,7 +18,7 @@ import { Player, Team } from '../types';
 const T0 = 1_000_000;
 const rng = createRng(7);
 
-const SETTINGS = { season: '2024-25', difficulty: 'normale' as const, fillWithBots: true };
+const SETTINGS = { season: '2024-25', difficulty: 'normale' as const };
 
 function lobby(): RoomState {
   return createRoom({
@@ -63,7 +63,7 @@ function auctionRoom(): RoomState {
     ...base,
     players: [
       ...base.players,
-      { id: 'p2', nickname: 'P2', teamName: 'T2', ready: true, connected: true, joinedAt: T0, teamId: 'tb' },
+      { id: 'p2', nickname: 'P2', teamName: 'T2', connected: true, joinedAt: T0, teamId: 'tb' },
     ],
   };
   const started = applyHostAction(withPlayers, 1, { type: 'START_AUCTION', teams, auction });
@@ -211,16 +211,22 @@ describe('comandi host', () => {
     }
   });
 
-  it('buildStartAuction: fillWithBots=false e meno di 8 umani -> null', () => {
+  it('buildStartAuction: meno di 8 umani -> i posti liberi vanno ai bot', () => {
     let s = createRoom({
       code: 'ABC23', hostId: 'h1',
       host: { nickname: 'H', teamName: 'T' },
-      settings: { ...SETTINGS, fillWithBots: false }, now: T0,
+      settings: SETTINGS, now: T0,
     });
     let book = createHostBook();
     ({ state: s, book } = joinPlayer(s, book, 'p2'));
     ({ state: s, book } = joinPlayer(s, book, 'p3'));
-    expect(buildStartAuction(s, makePool(), rng)).toBeNull();
+    const action = buildStartAuction(s, makePool(), rng);
+    expect(action).not.toBeNull();
+    if (action?.type === 'START_AUCTION') {
+      expect(action.teams).toHaveLength(8);
+      expect(action.teams.filter(t => t.controller === 'human')).toHaveLength(3);
+      expect(action.teams.filter(t => t.controller === 'bot')).toHaveLength(5);
+    }
   });
 
   it('buildStartCalling produce START con tutte le squadre', () => {

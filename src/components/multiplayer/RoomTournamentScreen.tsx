@@ -8,6 +8,7 @@ import { MatchPlaybackView } from '../match/MatchScreen';
 import { useRoomMatchPlayback } from './useRoomMatchPlayback';
 import { Icon } from '../Icon';
 import { useRoom } from './RoomProvider';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { useRoomTournament } from './useRoomTournament';
 import { TournamentDraw } from '../tournament/TournamentDraw';
 import { TournamentHub } from '../tournament/TournamentHub';
@@ -177,6 +178,7 @@ export function RoomTournamentScreen() {
     return m && (m.homeId === controller.myTeamId || m.awayId === controller.myTeamId);
   });
   const activeLive = backToHub ? null : (watchId && liveIds.includes(watchId) ? watchId : myLive ?? liveIds[0] ?? null);
+  useScrollToTop(activeLive ?? (sawDraw && !animDone ? 'draw' : 'hub'));
 
   if (!t) return null;
 

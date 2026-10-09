@@ -20,4 +20,19 @@ describe('ingresso spettatore', () => {
     // Nessun campo squadra richiesto
     expect(screen.queryByLabelText(/squadra/i)).toBeNull();
   });
+
+  it('con identità salvata compare "Rientra nella stanza" (un click, ruolo player)', async () => {
+    const onJoin = vi.fn(async () => {});
+    render(
+      <EntryScreen
+        initialView="entra"
+        initialCode="ABCDE"
+        hasIdentity
+        onCreate={async () => {}}
+        onJoin={onJoin}
+      />
+    );
+    fireEvent.click(screen.getByText('Rientra nella stanza'));
+    expect(onJoin).toHaveBeenCalledWith(expect.objectContaining({ code: 'ABCDE', role: 'player' }));
+  });
 });

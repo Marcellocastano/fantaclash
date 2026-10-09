@@ -9,10 +9,19 @@ import { createRng } from '../../services/auction';
 
 // jsdom qui non espone localStorage: identità distinte per partecipante
 let idSeq = 0;
-vi.mock('../../multiplayer/identity', () => ({
-  getRoomIdentity: () => ({ participantId: `id-${++idSeq}`, token: `tok-${idSeq}` }),
-  clearRoomIdentity: vi.fn(),
-}));
+vi.mock('../../multiplayer/identity', async () => {
+  const { generateRoomKeyPair } = await import('../../multiplayer/crypto');
+  return {
+    getRoomIdentity: () => ({ participantId: `id-${++idSeq}`, token: `tok-${idSeq}` }),
+    ensureRoomIdentity: async () => ({
+      participantId: `id-${++idSeq}`,
+      token: `tok-${idSeq}`,
+      keyPair: await generateRoomKeyPair(),
+    }),
+    savedRoomIdentity: () => null,
+    clearRoomIdentity: vi.fn(),
+  };
+});
 
 const SEASONS = [{ season: '2015-16', label: 'Serie A 2015-16', playerCount: 96 }];
 
@@ -74,11 +83,7 @@ describe('multiplayer UI su rete in memoria', () => {
     await waitFor(() => expect(hostView.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument());
     expect(hostView.getByText('Ospite')).toBeInTheDocument();
 
-    // pronto
-    fireEvent.click(guest.getByRole('button', { name: /Sono pronto/i }));
-    await waitFor(() => expect(hostView.getByText('Pronto')).toBeInTheDocument(), { timeout: 3000 });
-
-    // avvio: in DEV basta l'host ma fillWithBots è attivo di default -> abilitato
+    // avvio: in DEV basta l'host; i posti liberi vanno sempre ai bot -> abilitato
     const startBtn = hostView.getByRole('button', { name: /Avvia l.asta/i }) as HTMLButtonElement;
     expect(startBtn.disabled).toBe(false);
 

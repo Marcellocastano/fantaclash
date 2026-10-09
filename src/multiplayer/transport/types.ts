@@ -10,6 +10,8 @@ import { ClientIntent, Envelope, HostMessage } from '../protocol';
 export interface PresenceEntry {
   id: string;
   role: 'host' | 'player' | 'spectator';
+  /** Chiave pubblica JWK (l'host la pubblica qui) */
+  pubKey?: JsonWebKey;
 }
 
 export type TransportRole = PresenceEntry['role'];
@@ -18,6 +20,8 @@ export interface TransportOptions {
   code: string;
   selfId: string;
   role: TransportRole;
+  /** Chiave pubblica JWK pubblicata nella meta della presence */
+  pubKey?: JsonWebKey;
 }
 
 export interface RoomTransport {

@@ -20,7 +20,7 @@ function lobbyRoom(): RoomState {
   return createRoom({
     code: 'ABCDE', hostId: 'h1',
     host: { nickname: 'H', teamName: 'T' },
-    settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+    settings: { season: '2024-25', difficulty: 'normale' },
     now: 1000,
   });
 }

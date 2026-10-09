@@ -28,6 +28,21 @@ export function RoomGameShell({ children }: { children: ReactNode }) {
       <AppNavbar
         step={step}
         context={state ? <NavStat label="Annata" value={state.settings.season} /> : null}
+        sessionExit={
+          room.isHost
+            ? {
+                title: 'Chiudere la stanza per tutti?',
+                message: 'La stanza si chiude per ogni partecipante e non sarà possibile riprenderla.',
+                confirmLabel: 'Chiudi la stanza',
+                action: () => void room.closeRoom(),
+              }
+            : {
+                title: 'Uscire dalla stanza?',
+                message: 'Tornerai alla pagina multiplayer. Se la stanza continua potrai rientrare con il codice.',
+                confirmLabel: 'Esci dalla stanza',
+                action: () => void room.leave(),
+              }
+        }
       />
       <div className="w-full max-w-[1600px] mx-auto px-4">
         <RoomTopBar />

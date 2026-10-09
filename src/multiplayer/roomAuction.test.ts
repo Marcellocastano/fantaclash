@@ -61,7 +61,7 @@ describe('asta live di stanza (host driver + client)', () => {
     const initial = createRoom({
       code: CODE, hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
-      settings: { season: '2024-25', difficulty: 'normale', fillWithBots: true },
+      settings: { season: '2024-25', difficulty: 'normale' },
       now: Date.now(),
     });
     const hostTransport = net.createTransport({ code: CODE, selfId: 'h1', role: 'host' });

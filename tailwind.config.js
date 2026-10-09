@@ -162,6 +162,11 @@ export default {
           '0%': { opacity: '1', transform: 'translateY(-20vh) rotate(0deg)' },
           '100%': { opacity: '0.9', transform: 'translateY(110vh) rotate(540deg)' },
         },
+        // Cuoricino del pulsante Supporta che pulsa
+        heartbeat: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
+        },
       },
       animation: {
         reveal: 'reveal 260ms ease-out both',
@@ -172,6 +177,7 @@ export default {
         flash: 'flash 1200ms ease-out both',
         drop: 'drop 520ms cubic-bezier(.2,.9,.3,1.1) both',
         shake: 'shake 420ms ease-out both',
+        heartbeat: 'heartbeat 1200ms ease-in-out infinite',
         sweep: 'sweep 420ms ease-out both',
         'ball-rise': 'ball-rise 520ms cubic-bezier(.2,.9,.3,1.2) both',
         'ball-open': 'ball-open 260ms ease-out both',

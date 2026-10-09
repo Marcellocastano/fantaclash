@@ -1,5 +1,6 @@
 import { createClockSync, ClockSync } from './clock/clockSync';
 import { intervalTick, TickFn } from './clock/tick';
+import { RoomKeyPair, sameKey, serialQueue, signPayload, verifyPayload } from './crypto';
 import { PING_INTERVAL_MS, PROTOCOL_VERSION } from './constants';
 import { stateHash } from './hash';
 import { RoomIdentity } from './identity';
@@ -28,6 +29,12 @@ export interface ClientSessionOptions {
   role: 'player' | 'spectator';
   nickname: string;
   teamName: string;
+  /** Coppia ECDSA del partecipante: firma gli intenti in uscita */
+  keyPair?: RoomKeyPair;
+  /** Chiave pubblica dell'host già fissata per questo codice (TOFU) */
+  knownHostKey?: JsonWebKey;
+  /** Chiave pubblica del partecipante da mandare nell'HELLO */
+  pubKey?: JsonWebKey;
   now?: () => number;
   tick?: TickFn;
 }
@@ -37,10 +44,16 @@ export interface ClientSession {
   getState(): RoomState | null;
   getStatus(): ClientStatus;
   getRejectReason(): RejectReason | null;
-  /** READY/CALL/BID e gli altri intenti applicativi */
+  /** CALL/BID e gli altri intenti applicativi */
   sendIntent(intent: ClientIntent): void;
   /** Orologio stimato dell'host */
   hostNow(): number;
+  /** Chiave pubblica dell'host fissata alla prima SNAPSHOT (null se ignota) */
+  getHostKey(): JsonWebKey | null;
+  /** Messaggi host scartati per firma non valida (debug) */
+  getDrops(): number;
+  /** true dopo ROOM_CLOSED: la stanza è stata chiusa dall'host */
+  isRoomClosed(): boolean;
   subscribe(cb: (state: RoomState | null, status: ClientStatus) => void): () => void;
   close(): Promise<void>;
 }
@@ -58,6 +71,9 @@ export function createClientSession({
   role,
   nickname,
   teamName,
+  keyPair,
+  knownHostKey,
+  pubKey,
   now = Date.now,
   tick = intervalTick,
 }: ClientSessionOptions): ClientSession {
@@ -65,6 +81,14 @@ export function createClientSession({
   let status: ClientStatus = 'connecting';
   let rejectReason: RejectReason | null = null;
   let state: RoomState | null = null;
+  // Chiave dell'host fissata alla prima SNAPSHOT (trust-on-first-use)
+  let hostKey: JsonWebKey | null = knownHostKey ?? null;
+  let drops = 0;
+  let roomClosed = false;
+
+  // Verifica e applicazione serializzate: le ACTION restano in ordine
+  const verifyQueue = serialQueue();
+  const signQueue = serialQueue();
 
   const clock: ClockSync = createClockSync(now);
   const buffer = new Map<number, Extract<HostMessage, { type: 'ACTION' }>>();
@@ -84,7 +108,14 @@ export function createClientSession({
   }
 
   function send(msg: ClientIntent) {
-    transport.sendIntent({ from: me, msg });
+    if (!keyPair) {
+      transport.sendIntent({ from: me, msg });
+      return;
+    }
+    signQueue(async () => {
+      const sig = await signPayload(keyPair.privateJwk, msg);
+      transport.sendIntent({ from: me, msg, sig });
+    });
   }
 
   function sendHello() {
@@ -97,6 +128,7 @@ export function createClientSession({
       teamName,
       protocol: PROTOCOL_VERSION,
       role,
+      pubKey: pubKey ?? keyPair?.publicJwk,
     });
   }
 
@@ -146,15 +178,49 @@ export function createClientSession({
   }
 
   function onMessage(env: Envelope<HostMessage>) {
-    const msg = env.msg;
+    verifyQueue(async () => {
+      const msg = env.msg;
+      // Prima della fissazione si accettano messaggi senza verifica: una
+      // falsa LISTENING fa solo rimandare HELLO, il danno è nullo.
+      // Una SNAPSHOT con una chiave diversa da quella fissata è ignorata.
+      if (msg.type === 'SNAPSHOT' && msg.hostPubKey) {
+        if (hostKey && !sameKey(hostKey, msg.hostPubKey)) {
+          drops++;
+          return;
+        }
+        if (!(await verifyPayload(msg.hostPubKey, env.sig ?? '', msg))) {
+          drops++;
+          return;
+        }
+        hostKey = msg.hostPubKey;
+        handleVerified(msg);
+        return;
+      }
+      if (hostKey) {
+        if (!env.sig || !(await verifyPayload(hostKey, env.sig, msg))) {
+          drops++;
+          return;
+        }
+      }
+      handleVerified(msg);
+    });
+  }
+
+  function handleVerified(msg: HostMessage) {
     switch (msg.type) {
+      case 'ROOM_CLOSED':
+        roomClosed = true;
+        setStatus('closed');
+        return;
+
       case 'LISTENING':
         if (msg.to !== me) return;
         // Anche da 'ready': dopo una disconnessione l'host ci riascolta e
-        // il nuovo HELLO (stesso token) ci riporta connessi
-        if (status === 'rejected' || status === 'closed') return;
+        // il nuovo HELLO (stesso token) ci riporta connessi. Da 'closed'
+        // (timeout LISTENING) ci si può riprendere: la stanza esiste.
+        if (status === 'rejected' || roomClosed) return;
         sendHello();
-        if (status === 'connecting') setStatus('joining');
+        if (status === 'connecting' || status === 'closed') setStatus('joining');
         return;
 
       case 'REJECT':
@@ -168,7 +234,7 @@ export function createClientSession({
         awaitingSnapshot = false;
         if (resyncTimer) { clearTimeout(resyncTimer); resyncTimer = null; }
         drainBuffer();
-        if (status !== 'rejected' && status !== 'closed') setStatus('ready');
+        if (status !== 'rejected' && !roomClosed) setStatus('ready');
         else emit();
         return;
 
@@ -190,7 +256,9 @@ export function createClientSession({
       }
 
       case 'HASH':
-        if (state && msg.rev === state.rev && msg.hash !== stateHash(state)) resync();
+        // rev diverso = coda persa o fork; stesso rev e hash diverso = divergenza
+        if (state && msg.rev !== state.rev) resync();
+        else if (state && msg.hash !== stateHash(state)) resync();
         return;
 
       case 'PONG':
@@ -207,6 +275,15 @@ export function createClientSession({
       // PING periodico: liveness + misura RTT per clockSync
       cleanups.push(
         tick(() => send({ type: 'PING', t: now() }), PING_INTERVAL_MS)
+      );
+      // LISTENING/SNAPSHOT possono perdersi: riprova l'HELLO finché non si entra
+      // (anche dopo il timeout 'closed': la presenza può propagarsi in ritardo)
+      cleanups.push(
+        tick(() => {
+          if (status === 'connecting' || status === 'joining' || (status === 'closed' && !roomClosed)) {
+            sendHello();
+          }
+        }, 2_000)
       );
       // Attesa del LISTENING dell'host
       await new Promise<void>((resolve, reject) => {
@@ -232,6 +309,9 @@ export function createClientSession({
     getRejectReason: () => rejectReason,
     sendIntent: send,
     hostNow: () => clock.hostNow(),
+    getHostKey: () => hostKey,
+    getDrops: () => drops,
+    isRoomClosed: () => roomClosed,
 
     subscribe(cb) {
       listeners.add(cb);
