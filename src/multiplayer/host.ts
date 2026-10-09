@@ -80,6 +80,13 @@ function sanitize(text: string, max: number): string {
   return text.replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+/** Confronto dei nomi squadra: niente maiuscole, accenti e spazi doppi */
+function sameName(a: string, b: string): boolean {
+  const norm = (s: string) =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  return norm(a) === norm(b);
+}
+
 function reject(to: string, reason: RejectReason): HostMessage {
   return { type: 'REJECT', to, reason };
 }
@@ -165,6 +172,10 @@ export function handleIntent(
       const teamName = sanitize(intent.teamName, TEAM_NAME_MAX);
       if (!nickname || !teamName || isOffensiveName(nickname) || isOffensiveName(teamName)) {
         return ok([], [reject(fromPlayerId, 'invalid')]);
+      }
+      // Due squadre con lo stesso nome non possono stare nella stanza
+      if (state.players.some(p => sameName(p.teamName, teamName))) {
+        return ok([], [reject(fromPlayerId, 'name_taken')]);
       }
       const player = {
         id: fromPlayerId,

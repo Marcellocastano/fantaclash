@@ -78,13 +78,14 @@ function setRoom(state: RoomState, me: string | null, role: 'host' | 'player' | 
     roomClosed: false,
     isHost: role === 'host',
     createRoom: async () => {},
-    joinRoom: async () => {},
+    joinRoom: async () => ({ ok: true }),
     leave: async () => {},
     sendIntent: () => {},
     hostNow: () => Date.now(),
     kick: () => {},
     updateSettings: () => {},
     startAuction: () => {},
+    rematch: () => {},
     resumeRoom: async () => {},
     closeRoom: async () => {},
     dispatchRoomAction: (a: RoomAction) => { dispatched.push(a); return true; },
@@ -154,7 +155,20 @@ describe('torneo in stanza (UI)', () => {
     expect(dispatched).toEqual([{ type: 'FINISH' }]);
   });
 
-  it("in 'final' l'ospite vede il riepilogo della propria squadra", () => {
+  it("in 'final' l'host vede 'Rigioca' che chiama rematch", () => {
+    const s = tournamentState({ finish: true });
+    const rematch = vi.fn();
+    setRoom(s, 'h1', 'host');
+    mockRoom.rematch = rematch;
+    render(<RoomFinalScreen />);
+    fireEvent.click(screen.getByText('Rigioca'));
+    expect(rematch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Chiudi la stanza')).toBeInTheDocument();
+    expect(screen.queryByText('Nuova partita')).toBeNull();
+    expect(screen.queryByText('Esci dalla stanza')).toBeNull();
+  });
+
+  it("in 'final' l'ospite vede il riepilogo e l'attesa della rivincita", () => {
     const s = tournamentState({ finish: true });
     expect(s.phase).toBe('final');
     setRoom(s, 'c1', 'player');
@@ -162,16 +176,19 @@ describe('torneo in stanza (UI)', () => {
     // Riepilogo personale: nome squadra del guest e pulsante di uscita
     expect(screen.getAllByText('Guest FC').length).toBeGreaterThan(0);
     expect(screen.getByText('Esci dalla stanza')).toBeInTheDocument();
+    expect(screen.getByText(/attesa che l'host lanci la rivincita/)).toBeInTheDocument();
+    expect(screen.queryByText('Rigioca')).toBeNull();
     expect(screen.queryByText('Nuova partita')).toBeNull();
   });
 
-  it("in 'final' lo spettatore vede campione e tabellone", () => {
+  it("in 'final' lo spettatore vede campione, tabellone e attesa", () => {
     const s = tournamentState({ finish: true });
     setRoom(s, null, 'spectator');
     render(<RoomFinalScreen />);
     const champion = s.tournament!.teams.find(t => t.id === s.tournament!.winnerId)!;
     expect(screen.getByText(`Campione: ${champion.name}`)).toBeInTheDocument();
-    expect(screen.queryByText('Esci dalla stanza')).toBeNull();
+    expect(screen.getByText(/attesa che l'host lanci la rivincita/)).toBeInTheDocument();
+    expect(screen.getByText('Esci dalla stanza')).toBeInTheDocument();
     expect(screen.queryByText('Nuova partita')).toBeNull();
   });
 });

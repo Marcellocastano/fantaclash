@@ -1,14 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { normalizeRoomCode } from '../../multiplayer/roomCode';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../../mock/teamNames';
-import { loadSeasonIndex, SeasonInfo } from '../../services/seasons';
+import { loadSeasonIndex } from '../../services/seasons';
 import { CUP_NAME_MAX, MAX_PLAYERS, NICKNAME_MAX } from '../../multiplayer/constants';
 import { isOffensiveName } from '../../multiplayer/moderation';
-import { SeasonPicker } from '../SeasonPicker';
 import { Icon } from '../Icon';
 import { loadSavedNickname, loadSavedTeamName, saveRoomProfile } from './storage';
-import { CreateRoomInput, JoinRoomInput } from './RoomProvider';
+import { CreateRoomInput, JoinOutcome, JoinRoomInput } from './RoomProvider';
+import { RejectReason } from '../../multiplayer/protocol';
 import { TeamBadge } from '../tournament/TeamBadge';
+
+/** Motivi di rifiuto mostrati come toast (name_taken e not_found restano sui campi) */
+const JOIN_TOAST: Partial<Record<RejectReason | 'not_found', string>> = {
+  full: 'La stanza è piena.',
+  started: 'La partita è già iniziata.',
+  kicked: 'Sei stato espulso da questa stanza.',
+  protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
+  bad_token: "Questo browser ha già un'altra identità per la stanza.",
+};
+
+/** Toast di form: fisso in basso, si chiude da solo */
+function JoinToast({ text, onClose }: { text: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  return (
+    <div className="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50">
+      <div
+        role="alert"
+        className="bg-ink text-canvas border-2 border-ink shadow-block px-4 py-3 font-semibold flex items-center gap-3 motion-safe:animate-drop"
+      >
+        <span className="w-1.5 self-stretch bg-danger" aria-hidden="true" />
+        {text}
+        <button type="button" aria-label="Chiudi" onClick={onClose} className="ml-2 shrink-0">
+          <Icon name="cross" className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /** Schermata d'ingresso: due schede — Crea stanza / Entra con codice */
 export function EntryScreen({
@@ -24,7 +55,7 @@ export function EntryScreen({
   initialSpectator?: boolean;
   hasIdentity: boolean;
   onCreate: (input: CreateRoomInput) => Promise<void>;
-  onJoin: (input: JoinRoomInput) => Promise<void>;
+  onJoin: (input: JoinRoomInput) => Promise<JoinOutcome>;
 }) {
   const [view, setView] = useState<'crea' | 'entra'>(initialView);
   const [nickname, setNickname] = useState(loadSavedNickname);
@@ -32,15 +63,18 @@ export function EntryScreen({
   const [code, setCode] = useState(initialCode ?? '');
   const [season, setSeason] = useState('');
   const [cupName, setCupName] = useState('');
-  const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
   const [asSpectator, setAsSpectator] = useState(initialSpectator);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [teamError, setTeamError] = useState(false);
+  const [codeError, setCodeError] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const teamRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadSeasonIndex()
       .then(list => {
-        setSeasons(list);
+        // Annata iniziale a caso: quella vera si sceglie nella lobby
         setSeason(s => s || list[Math.floor(Math.random() * list.length)].season);
       })
       .catch(() => setError('Impossibile caricare le stagioni'));
@@ -72,6 +106,34 @@ export function EntryScreen({
     }
   };
 
+  // Esito del join: errori mirati sui campi o toast, senza lasciare il form
+  const applyOutcome = (reason: RejectReason | 'not_found') => {
+    if (reason === 'name_taken') {
+      setTeamError(true);
+      teamRef.current?.focus();
+    } else if (reason === 'invalid') {
+      setError('Nome non consentito: scegline un altro.');
+    } else if (reason === 'not_found') {
+      setCodeError(true);
+      setToast('Codice non corretto: nessuna stanza attiva con questo codice.');
+    } else {
+      setToast(reason === 'full' && asSpectator ? 'Troppi spettatori in questa stanza.' : JOIN_TOAST[reason] ?? 'Non sei entrato nella stanza.');
+    }
+  };
+
+  const tryJoin = async (input: JoinRoomInput) => {
+    setBusy(true);
+    setError(null);
+    setToast(null);
+    try {
+      const outcome = await onJoin(input);
+      if (!outcome.ok) applyOutcome(outcome.reason);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Errore di connessione');
+    }
+    setBusy(false);
+  };
+
   const submitJoin = async () => {
     const normalized = normalizeRoomCode(code);
     if (!normalized) {
@@ -82,22 +144,13 @@ export function EntryScreen({
       setError('Servono nickname e nome squadra');
       return;
     }
-    setBusy(true);
-    setError(null);
-    try {
-      saveRoomProfile(nickname.trim(), teamName.trim());
-      await onJoin({
-        code: normalized,
-        nickname: nickname.trim() || 'Spettatore',
-        teamName: teamName.trim(),
-        role: asSpectator ? 'spectator' : 'player',
-      });
-      // se la sessione non è entrata, lo stato lo mostra il contenitore
-      setBusy(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore di connessione');
-      setBusy(false);
-    }
+    saveRoomProfile(nickname.trim(), teamName.trim());
+    await tryJoin({
+      code: normalized,
+      nickname: nickname.trim() || 'Spettatore',
+      teamName: teamName.trim(),
+      role: asSpectator ? 'spectator' : 'player',
+    });
   };
 
   const ticketCls = (tab: 'crea' | 'entra') => {
@@ -150,6 +203,7 @@ export function EntryScreen({
                 type="text"
                 value={nickname}
                 maxLength={NICKNAME_MAX}
+                disabled={busy}
                 onChange={e => setNickname(e.target.value)}
                 placeholder={asSpectator ? 'Spettatore' : 'Es. Marco'}
                 className="input-field"
@@ -164,11 +218,17 @@ export function EntryScreen({
                 <div className="relative">
                   <input
                     id="mp-team"
+                    ref={teamRef}
                     type="text"
                     value={teamName}
                     maxLength={MAX_TEAM_NAME_LENGTH + 10}
-                    onChange={e => setTeamName(e.target.value)}
-                    className="input-field font-display text-xl sm:text-2xl font-extrabold py-2 sm:py-3 pr-10"
+                    disabled={busy}
+                    aria-invalid={teamError || undefined}
+                    onChange={e => {
+                      setTeamName(e.target.value);
+                      setTeamError(false);
+                    }}
+                    className={`input-field font-display text-xl sm:text-2xl font-extrabold py-2 sm:py-3 pr-10 ${teamError ? 'input-error' : ''}`}
                   />
                   <button
                     type="button"
@@ -180,19 +240,12 @@ export function EntryScreen({
                     <Icon name="reset" className="w-4 h-4" />
                   </button>
                 </div>
+                {teamError && <p className="mt-2 text-sm text-danger">Nome già in uso da un altro utente</p>}
               </div>
             )}
 
             {view === 'crea' ? (
               <>
-                <div>
-                  <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">Annata del listone</p>
-                  {seasons ? (
-                    <SeasonPicker seasons={seasons} value={season} onChange={setSeason} />
-                  ) : (
-                    <p className="border-2 border-ink px-4 py-5 text-ink-muted">Caricamento stagioni…</p>
-                  )}
-                </div>
                 <div>
                   <label htmlFor="mp-cup" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
                     Nome della coppa <span className="font-semibold text-sm text-ink-muted">(facoltativo)</span>
@@ -208,7 +261,7 @@ export function EntryScreen({
                   />
                   <p className="mt-1.5 text-sm text-ink-muted">Il nome del torneo: compare nel sorteggio, nel tabellone e nella card finale.</p>
                 </div>
-                <button type="button" onClick={submitCreate} disabled={busy} className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5">
+                <button type="button" onClick={submitCreate} disabled={busy || !season} className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5">
                   {busy ? 'Creazione…' : 'Crea stanza'}
                   <Icon name="arrow" className="w-5 h-5" />
                 </button>
@@ -225,9 +278,14 @@ export function EntryScreen({
                     value={code}
                     maxLength={8}
                     autoCapitalize="characters"
-                    onChange={e => setCode(e.target.value.toUpperCase())}
+                    disabled={busy}
+                    aria-invalid={codeError || undefined}
+                    onChange={e => {
+                      setCode(e.target.value.toUpperCase());
+                      setCodeError(false);
+                    }}
                     placeholder="ABCDE"
-                    className={`input-field font-display text-3xl tracking-[0.3em] ${code && !codeOk ? 'input-error' : ''}`}
+                    className={`input-field font-display text-3xl tracking-[0.3em] ${(code && !codeOk) || codeError ? 'input-error' : ''}`}
                   />
                   {code && !codeOk && (
                     <p className="mt-2 text-sm text-danger">Codice non valido</p>
@@ -236,26 +294,19 @@ export function EntryScreen({
                 {showRejoin && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      setBusy(true);
-                      setError(null);
-                      try {
-                        await onJoin({
-                          code: initialCode,
-                          nickname: nickname.trim() || 'Giocatore',
-                          teamName: teamName.trim() || 'Squadra',
-                          role: 'player',
-                        });
-                        setBusy(false);
-                      } catch (e) {
-                        setError(e instanceof Error ? e.message : 'Errore di connessione');
-                        setBusy(false);
-                      }
-                    }}
+                    onClick={() =>
+                      void tryJoin({
+                        code: initialCode,
+                        nickname: nickname.trim() || 'Giocatore',
+                        teamName: teamName.trim() || 'Squadra',
+                        role: 'player',
+                      })
+                    }
                     disabled={busy}
                     className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5"
                   >
-                    Rientra nella stanza
+                    {busy && <Icon name="ball" className="w-5 h-5 motion-safe:animate-spin" />}
+                    {busy ? 'Entro…' : 'Rientra nella stanza'}
                   </button>
                 )}
                 <button
@@ -264,8 +315,12 @@ export function EntryScreen({
                   disabled={busy || !codeOk || (!asSpectator && !nickname.trim())}
                   className={showRejoin ? 'btn-ghost w-full' : 'btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5'}
                 >
+                  {busy ? (
+                    <Icon name="ball" className="w-5 h-5 motion-safe:animate-spin" />
+                  ) : (
+                    <Icon name="arrow" className="w-5 h-5" />
+                  )}
                   {busy ? 'Entro…' : asSpectator ? 'Guarda la stanza' : 'Entra nella stanza'}
-                  <Icon name="arrow" className="w-5 h-5" />
                 </button>
                 <button
                   type="button"
@@ -277,6 +332,7 @@ export function EntryScreen({
               </>
             )}
             {error && <p className="text-sm text-danger" role="alert">{error}</p>}
+            {toast && <JoinToast text={toast} onClose={() => setToast(null)} />}
           </div>
         </div>
       </div>
@@ -285,6 +341,7 @@ export function EntryScreen({
       <div className="hidden lg:block p-8 lg:pl-12">
         <h2 className="font-display text-3xl font-black">La tua stanza</h2>
         <p className="text-ink-soft">8 posti: chi non arriva viene sostituito da un bot.</p>
+        <p className="text-ink-soft">L'annata la scegli nella stanza, prima di avviare l'asta.</p>
         <div className="grid grid-cols-2 gap-4 mt-6">
           {TILTS.map((tilt, i) => (
             <div key={i} className={tilt}>

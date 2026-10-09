@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { applyHostAction, createRoom } from './roomReducer';
 import { buildStartAuction, buildStartCalling, createHostBook, handleIntent } from './host';
 import { resultHash, stateHash } from './hash';
+import { PROTOCOL_VERSION } from './constants';
 import { RoomAction, RoomState } from './protocol';
 import {
   createRng,
@@ -85,7 +86,7 @@ describe('simulazione stanza completa (host autorevole)', () => {
       const r = handleIntent(host, book, id, {
         type: 'HELLO', playerId: id, token: `tok-${id}`,
         nickname: `N${id}`, teamName: `Team ${id}`,
-        protocol: 1, role: 'player',
+        protocol: PROTOCOL_VERSION, role: 'player',
       }, T0, rng);
       book = r.book;
       const joined = applyHostAction(host, ++rev, r.actions[0]);

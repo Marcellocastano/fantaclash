@@ -109,4 +109,86 @@ describe('torneo di stanza (host autorevole su rete in memoria)', () => {
     host.destroy();
     client.close();
   });
+
+  it('REMATCH riporta tutti in lobby e una seconda asta+torneo funziona', async () => {
+    const net = createMemoryNetwork({ rng: createRng(7), latency: { min: 20, max: 60 }, dropRate: 0 });
+    const pump = (ms: number) => vi.advanceTimersByTimeAsync(ms);
+
+    const initial = createRoom({
+      code: CODE, hostId: 'h1',
+      host: { nickname: 'Host', teamName: 'Host FC' },
+      settings: { season: '2024-25', difficulty: 'normale' },
+      now: Date.now(),
+    });
+    const hostTransport = net.createTransport({ code: CODE, selfId: 'h1', role: 'host' });
+    const hc = hostTransport.connect();
+    await pump(500);
+    await hc;
+    const host = createHostSession({
+      transport: hostTransport, initialState: initial, hostToken: 'tok-h1', rng: createRng(9),
+    });
+
+    const client = createClientSession({
+      transport: net.createTransport({ code: CODE, selfId: 'c1', role: 'player' }),
+      identity: { participantId: 'c1', token: 'tok-c1' },
+      role: 'player', nickname: 'Guest', teamName: 'Guest FC',
+    });
+    const cp = client.connect();
+    for (let i = 0; i < 80 && client.getStatus() !== 'ready'; i++) await pump(200);
+    await cp;
+    expect(client.getStatus()).toBe('ready');
+
+    // Prima partita completa: asta -> torneo -> final
+    host.dispatch({
+      type: 'START_AUCTION',
+      teams: makeTeams(),
+      auction: { ...createInitialAuctionState(makePool()), phase: 'complete' },
+    });
+    await pump(300);
+    host.dispatch(buildStartTournament());
+    await pump(200);
+    host.dispatch(buildDraw(host.getState(), createRng(11))!);
+    await pump(200);
+    let guard = 0;
+    while (host.getState().tournament!.status !== 'completed' && guard++ < 10) {
+      for (const a of buildRoundRecords(host.getState())) host.dispatch(a);
+      await pump(300);
+    }
+    host.dispatch({ type: 'FINISH' });
+    await pump(300);
+    expect(host.getState().phase).toBe('final');
+
+    // Rivincita: lobby per tutti, libro delle scelte vuoto
+    host.rematch();
+    await pump(300);
+    expect(host.getState().phase).toBe('lobby');
+    expect(client.getState()?.phase).toBe('lobby');
+    expect(stateHash(client.getState()!)).toBe(stateHash(host.getState()));
+    expect(Object.keys(host.getBook().matchChoices)).toHaveLength(0);
+    expect(client.getState()?.players.every(p => p.teamId === null)).toBe(true);
+
+    // Seconda partita: stesso flusso, client ancora allineato
+    host.dispatch({
+      type: 'START_AUCTION',
+      teams: makeTeams(),
+      auction: { ...createInitialAuctionState(makePool()), phase: 'complete' },
+    });
+    await pump(300);
+    expect(host.getState().phase).toBe('auction');
+    host.dispatch(buildStartTournament());
+    await pump(200);
+    host.dispatch(buildDraw(host.getState(), createRng(13))!);
+    await pump(200);
+    expect(host.getState().tournament?.status).toBe('quarterfinals');
+    guard = 0;
+    while (host.getState().tournament!.status !== 'completed' && guard++ < 10) {
+      for (const a of buildRoundRecords(host.getState())) host.dispatch(a);
+      await pump(300);
+    }
+    expect(host.getState().tournament?.status).toBe('completed');
+    expect(stateHash(client.getState()!)).toBe(stateHash(host.getState()));
+
+    host.destroy();
+    client.close();
+  });
 });

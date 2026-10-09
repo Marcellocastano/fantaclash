@@ -26,6 +26,8 @@ export interface TournamentController {
   inRoom: boolean;
   /** Etichetta del pulsante del riepilogo finale (default "Nuova partita") */
   finalLabel?: string;
+  /** Contenuto al posto di tagline+pulsante nel riepilogo (stanza: rivincita) */
+  finalSlot?: ReactNode;
 }
 
 const TournamentControllerContext = createContext<TournamentController | null>(null);

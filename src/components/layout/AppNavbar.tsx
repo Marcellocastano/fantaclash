@@ -69,15 +69,15 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
             aria-label="FantaClash"
             className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold leading-none shrink-0"
           >
-            <LogoMark className="h-9 w-9" />
+            <LogoMark className="h-11 w-11" />
             <span className="hidden sm:inline">FantaClash</span>
-            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">ALPHA</span>
+            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">BETA</span>
           </button>
         ) : (
           <a href="/" aria-label="FantaClash — torna alla home" className="flex items-center gap-2.5 font-display text-2xl md:text-3xl font-extrabold leading-none shrink-0">
-            <LogoMark className="h-9 w-9" />
+            <LogoMark className="h-11 w-11" />
             <span className="hidden sm:inline">FantaClash</span>
-            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">ALPHA</span>
+            <span className="font-display text-[10px] md:text-xs font-black tracking-widest bg-highlight text-on-highlight border border-ink px-1.5 py-0.5 -rotate-3 shadow-block-sm">BETA</span>
           </a>
         )}
 
@@ -161,23 +161,6 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
                     Libera l'angolo in alto a destra per la webcam (solo su schermi larghi).
                   </p>
                 </div>
-                {SUPPORT_URL ? (
-                  <a
-                    role="menuitem"
-                    href={SUPPORT_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-4 py-3 font-semibold hover:bg-surface border-t-2 border-line first:border-t-0"
-                  >
-                    <Icon name="heart" className="w-5 h-5 text-whistle" />
-                    Supporta FantaClash
-                  </a>
-                ) : (
-                  <span className="flex items-center gap-3 px-4 py-3 text-ink-muted border-t-2 border-line first:border-t-0" title="Link di supporto in arrivo">
-                    <Icon name="heart" className="w-5 h-5" />
-                    Supporta (in arrivo)
-                  </span>
-                )}
               </div>
             )}
           </div>

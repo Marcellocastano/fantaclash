@@ -291,6 +291,25 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, phase: 'final' };
     }
 
+    case 'REMATCH': {
+      // Rivincita: si torna in lobby con gli stessi giocatori connessi
+      // (l'host c'è sempre) ma squadre e partite ripartono da zero.
+      if (state.phase !== 'final') return state;
+      const players = state.players
+        .filter(p => p.connected || p.id === state.hostId)
+        .map(p => ({ ...p, teamId: null }));
+      return {
+        ...state,
+        phase: 'lobby',
+        players,
+        teams: [],
+        auction: null,
+        tournament: null,
+        live: {},
+        callDeadline: null,
+      };
+    }
+
     default:
       return state;
   }

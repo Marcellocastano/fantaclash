@@ -96,7 +96,8 @@ export type RoomAction =
       shootoutOrder?: Partial<Record<MatchSide, string[]>>;
     }
   | { type: 'FINISH' }
-  | { type: 'TIME_SHIFT'; by: number };
+  | { type: 'TIME_SHIFT'; by: number }
+  | { type: 'REMATCH' };
 
 export type ClientIntent =
   | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator'; pubKey?: JsonWebKey }
@@ -107,7 +108,7 @@ export type ClientIntent =
   | { type: 'TACTIC'; matchId: string; stopTick: number; tactic: Tactic }
   | { type: 'SHOOTOUT_ORDER'; matchId: string; order: string[] };
 
-export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_token' | 'invalid';
+export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_token' | 'invalid' | 'name_taken';
 
 export type HostMessage =
   | { type: 'ACTION'; rev: number; action: RoomAction; hostNow: number }
@@ -137,7 +138,7 @@ const ROOM_ACTION_TYPES: readonly RoomAction['type'][] = [
   'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION',
   'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE',
   'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'MATCH_START', 'MATCH_RESUME', 'FINISH',
-  'TIME_SHIFT',
+  'TIME_SHIFT', 'REMATCH',
 ];
 
 /** Guard minimo sulla forma del messaggio (type noto) */

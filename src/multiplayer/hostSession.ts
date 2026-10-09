@@ -68,6 +68,8 @@ export interface HostSession {
   kick(playerId: string): void;
   updateSettings(settings: Partial<RoomSettings>): void;
   startAuction(pool: Player[]): void;
+  /** Rivincita: svuota le scelte delle partite e riporta la stanza in lobby */
+  rematch(): void;
   /** Uscita volontaria: ROOM_CLOSED a tutti, poi destroy */
   closeRoom(): Promise<void>;
   destroy(): Promise<void>;
@@ -364,6 +366,12 @@ export function createHostSession({
       const start = buildStartAuction(state, pool, rng);
       if (!start || !dispatch(start)) return;
       dispatch(buildStartCalling(state, rng));
+    },
+
+    rematch() {
+      book = { ...book, matchChoices: {} };
+      resultCache.clear();
+      dispatch({ type: 'REMATCH' });
     },
 
     async closeRoom() {

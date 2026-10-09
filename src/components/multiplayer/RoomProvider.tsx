@@ -35,6 +35,9 @@ export interface JoinRoomInput {
   role: 'player' | 'spectator';
 }
 
+/** Esito del tentativo di ingresso: mostrato nel form, senza schermate */
+export type JoinOutcome = { ok: true } | { ok: false; reason: RejectReason | 'not_found' };
+
 interface RoomSnapshot {
   status: RoomStatus;
   rejectReason: RejectReason | null;
@@ -62,7 +65,7 @@ const IDLE: RoomSnapshot = {
 export interface RoomContextValue extends RoomSnapshot {
   isHost: boolean;
   createRoom(input: CreateRoomInput): Promise<void>;
-  joinRoom(input: JoinRoomInput): Promise<void>;
+  joinRoom(input: JoinRoomInput): Promise<JoinOutcome>;
   /** Riprende una stanza host salvata (ricarica della pagina) */
   resumeRoom(code: string): Promise<void>;
   leave(): Promise<void>;
@@ -74,6 +77,8 @@ export interface RoomContextValue extends RoomSnapshot {
   kick(playerId: string): void;
   updateSettings(settings: Partial<RoomSettings>): void;
   startAuction(pool: Player[]): void;
+  /** Solo host: rivincita, tutti tornano in lobby (no-op altrove) */
+  rematch(): void;
   /** Solo host: dispaccia un'azione di stanza autorevole (false su client/rifiuto) */
   dispatchRoomAction(action: RoomAction): boolean;
 }
@@ -83,6 +88,8 @@ const RoomContext = createContext<RoomContextValue | null>(null);
 /** Codice libero se nessun 'host' compare in presence entro l'attesa */
 const COLLISION_WAIT_MS = 1500;
 const COLLISION_TRIES = 3;
+/** Attesa massima dell'esito di ingresso (oltre il timeout LISTENING) */
+const JOIN_WAIT_MS = 12_000;
 
 /** Chiave pubblica dell'host fissata (TOFU) per codice stanza */
 const hostKeyFor = (code: string) => `fanta-fc-room-hostkey-${code}`;
@@ -167,9 +174,10 @@ export function RoomProvider({
     });
     sessionRef.current = session;
     detachSaverRef.current = attachHostSaver(session, hostKey);
-    session.subscribe(s =>
-      notify({ ...snapRef.current, status: 'ready', rejectReason: null, state: s, role: 'host', me: identity.participantId })
-    );
+    session.subscribe(s => {
+      if (sessionRef.current !== session) return; // sessione stantia
+      notify({ ...snapRef.current, status: 'ready', rejectReason: null, state: s, role: 'host', me: identity.participantId });
+    });
     notify({ ...snapRef.current, status: 'ready', rejectReason: null, state, role: 'host', me: identity.participantId });
     if (timeShift > 0) session.dispatch({ type: 'TIME_SHIFT', by: timeShift });
   }, [transportFactory, notify, watchPresence]);
@@ -214,9 +222,10 @@ export function RoomProvider({
       });
       sessionRef.current = session;
       detachSaverRef.current = attachHostSaver(session, hostKey);
-      session.subscribe(state =>
-        notify({ ...snapRef.current, status: 'ready', rejectReason: null, state, role: 'host', me: identity.participantId })
-      );
+      session.subscribe(state => {
+        if (sessionRef.current !== session) return; // sessione stantia
+        notify({ ...snapRef.current, status: 'ready', rejectReason: null, state, role: 'host', me: identity.participantId });
+      });
       notify({ ...IDLE, status: 'ready', state: initial, role: 'host', me: identity.participantId });
       window.history.replaceState(null, '', `/multiplayer/?codice=${code}`);
       return;
@@ -232,7 +241,7 @@ export function RoomProvider({
     await startHostSession(code, save.state, save.hostKey, deserializeBook(save.book), elapsed);
   }, [startHostSession]);
 
-  const joinRoom = useCallback(async (input: JoinRoomInput) => {
+  const joinRoom = useCallback(async (input: JoinRoomInput): Promise<JoinOutcome> => {
     // Un nuovo tentativo chiude la sessione precedente: niente presenze fantasma
     const prev = sessionRef.current;
     sessionRef.current = null;
@@ -257,7 +266,13 @@ export function RoomProvider({
       tick: createWorkerTick(),
     });
     sessionRef.current = session;
+    // Gli esiti pre-ingresso (rejected/closed prima del primo 'ready') non
+    // passano dallo snapshot: diventano il JoinOutcome restituito da joinRoom.
+    let entered = false;
     session.subscribe((state, status) => {
+      if (sessionRef.current !== session) return; // sessione stantia
+      if (!entered && (status === 'rejected' || status === 'closed')) return;
+      if (status === 'ready') entered = true;
       const hostKey = session.getHostKey();
       if (hostKey) writeHostKey(input.code, hostKey);
       notify({
@@ -271,7 +286,44 @@ export function RoomProvider({
       });
     });
     notify({ ...snapRef.current, status: session.getStatus(), rejectReason: null, state: null, role: input.role, me: identity.participantId });
-    await session.connect();
+
+    // Fallimento silenzioso: si torna al form con un motivo, niente schermate
+    const fail = async (reason: RejectReason | 'not_found'): Promise<JoinOutcome> => {
+      if (sessionRef.current === session) {
+        // ref azzerato PRIMA di close(): il 'closed' della close è scartato
+        sessionRef.current = null;
+        await session.close();
+        notify(IDLE);
+      } else {
+        await session.close();
+      }
+      return { ok: false, reason };
+    };
+
+    try {
+      await session.connect();
+    } catch {
+      // LISTENING mai arrivato: nessuna stanza con questo codice
+      return fail('not_found');
+    }
+
+    // Attesa del primo stato terminale (ready | rejected | closed)
+    const terminal = await new Promise<string>(res => {
+      const cur = session.getStatus();
+      if (cur === 'ready' || cur === 'rejected' || cur === 'closed') return res(cur);
+      const off = session.subscribe((_s, st) => {
+        if (st === 'ready' || st === 'rejected' || st === 'closed') {
+          off();
+          res(st);
+        }
+      });
+      setTimeout(() => {
+        off();
+        res('timeout');
+      }, JOIN_WAIT_MS);
+    });
+    if (terminal === 'ready' && sessionRef.current === session) return { ok: true };
+    return fail(session.getRejectReason() ?? 'not_found');
   }, [transportFactory, notify, watchPresence]);
 
   // Dismissione del provider: chiude la sessione senza toccare l'URL
@@ -319,6 +371,7 @@ export function RoomProvider({
     kick(id) { const s = sessionRef.current; if (s && 'kick' in s) s.kick(id); },
     updateSettings(p) { const s = sessionRef.current; if (s && 'updateSettings' in s) s.updateSettings(p); },
     startAuction(pool) { const s = sessionRef.current; if (s && 'startAuction' in s) s.startAuction(pool); },
+    rematch() { const s = sessionRef.current; if (s && 'rematch' in s) s.rematch(); },
     dispatchRoomAction(action) {
       const s = sessionRef.current;
       return s && 'dispatch' in s ? s.dispatch(action) : false;

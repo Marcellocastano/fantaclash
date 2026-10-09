@@ -14,6 +14,7 @@ import { TournamentDraw } from '../tournament/TournamentDraw';
 import { TournamentHub } from '../tournament/TournamentHub';
 import { TournamentBracket } from '../tournament/TournamentBracket';
 import { TournamentSummaryScreen } from '../tournament/TournamentSummaryScreen';
+import { RoomExitLink } from './RoomExitLink';
 
 const noop = () => {};
 
@@ -231,8 +232,19 @@ export function RoomTournamentScreen() {
   return body;
 }
 
+/** Attesa della rivincita per chi non è host */
+function RematchWaiting() {
+  return (
+    <p className="mt-10 inline-flex items-center gap-2 font-display text-xl font-extrabold text-ink">
+      <span className="w-2.5 h-2.5 rounded-full bg-highlight motion-safe:animate-pulse" aria-hidden="true" />
+      In attesa che l'host lanci la rivincita…
+    </p>
+  );
+}
+
 /** Fase 'final': riepilogo personale per i giocatori, campione+tabellone per gli spettatori */
 export function RoomFinalScreen() {
+  const room = useRoom();
   const controller = useRoomTournament();
   const t = controller.tournament;
   if (!t) return null;
@@ -249,13 +261,31 @@ export function RoomFinalScreen() {
           <section className="mt-10" aria-label="Tabellone">
             <TournamentBracket tournament={t} />
           </section>
+          {!room.isHost && <RematchWaiting />}
+          <div className="mt-4"><RoomExitLink /></div>
         </div>
       </div>
     );
   }
 
+  const finalSlot = room.isHost ? (
+    <>
+      <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+      <button type="button" onClick={room.rematch} className="btn-cta mt-4 text-2xl sm:text-3xl py-4 sm:py-5 px-8">
+        Rigioca
+        <Icon name="reset" className="w-7 h-7" />
+      </button>
+      <div className="mt-4"><RoomExitLink /></div>
+    </>
+  ) : (
+    <>
+      <RematchWaiting />
+      <div className="mt-4"><RoomExitLink /></div>
+    </>
+  );
+
   return (
-    <TournamentControllerProvider value={controller}>
+    <TournamentControllerProvider value={{ ...controller, finalSlot }}>
       <TournamentSummaryScreen />
     </TournamentControllerProvider>
   );

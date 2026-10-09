@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MAX_PLAYERS, MIN_HUMANS } from '../../multiplayer/constants';
 import { TOURNAMENT_NAME } from '../../domain/tournament';
+import { loadSeasonIndex, SeasonInfo } from '../../services/seasons';
 import { Icon } from '../Icon';
+import { SeasonPicker } from '../SeasonPicker';
 import { TeamBadge } from '../tournament/TeamBadge';
 import { useRoom } from './RoomProvider';
 import { RoomExitLink } from './RoomExitLink';
@@ -22,6 +24,15 @@ export function LobbyScreen({
   const room = useRoom();
   const state = room.state!;
   const [copied, setCopied] = useState<string | null>(null);
+  const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
+
+  // L'host sceglie l'annata nella stanza; gli altri la vedono nel chip
+  useEffect(() => {
+    if (!room.isHost) return;
+    loadSeasonIndex()
+      .then(setSeasons)
+      .catch(() => setSeasons(null));
+  }, [room.isHost]);
 
   const copy = async (label: string, text: string) => {
     try {
@@ -67,10 +78,26 @@ export function LobbyScreen({
             <Icon name="trophy" className="w-4 h-4" aria-hidden="true" />
             {state.settings.cupName ?? TOURNAMENT_NAME}
           </span>
-          <span className="inline-block border-2 border-canvas/50 px-3 py-1 font-display font-bold text-lg text-canvas">
-            Serie A {state.settings.season}
-          </span>
+          {(!room.isHost || !seasons) && (
+            <span className="inline-block border-2 border-canvas/50 px-3 py-1 font-display font-bold text-lg text-canvas">
+              Serie A {state.settings.season}
+            </span>
+          )}
         </p>
+        {room.isHost && seasons && (
+          <div className="mt-5 max-w-md mx-auto text-left">
+            <p className="font-display text-lg font-extrabold text-canvas/80 mb-2 text-center">Annata del listone</p>
+            {/* Le etichette interne del picker sono inchiostro: scatola crema */}
+            <div className="bg-canvas border-2 border-ink p-3">
+              <SeasonPicker
+                seasons={seasons}
+                value={state.settings.season}
+                onChange={season => room.updateSettings({ season })}
+                disabled={starting}
+              />
+            </div>
+          </div>
+        )}
         <div className="mt-5 flex flex-col items-center gap-2">
           <button
             type="button"

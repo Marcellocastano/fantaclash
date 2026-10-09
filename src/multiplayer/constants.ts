@@ -6,7 +6,7 @@ import { MAX_TEAM_NAME_LENGTH } from '../mock/teamNames';
  */
 
 /** Versione del protocollo: client e host devono concordare */
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 
 /** Giocatori umani massimi in stanza (uno per squadra) */
 export const MAX_PLAYERS = LEAGUE_SIZE;

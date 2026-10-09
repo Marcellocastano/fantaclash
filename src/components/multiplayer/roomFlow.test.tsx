@@ -54,8 +54,11 @@ describe('multiplayer UI su rete in memoria', () => {
     const hostApp = renderApp(shared);
     await waitFor(() => expect(hostApp.getByLabelText('Nickname')).toBeInTheDocument());
     fireEvent.change(hostApp.getByLabelText('Nickname'), { target: { value: 'Hostu' } });
-    await waitFor(() => expect(hostApp.getByRole('group', { name: 'Annata' })).toBeInTheDocument());
     // due elementi "Crea stanza": la scheda e il pulsante del form
+    // (abilitato quando l'indice delle stagioni è arrivato)
+    await waitFor(() =>
+      expect(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]).not.toBeDisabled()
+    );
     fireEvent.click(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]);
 
     const hostView = within(hostApp.container);
@@ -91,6 +94,59 @@ describe('multiplayer UI su rete in memoria', () => {
     fireEvent.click(hostView.getByRole('button', { name: 'Espelli' }));
     await waitFor(() => expect(guest.getByText(/espulso dalla stanza/i)).toBeInTheDocument(), { timeout: 3000 });
     await waitFor(() => expect(hostView.getByText('Giocatori 1/8', { exact: false })).toBeInTheDocument());
+  }, 20000);
+
+  it('nome squadra già in uso: errore sul campo, si resta nel form', async () => {
+    const shared = net();
+    const hostApp = renderApp(shared);
+    await waitFor(() => expect(hostApp.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(hostApp.getByLabelText('Nickname'), { target: { value: 'Hostu' } });
+    fireEvent.change(hostApp.getByLabelText('La tua squadra'), { target: { value: 'Cacca FC' } });
+    await waitFor(() => expect(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]).not.toBeDisabled());
+    fireEvent.click(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]);
+    await waitFor(() => expect(window.location.search).toMatch(/codice=[A-Z0-9]{5}/), { timeout: 5000 });
+
+    const guestApp = renderApp(shared);
+    const guest = within(guestApp.container);
+    await waitFor(() => expect(guest.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(guest.getByLabelText('Nickname'), { target: { value: 'Ospite' } });
+    fireEvent.change(guest.getByLabelText('Nome squadra'), { target: { value: 'Cacca FC' } });
+    fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
+
+    // REJECT name_taken: errore sul campo squadra, niente schermate intermedie
+    await waitFor(() => expect(guest.getByText('Nome già in uso da un altro utente')).toBeInTheDocument(), { timeout: 5000 });
+    expect(guest.queryByText('Stanza non trovata')).toBeNull();
+    expect(guest.queryByText('Non sei entrato')).toBeNull();
+    expect(guest.getByLabelText('Codice stanza')).toBeInTheDocument();
+
+    // nome diverso: si entra in lobby
+    fireEvent.change(guest.getByLabelText('Nome squadra'), { target: { value: 'Altra FC' } });
+    fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
+    await waitFor(() => expect(guest.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument(), { timeout: 5000 });
+  }, 20000);
+
+  it("leave dopo l'ingresso: si torna al form (mai 'Stanza non trovata')", async () => {
+    const shared = net();
+    const hostApp = renderApp(shared);
+    await waitFor(() => expect(hostApp.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(hostApp.getByLabelText('Nickname'), { target: { value: 'Hostu' } });
+    await waitFor(() => expect(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]).not.toBeDisabled());
+    fireEvent.click(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]);
+    await waitFor(() => expect(window.location.search).toMatch(/codice=[A-Z0-9]{5}/), { timeout: 5000 });
+
+    const guestApp = renderApp(shared);
+    const guest = within(guestApp.container);
+    await waitFor(() => expect(guest.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(guest.getByLabelText('Nickname'), { target: { value: 'Ospite' } });
+    fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
+    await waitFor(() => expect(guest.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument(), { timeout: 5000 });
+
+    // Esci dalla lobby: la close() emette 'closed' ma la sessione è stantia
+    fireEvent.click(guest.getByRole('button', { name: 'Esci dalla stanza' }));
+    // secondo "Esci dalla stanza": il bottone di conferma del dialogo
+    fireEvent.click(guest.getAllByRole('button', { name: 'Esci dalla stanza' })[1]);
+    await waitFor(() => expect(guest.getByLabelText('Nickname')).toBeInTheDocument(), { timeout: 5000 });
+    expect(guest.queryByText('Stanza non trovata')).toBeNull();
   }, 20000);
 
 });

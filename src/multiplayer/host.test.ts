@@ -11,7 +11,7 @@ import { RoomState, RoomAction } from './protocol';
 import { createInitialAuctionState } from '../services/auction';
 import { createRng } from '../services/auction';
 import { LOT_DURATION_MS } from '../services/auction';
-import { BID_GRACE_MS } from './constants';
+import { BID_GRACE_MS, PROTOCOL_VERSION } from './constants';
 import { buildRoster, createTestPlayer, createTestTeam } from '../test/testUtils';
 import { Player, Team } from '../types';
 
@@ -34,7 +34,7 @@ function hello(id: string, overrides = {}) {
   return {
     type: 'HELLO' as const, playerId: id, token: `tok-${id}`,
     nickname: `Nick ${id}`, teamName: `Team ${id}`,
-    protocol: 1, role: 'player' as const, ...overrides,
+    protocol: PROTOCOL_VERSION, role: 'player' as const, ...overrides,
   };
 }
 
@@ -104,6 +104,16 @@ describe('handleIntent HELLO', () => {
 
     const empty = handleIntent(lobby(), createHostBook(), 'p3', hello('p3', { nickname: '   ' }), T0, rng);
     expect(empty.replies[0]).toMatchObject({ type: 'REJECT', reason: 'invalid' });
+  });
+
+  it('nome squadra già in stanza (maiuscole/accenti/spazi a parte) -> REJECT name_taken', () => {
+    for (const teamName of ['Host FC', '  host   fc ', 'HÒST FC']) {
+      const r = handleIntent(lobby(), createHostBook(), 'p2', hello('p2', { teamName }), T0, rng);
+      expect(r.actions).toHaveLength(0);
+      expect(r.replies).toEqual([{ type: 'REJECT', to: 'p2', reason: 'name_taken' }]);
+    }
+    const ok = handleIntent(lobby(), createHostBook(), 'p2', hello('p2', { teamName: 'Host FC 2' }), T0, rng);
+    expect(ok.actions[0].type).toBe('PLAYER_JOINED');
   });
 
   it('giocatore noto con token giusto -> PLAYER_CONNECTION; token errato -> bad_token', () => {

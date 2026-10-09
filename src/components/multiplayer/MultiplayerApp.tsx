@@ -8,7 +8,7 @@ import { RejectReason } from '../../multiplayer/protocol';
 import { ContentLayout } from '../../site/ContentLayout';
 import { RoomGameShell } from './RoomGameShell';
 import { EntryScreen } from './EntryScreen';
-import { BallLoader } from '../BallLoader';
+import { Icon } from '../Icon';
 import { LobbyScreen } from './LobbyScreen';
 import { RoomAuctionScreen } from './RoomAuctionScreen';
 import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
@@ -17,6 +17,9 @@ import { useRoomExit } from './useRoomExit';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 
 
+/** Inclinazioni alternate delle tessere del codice (classi letterali) */
+const RESUME_TILTS = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2', '-rotate-2'];
+
 const REJECT_TEXT: Record<RejectReason, string> = {
   protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
   full: 'La stanza è piena.',
@@ -24,6 +27,7 @@ const REJECT_TEXT: Record<RejectReason, string> = {
   kicked: 'Sei stato espulso dalla stanza.',
   bad_token: 'Rientro non riconosciuto: questo browser ha già un’altra identità per la stanza.',
   invalid: 'Nome non consentito: scegline un altro.',
+  name_taken: 'Nella stanza c’è già una squadra con questo nome: scegline un altro.',
 };
 
 /** Contenuto interattivo di /multiplayer/: ingresso, connessione, lobby */
@@ -60,6 +64,7 @@ export function MultiplayerApp() {
       room.startAuction(buildAuctionPool(players));
     } catch {
       setStartError('Impossibile caricare il listone, riprova');
+    } finally {
       setStarting(false);
     }
   };
@@ -69,28 +74,6 @@ export function MultiplayerApp() {
   };
 
   switch (room.status) {
-    case 'connecting':
-    case 'joining':
-      return (
-        <ContentLayout>
-          <div className="py-16 flex flex-col items-center text-center" role="status">
-            <BallLoader />
-            <p className="font-display text-3xl font-extrabold text-ink mt-8">
-              Entro nella stanza
-              {codeParam && (
-                <span className="font-display font-black bg-highlight text-on-highlight border-2 border-ink px-2 ml-2">{codeParam}</span>
-              )}
-            </p>
-            <p className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
-              {[0, 150, 300].map(d => (
-                <span key={d} className="w-2 h-2 rounded-full bg-ink motion-safe:animate-pulse" style={{ animationDelay: `${d}ms` }} />
-              ))}
-            </p>
-            <p className="text-ink-soft mt-3">Saluto l'host e preparo il tuo posto</p>
-          </div>
-        </ContentLayout>
-      );
-
     case 'rejected':
       return (
         <ContentLayout>
@@ -169,14 +152,27 @@ export function MultiplayerApp() {
       return (
         <ContentLayout wide>
           {hostSave && codeParam && (
-            <div className="max-w-2xl mx-auto panel p-4 sm:p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
-              <p className="font-semibold text-ink">
-                Eri l'host della stanza <span className="font-display font-extrabold tracking-widest">{codeParam}</span>: la stanza può riprendere.
-              </p>
-              <button type="button" onClick={() => void room.resumeRoom(codeParam)} className="btn-cta">
-                Riprendi la stanza {codeParam}
+            <section className="mb-8 bg-pitch-deep text-canvas border-4 border-ink shadow-block-lg p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
+              <div className="flex gap-1.5 shrink-0" aria-label={`Codice ${codeParam}`}>
+                {codeParam.split('').map((ch, i) => (
+                  <span
+                    key={i}
+                    aria-hidden="true"
+                    className={`w-10 h-12 sm:w-12 sm:h-14 inline-flex items-center justify-center bg-canvas text-ink border-2 border-ink shadow-block-sm font-display text-3xl sm:text-4xl font-black ${RESUME_TILTS[i % RESUME_TILTS.length]}`}
+                  >
+                    {ch}
+                  </span>
+                ))}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-2xl sm:text-3xl font-black leading-none">La tua stanza è ancora aperta</p>
+                <p className="text-canvas/80 mt-2">Eri l'host: riprendi la partita da dove eravate rimasti.</p>
+              </div>
+              <button type="button" onClick={() => void room.resumeRoom(codeParam)} className="btn-cta shrink-0">
+                Riprendi la stanza
+                <Icon name="arrow" className="w-6 h-6" />
               </button>
-            </div>
+            </section>
           )}
           <EntryScreen
           initialView={codeParam ? 'entra' : vista === 'crea' ? 'crea' : vista === 'entra' ? 'entra' : 'crea'}

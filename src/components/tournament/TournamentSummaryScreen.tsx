@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTournamentController } from '../../hooks/tournamentController';
 import { buildTournamentSummary, TournamentState, TournamentSummary } from '../../domain/tournament';
 import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, xShareUrl } from '../../services/shareCard';
@@ -24,10 +24,10 @@ const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
  * Un solo pulsante: nuova partita.
  */
 export function TournamentSummaryScreen() {
-  const { tournament, teams, resetGame, finalLabel } = useTournamentController();
+  const { tournament, teams, resetGame, finalLabel, finalSlot } = useTournamentController();
   const summary = useMemo(() => (tournament ? buildTournamentSummary(tournament, teams) : null), [tournament, teams]);
   if (!tournament || !summary) return null;
-  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} newGameLabel={finalLabel} />;
+  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} newGameLabel={finalLabel} finalSlot={finalSlot} />;
 }
 
 interface SummaryProps {
@@ -35,9 +35,11 @@ interface SummaryProps {
   tournament: TournamentState;
   onNewGame: () => void;
   newGameLabel?: string;
+  /** Contenuto custom al posto di tagline+pulsante (stanza: rivincita) */
+  finalSlot?: ReactNode;
 }
 
-function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps) {
+function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: SummaryProps) {
   const { card, failed } = useSummaryCard(summary);
   const [notice, setNotice] = useState<string | null>(null);
   const champion = summary.placement === 'campione';
@@ -135,13 +137,17 @@ function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps)
               </p>
             )}
 
-            {newGameLabel === undefined && (
-              <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+            {finalSlot ?? (
+              <>
+                {newGameLabel === undefined && (
+                  <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+                )}
+                <button onClick={onNewGame} className={`btn-cta text-2xl sm:text-3xl py-4 sm:py-5 px-8 ${newGameLabel === undefined ? 'mt-4' : 'mt-10'}`}>
+                  {newGameLabel ?? 'Nuova partita'}
+                  <Icon name="arrow" className="w-7 h-7" />
+                </button>
+              </>
             )}
-            <button onClick={onNewGame} className={`btn-cta text-2xl sm:text-3xl py-4 sm:py-5 px-8 ${newGameLabel === undefined ? 'mt-4' : 'mt-10'}`}>
-              {newGameLabel ?? 'Nuova partita'}
-              <Icon name="arrow" className="w-7 h-7" />
-            </button>
           </div>
         </div>
 

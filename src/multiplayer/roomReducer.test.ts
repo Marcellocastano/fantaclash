@@ -91,3 +91,54 @@ describe('nome della coppa (settings.cupName)', () => {
     expect(roomReducer(inGame, { type: 'SETTINGS', settings: { cupName: 'Altra' } })).toBe(inGame);
   });
 });
+
+describe('REMATCH (rivincita)', () => {
+  const finalRoom = (): RoomState => ({
+    ...makeRoom(),
+    phase: 'final',
+    players: [
+      { id: 'h1', nickname: 'Host', teamName: 'Host FC', connected: true, joinedAt: 1, teamId: 't1' },
+      { id: 'p2', nickname: 'Due', teamName: 'Due FC', connected: true, joinedAt: 2, teamId: 't2' },
+      { id: 'p3', nickname: 'Tre', teamName: 'Tre FC', connected: false, joinedAt: 3, teamId: 't3' },
+    ],
+    teams: [{ id: 't1' } as RoomState['teams'][number]],
+    auction: { phase: 'complete' } as RoomState['auction'],
+    tournament: { status: 'completed' } as RoomState['tournament'],
+    live: { m1: {} as RoomState['live'][string] },
+    callDeadline: 999,
+    settings: { season: '2017-18', difficulty: 'normale', cupName: 'Coppa Brago' },
+  });
+
+  it('da final riporta in lobby, azzera la partita e tiene i connessi', () => {
+    const room = finalRoom();
+    const next = roomReducer(room, { type: 'REMATCH' });
+    expect(next).not.toBe(room);
+    expect(next.phase).toBe('lobby');
+    expect(next.teams).toEqual([]);
+    expect(next.auction).toBeNull();
+    expect(next.tournament).toBeNull();
+    expect(next.live).toEqual({});
+    expect(next.callDeadline).toBeNull();
+    // giocatori: solo connessi + host (sempre), teamId azzerato
+    expect(next.players.map(p => p.id)).toEqual(['h1', 'p2']);
+    expect(next.players.every(p => p.teamId === null)).toBe(true);
+    expect(next.players[1]).toMatchObject({ nickname: 'Due', teamName: 'Due FC', joinedAt: 2, connected: true });
+    // impostazioni conservate
+    expect(next.settings).toEqual(room.settings);
+  });
+
+  it('host disconnesso resta comunque', () => {
+    const room = finalRoom();
+    room.players = room.players.map(p => (p.id === 'h1' ? { ...p, connected: false } : p));
+    const next = roomReducer(room, { type: 'REMATCH' });
+    expect(next.players.map(p => p.id)).toEqual(['h1', 'p2']);
+  });
+
+  it('è rifiutata fuori dalla fase final (stessa referenza)', () => {
+    const room = makeRoom();
+    for (const phase of ['lobby', 'auction', 'tournament'] as const) {
+      const s = { ...room, phase };
+      expect(roomReducer(s, { type: 'REMATCH' })).toBe(s);
+    }
+  });
+});
