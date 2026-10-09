@@ -83,6 +83,24 @@ describe('session reducer', () => {
     expect(lot.bidHistory).toHaveLength(1);
   });
 
+  it('lotDurationMs sostituisce la durata standard del lotto', () => {
+    const world = startedWorld();
+    const custom: AuctionWorld = {
+      teams: world.teams,
+      auction: { ...world.auction, lotDurationMs: 7000 },
+    };
+    const next = auctionReducer(custom, {
+      type: 'CALL_PLAYER', teamId: 't0', playerId: 'p1', now: NOW, seed: 5,
+    });
+    expect(next.auction.lot!.deadline).toBe(NOW + 7000);
+    // la chiusura rispetta la deadline personalizzata
+    expect(auctionReducer(next, { type: 'CLOSE_LOT', now: NOW + 6999 })).toBe(next);
+    expect(auctionReducer(next, { type: 'CLOSE_LOT', now: NOW + 7000 })).not.toBe(next);
+    // anche il rilancio resetta alla durata personalizzata
+    const bid = auctionReducer(next, { type: 'BID', teamId: 't1', amount: 5, now: NOW + 1000 });
+    expect(bid.auction.lot!.deadline).toBe(NOW + 1000 + 7000);
+  });
+
   function biddingWorld() {
     return auctionReducer(startedWorld(), {
       type: 'CALL_PLAYER', teamId: 't0', playerId: 'p1', now: NOW, seed: 5,

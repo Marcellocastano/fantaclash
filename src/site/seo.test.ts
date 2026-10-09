@@ -7,7 +7,8 @@ const routes = buildRoutes();
 
 describe('SEO delle pagine', () => {
   it('title e description unici e nei limiti di lunghezza', () => {
-    for (const r of routes) {
+    // i limiti di lunghezza contano per le pagine indicizzabili
+    for (const r of routes.filter(x => x.indexable)) {
       expect(r.title.length, r.path).toBeLessThanOrEqual(60);
       expect(r.description.length, r.path).toBeGreaterThanOrEqual(110);
       expect(r.description.length, r.path).toBeLessThanOrEqual(160);
@@ -17,7 +18,7 @@ describe('SEO delle pagine', () => {
   });
 
   it('percorsi con la barra finale e canonical assolute sul dominio www', () => {
-    for (const r of routes) {
+    for (const r of routes.filter(x => x.indexable)) {
       expect(r.path === '/' || /^\/[a-z0-9/-]+\/$/.test(r.path), r.path).toBe(true);
       expect(renderHead(r)).toContain(`<link rel="canonical" href="${SITE_URL}${r.path}" />`);
     }

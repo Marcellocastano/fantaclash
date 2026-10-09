@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { MULTIPLAYER_ENABLED } from '../config';
 import { GameConfig, Player } from '../types';
 import { Icon } from './Icon';
 import { Footer } from './Footer';
@@ -86,6 +87,21 @@ export function Landing({ onSubmit }: LandingProps) {
                     <SetupForm onSubmit={onSubmit} onSeasonChange={setSeason} />
                   </div>
                 </div>
+
+                {MULTIPLAYER_ENABLED && (
+                  <div className="mt-4 border-2 border-ink bg-canvas p-3 sm:p-4">
+                    <p className="font-display font-extrabold text-ink">Multiplayer — gioca con gli amici</p>
+                    <p className="text-sm text-ink-soft mt-1">Una stanza, un link, l’asta in diretta.</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <a href="/multiplayer/?vista=crea" className="btn-primary text-center text-sm sm:text-base py-2">
+                        Crea stanza
+                      </a>
+                      <a href="/multiplayer/?vista=entra" className="btn-ghost text-center text-sm sm:text-base py-2">
+                        Entra con codice
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="p-5 sm:p-8 lg:pl-12 border-t-4 lg:border-t-0 border-ink">

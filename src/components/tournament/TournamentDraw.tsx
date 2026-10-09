@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { drawOrder, TournamentState, TournamentTeam } from '../../domain/tournament';
 import { playSound } from '../../services/sound';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { TeamBadge } from './TeamBadge';
 
 interface TournamentDrawProps {
   tournament: TournamentState;
+  /**
+   * Ordine già deciso (stanza multiplayer): lo anima così com'è e non
+   * chiama onDrawn. Senza la prop, l'ordine è generato con Math.random.
+   */
+  order?: string[];
   /** Registra il sorteggio nello stato (a fine animazione) */
-  onDrawn: (order: string[]) => void;
+  onDrawn?: (order: string[]) => void;
   /** Animazione finita: si va al tabellone */
   onDone: () => void;
 }
@@ -31,10 +37,11 @@ type Stage = 'intro' | 'rise' | 'show' | 'user' | 'outro';
  * accoppiamento è completo c'è un momento dedicato al tuo avversario.
  * L'ordine è deciso al montaggio e registrato nello stato solo alla fine.
  */
-export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawProps) {
-  const [order] = useState(() => drawOrder(tournament, Math.random));
+export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone }: TournamentDrawProps) {
+  const [order] = useState(() => fixedOrder ?? drawOrder(tournament, Math.random));
   const [placed, setPlaced] = useState(0);
   const [stage, setStage] = useState<Stage>('intro');
+  const [streamer] = useStreamerMode();
   const committed = useRef(false);
   // Callback sempre aggiornati senza riavviare i timer quando il genitore si ridisegna
   const callbacks = useRef({ onDrawn, onDone });
@@ -70,7 +77,7 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
       case 'outro':
         if (!committed.current) {
           committed.current = true;
-          callbacks.current.onDrawn(order);
+          callbacks.current.onDrawn?.(order);
         }
         t = setTimeout(() => callbacks.current.onDone(), OUTRO_MS);
         break;
@@ -90,14 +97,10 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
     <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
         <div>
-          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none">Il sorteggio</h1>
+          <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
+          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">Il sorteggio</h1>
           <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
         </div>
-        {stage !== 'outro' && (
-          <button onClick={skip} className="link-action">
-            Salta il sorteggio
-          </button>
-        )}
       </div>
 
       <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-10 items-start">
@@ -144,7 +147,8 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
         </div>
 
         {/* Quarti */}
-        <div className="col-span-12 md:col-span-7">
+        {/* Streamer: i quarti scendono sotto il riquadro della webcam */}
+        <div className={`col-span-12 md:col-span-7 ${streamer ? 'lg:pt-16 2xl:pt-24' : ''}`}>
           <h2 className="section-heading mb-6">Quarti di finale</h2>
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
             {[0, 1, 2, 3].map(i => (
@@ -157,6 +161,14 @@ export function TournamentDraw({ tournament, onDrawn, onDone }: TournamentDrawPr
           </div>
         </div>
       </div>
+
+      {stage !== 'outro' && (
+        <div className="flex justify-center mt-10">
+          <button onClick={skip} className="btn-ghost">
+            Salta il sorteggio
+          </button>
+        </div>
+      )}
 
       {/* Momento della tua squadra */}
       {stage === 'user' && opponent && (

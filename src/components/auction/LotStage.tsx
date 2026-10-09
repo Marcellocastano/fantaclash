@@ -19,6 +19,8 @@ interface LotStageProps {
   outbidKey: number;
   /** Avanzamento automatico attivo: il pulsante mostra l'attesa */
   autoAdvance: boolean;
+  /** false in stanza: niente pulsante di avanzamento, lo decide l'host */
+  allowSimulation?: boolean;
   onBid: (amount: number) => void;
   onNext: () => void;
 }
@@ -33,7 +35,7 @@ const HISTORY_SIZE = 5;
  * quando ti superano lampeggia in arancio.
  */
 export function LotStage(props: LotStageProps) {
-  const { player, currentBid, bidderId, bids, teams, userTeam, timeRemaining, active, canBid, userMaxBid, outbid, outbidKey, autoAdvance, onBid, onNext } = props;
+  const { player, currentBid, bidderId, bids, teams, userTeam, timeRemaining, active, canBid, userMaxBid, outbid, outbidKey, autoAdvance, allowSimulation = true, onBid, onNext } = props;
   const leader = teams.find(t => t.id === bidderId);
   const userLeads = !!userTeam && bidderId === userTeam.id;
   const lowTime = active && timeRemaining < 2000;
@@ -127,14 +129,20 @@ export function LotStage(props: LotStageProps) {
               </p>
             </div>
           ) : (
-            <p className="text-ink-soft">Hai già completato questo reparto: guarda come va a finire.</p>
+            <p className="text-ink-soft">
+              {allowSimulation
+                ? 'Hai già completato questo reparto, puoi passare al reparto successivo cliccando su Avanti veloce'
+                : 'Hai già completato questo reparto: guarda come va a finire.'}
+            </p>
           )}
         </>
-      ) : (
+      ) : allowSimulation ? (
         <AdvanceButton auto={autoAdvance} onClick={onNext} className="btn-primary w-full text-2xl py-4">
           Prossimo giocatore
           <Icon name="arrow" className="w-5 h-5" />
         </AdvanceButton>
+      ) : (
+        <p className="text-sm text-ink-muted">Aggiudicato: si va avanti da soli…</p>
       )}
 
       {bids.length > 0 && (

@@ -1,11 +1,10 @@
 import { useCallback, useState } from 'react';
-import { useGame } from '../../context/GameContext';
+import { useTournamentController } from '../../hooks/tournamentController';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { MatchResult } from '../../domain/match';
 import {
-  simulateRemaining,
   simulateRound,
   tournamentReducer,
-  TournamentAction,
   TournamentState,
 } from '../../domain/tournament';
 import { MatchExit, MatchScreen } from '../match/MatchScreen';
@@ -20,26 +19,21 @@ import { TournamentHub } from './TournamentHub';
  * risultati.
  */
 export function TournamentScreen() {
-  const { state, dispatch } = useGame();
-  const tournament = state.tournament;
-  const teams = state.teams;
+  const {
+    tournament,
+    teams,
+    dispatchTournament: act,
+    setTournament: save,
+    finishTournament,
+  } = useTournamentController();
   const [showDraw, setShowDraw] = useState(tournament?.status === 'draw');
   const [revealIds, setRevealIds] = useState<string[]>([]);
+  useScrollToTop(showDraw ? 'draw' : tournament?.currentMatchId ?? 'hub');
 
-  const act = useCallback(
-    (action: TournamentAction) => dispatch({ type: 'TOURNAMENT_ACTION', payload: action }),
-    [dispatch]
-  );
   const onDrawn = useCallback((order: string[]) => act({ type: 'DRAW', order }), [act]);
   const onDrawDone = useCallback(() => setShowDraw(false), []);
 
   if (!tournament) return null;
-
-  const save = (next: TournamentState) => dispatch({ type: 'SET_TOURNAMENT', payload: next });
-  const finishTournament = (next: TournamentState = tournament) => {
-    save(simulateRemaining(next, teams));
-    dispatch({ type: 'SET_PHASE', payload: 'FINALE' });
-  };
 
   /** Simula le partite rimaste del turno e ne prepara la rivelazione */
   const completeRound = (from: TournamentState) => {

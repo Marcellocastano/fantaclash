@@ -162,6 +162,20 @@ export default {
           '0%': { opacity: '1', transform: 'translateY(-20vh) rotate(0deg)' },
           '100%': { opacity: '0.9', transform: 'translateY(110vh) rotate(540deg)' },
         },
+        // Pallone che rimbalza con l'ombra che si stringe
+        'ball-bounce': {
+          '0%, 100%': { transform: 'translateY(0) scale(1.05, 0.92)' },
+          '50%': { transform: 'translateY(-56px) scale(1)' },
+        },
+        'ball-shadow': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.35' },
+          '50%': { transform: 'scale(0.55)', opacity: '0.15' },
+        },
+        // Cuoricino del pulsante Supporta che pulsa
+        heartbeat: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
+        },
       },
       animation: {
         reveal: 'reveal 260ms ease-out both',
@@ -172,6 +186,7 @@ export default {
         flash: 'flash 1200ms ease-out both',
         drop: 'drop 520ms cubic-bezier(.2,.9,.3,1.1) both',
         shake: 'shake 420ms ease-out both',
+        heartbeat: 'heartbeat 1200ms ease-in-out infinite',
         sweep: 'sweep 420ms ease-out both',
         'ball-rise': 'ball-rise 520ms cubic-bezier(.2,.9,.3,1.2) both',
         'ball-open': 'ball-open 260ms ease-out both',
@@ -180,6 +195,8 @@ export default {
         beat: 'beat 1000ms ease-in-out infinite',
         'tick-pulse': 'tick-pulse 300ms ease-out both',
         'confetti-fall': 'confetti-fall 2600ms linear both',
+        'ball-bounce': 'ball-bounce 700ms cubic-bezier(.5,0,.6,1) infinite',
+        'ball-shadow': 'ball-shadow 700ms cubic-bezier(.5,0,.6,1) infinite',
         drain: 'drain 2500ms linear both',
       },
     },

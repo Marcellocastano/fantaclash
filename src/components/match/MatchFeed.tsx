@@ -14,7 +14,9 @@ export function MatchFeed({ events, userSide, hiddenId }: MatchFeedProps) {
     .filter(e => (e.type !== 'miss' || e.impact > 0) && e.id !== hiddenId && !(hiddenId && e.type === 'full_time'))
     .reverse();
   return (
-    <ul className="divide-y-2 divide-line max-h-[560px] overflow-y-auto" aria-live="polite">
+    // px-2 compensa il -mx-2 delle righe evidenziate: lo sfondo arriva al
+    // bordo senza creare uno scorrimento orizzontale nella lista
+    <ul className="divide-y-2 divide-line max-h-[560px] overflow-y-auto px-2" aria-live="polite">
       {visible.length === 0 && <li className="py-4 text-ink-muted">La partita sta per iniziare.</li>}
       {visible.map(e => {
         const strong = e.impact >= 3;
@@ -24,7 +26,7 @@ export function MatchFeed({ events, userSide, hiddenId }: MatchFeedProps) {
               {e.type === 'kickoff' ? "0'" : formatMinute(e.minute, e.extra)}
             </span>
             <EventIcon event={e} className="w-5 h-5 mt-0.5" />
-            <span className={`${strong ? 'font-bold' : 'text-ink-soft'} ${strong && e.side === userSide ? 'text-pitch' : strong ? 'text-ink' : ''}`}>
+            <span className={`min-w-0 break-words ${strong ? 'font-bold' : 'text-ink-soft'} ${strong && e.side === userSide ? 'text-pitch' : strong ? 'text-ink' : ''}`}>
               {e.description}
             </span>
           </li>

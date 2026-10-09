@@ -18,11 +18,7 @@ export function Footer({ linkGroups = FOOTER_LINK_GROUPS }: { linkGroups?: { tit
             FantaClash
           </p>
           <p className="text-canvas/70 mt-4 max-w-xl">
-            Asta e torneo con i giocatori veri della Serie A, dal 2003-04 al 2025-26. Gioco amatoriale senza scopo di lucro:
-            le statistiche storiche servono solo a calcolare valori e simulazioni, nessun legame con la Lega Serie A o con i club.
-          </p>
-          <p className="text-canvas/75 text-sm mt-4">
-            FantaClash non è affiliato a Lega Serie A, ai club o a Fantacalcio®: nomi e marchi appartengono ai rispettivi titolari.
+            Asta e torneo con i giocatori della Serie A, dal 2003-04 al 2025-26. Rivivi il brio di poter fare asta per le leggende del passato e prova a vincere il torneo.
           </p>
         </div>
         {linkGroups.map(g => (

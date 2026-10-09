@@ -10,8 +10,10 @@ Scegli un'annata, sfidi 7 bot in un'asta con 100 crediti e costruisci una rosa d
 - **Listone**: 96 giocatori reali per annata, con un overall calcolato da statistiche e quotazioni storiche.
 - **Torneo**: sorteggio, tabellone, partite simulate minuto per minuto con cronaca, statistiche, pagelle e lotteria dei rigori (l'ordine dei rigoristi lo scegli tu).
 - **Fine torneo**: una card riepilogativa da scaricare o condividere.
+- **Multiplayer** (dietro flag): stanze con codice per giocare in 2-8 amici la stessa asta e lo stesso torneo in tempo reale, con spettatori; i posti vuoti li riempiono i bot.
+- **Modalità streamer**: dal menu si attiva un riquadro webcam fisso e il layout gli lascia spazio.
 
-Tutto gira nel browser, senza backend. La partita in corso viene salvata nel `localStorage`.
+Il gioco singolo gira tutto nel browser, senza backend: la partita in corso viene salvata nel `localStorage`. Le stanze multiplayer usano Supabase Realtime come trasporto (l'host è il browser di chi crea la stanza; nessun database).
 
 ## Requisiti
 
@@ -43,8 +45,11 @@ npm run seo:check  # controlli SEO su dist/ (dopo la build)
 Variabili facoltative in `.env.local`:
 
 ```bash
-VITE_SUPPORT_URL=https://...        # link del pulsante "Supporta" (vuoto = disattivato)
+VITE_SUPPORT_URL=https://...        # link del pulsante "Supporta" (default: ko-fi.com/fantaclash)
 VITE_GOATCOUNTER_CODE=fantaclash    # analytics senza cookie (vuoto = nessuno script)
+VITE_MULTIPLAYER=1                  # attiva /multiplayer/ (richiede le due variabili sotto)
+VITE_SUPABASE_URL=https://....supabase.co
+VITE_SUPABASE_ANON_KEY=...          # chiave anon pubblica di Supabase
 ```
 
 ## Stack
@@ -57,6 +62,7 @@ React 18, TypeScript, Vite, Tailwind CSS, Vitest e Testing Library.
 src/
   components/    interfaccia (landing, asta, torneo, partita)
   domain/        motore della partita e del torneo (TypeScript puro)
+  multiplayer/   stanze multiplayer: protocollo, sessioni, trasporto (TypeScript puro)
   services/      motore d'asta, dati delle stagioni, salvataggio, card
   hooks/         collegamento tra motori e interfaccia
   site/          rotte, meta tag e pagine pubbliche pre-renderizzate

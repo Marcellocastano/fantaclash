@@ -1,18 +1,18 @@
 import { lazy, Suspense, useCallback } from 'react';
 import { Landing } from './components/Landing';
 import { AppNavbar, NavStat } from './components/layout/AppNavbar';
+import { GameShell } from './components/layout/GameShell';
 import { journeyStep } from './components/layout/journey';
 import { NAV_LINKS } from './site/navigation';
 import { randomTournamentSeed } from './domain/tournament';
 import { GameProvider, useGame, useGamePhase } from './context/GameContext';
 import { PlayerRole } from './types';
+import { useScrollToTop } from './hooks/useScrollToTop';
 
-// Asta, torneo e riepilogo si scaricano solo quando servono: la landing resta leggera
-const AuctionRoom = lazy(() => import('./components/auction/AuctionRoom').then(m => ({ default: m.AuctionRoom })));
-const TournamentScreen = lazy(() => import('./components/tournament/TournamentScreen').then(m => ({ default: m.TournamentScreen })));
-const TournamentSummaryScreen = lazy(() =>
-  import('./components/tournament/TournamentSummaryScreen').then(m => ({ default: m.TournamentSummaryScreen }))
-);
+// Asta, torneo e riepilogo si scaricano solo quando servono (provider compresi)
+const AuctionPhase = lazy(() => import('./components/phases/AuctionPhase'));
+const TournamentPhase = lazy(() => import('./components/phases/TournamentPhase'));
+const FinalPhase = lazy(() => import('./components/phases/FinalPhase'));
 
 const ROLE_PLURAL: Record<PlayerRole, string> = {
   P: 'Portieri',
@@ -46,6 +46,7 @@ function GameNavbar() {
 function GameContent() {
   const { dispatch, startGame, resetGame } = useGame();
   const phase = useGamePhase();
+  useScrollToTop(phase);
 
   /**
    * Gestisce il completamento dell'asta e passa al torneo (sorteggio)
@@ -57,16 +58,28 @@ function GameContent() {
   switch (phase) {
     case 'SETUP':
       return <Landing onSubmit={startGame} />;
-    
+
     case 'ASTA':
-      return <AuctionRoom onComplete={handleAuctionComplete} />;
-    
+      return (
+        <GameShell floatingCam={false}>
+          <AuctionPhase onComplete={handleAuctionComplete} />
+        </GameShell>
+      );
+
     case 'TORNEO':
-      return <TournamentScreen />;
+      return (
+        <GameShell>
+          <TournamentPhase />
+        </GameShell>
+      );
 
     case 'FINALE':
-      return <TournamentSummaryScreen />;
-    
+      return (
+        <GameShell>
+          <FinalPhase />
+        </GameShell>
+      );
+
     default:
       // Mai una pagina vuota: fase sconosciuta -> possibilità di ripartire
       return (

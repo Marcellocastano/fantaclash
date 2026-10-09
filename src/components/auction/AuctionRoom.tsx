@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useGame } from '../../context/GameContext';
-import { useAuction } from '../../hooks/useAuction';
+import { useAuctionController } from '../../hooks/auctionController';
 import { Player, PlayerRole } from '../../types';
 import { Icon } from '../Icon';
 import { BotThinking } from './BotThinking';
@@ -11,6 +10,8 @@ import { TeamsRecap } from './TeamsRecap';
 import { useAutoAdvance, useBidFeedback, useBotScanner } from './useAuctionFx';
 import { AdvanceButton } from './AutoAdvance';
 import { isBoolean, usePersistentState } from '../../hooks/usePersistentState';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { StreamerCamZone } from '../layout/StreamerCamZone';
 
 interface AuctionRoomProps {
   onComplete: () => void;
@@ -35,20 +36,25 @@ const ROLE_SINGULAR: Record<PlayerRole, string> = {
  * squadre. Il banco cambia aspetto con lo stato del lotto.
  */
 export function AuctionRoom({ onComplete }: AuctionRoomProps) {
-  const { state } = useGame();
-  const a = useAuction();
+  const a = useAuctionController();
   const { roundState, currentRole, currentPlayer, currentBidderId } = a;
   const [showTeams, setShowTeams] = useState(false);
   const [autoAdvance, setAutoAdvance] = usePersistentState('fanta-fc-auto-advance-v2', true, isBoolean);
+  const [streamer] = useStreamerMode();
 
-  const userTeam = state.teams.find(t => t.isUserTeam);
-  const caller = state.teams.find(t => t.id === a.callerId);
+  const userTeam = a.myTeam;
+  const caller = a.teams.find(t => t.id === a.callerId);
+  const callerMeta = a.callerId ? a.teamMeta?.[a.callerId] : undefined;
+  // In stanza un umano può essere il chiamante: niente animazione "bot che pensa"
+  const callerIsHuman = !!caller && !!callerMeta && callerMeta.controller === 'human';
+  const callSeconds =
+    a.callDeadline != null ? Math.max(0, Math.ceil((a.callDeadline - a.now) / 1000)) : null;
   const isUserWinning = !!userTeam && currentBidderId === userTeam.id;
-  const remaining = state.auction?.remainingPlayers ?? [];
+  const remaining = a.remainingPlayers;
 
   const sold: SoldEntry[] = useMemo(
-    () => state.teams.flatMap(t => t.roster.map(o => ({ player: o.player, team: t.name, price: o.purchasePrice }))),
-    [state.teams]
+    () => a.teams.flatMap(t => t.roster.map(o => ({ player: o.player, team: t.name, price: o.purchasePrice }))),
+    [a.teams]
   );
 
   const { scanId, lockedId } = useBotScanner(roundState === 'bot_calling', currentRole, remaining, currentPlayer?.id ?? null);
@@ -87,7 +93,9 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
       : roundState === 'calling'
         ? 'Tocca a te'
         : roundState === 'bot_calling'
-          ? 'Chiama un bot'
+          ? callerIsHuman
+            ? 'Attendi la chiamata'
+            : 'Chiama un bot'
           : roundState === 'role_complete'
             ? 'Reparto chiuso'
             : roundState === 'sold'
@@ -103,26 +111,39 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
         <section className="col-span-12 lg:col-span-5 xl:col-span-4 lg:min-h-0 lg:overflow-y-auto py-6 lg:pr-6 lg:border-r-2 lg:border-ink">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <h1 className="font-display text-4xl xl:text-5xl font-black text-ink leading-none">{stageTitle}</h1>
-            <FastForwardMenu
-              currentRole={currentRole}
-              canSimulateLot={a.canSimulateLot}
-              canSimulateRole={a.canSimulateRole}
-              onSimulateLot={a.simulateLot}
-              onSimulateRole={a.simulateRoleCompletion}
-              onSimulateAll={a.simulateAll}
-              autoAdvance={autoAdvance}
-              onAutoAdvanceChange={setAutoAdvance}
-            />
+            {a.allowSimulation && (
+              <FastForwardMenu
+                currentRole={currentRole}
+                canSimulateLot={a.canSimulateLot}
+                canSimulateRole={a.canSimulateRole}
+                onSimulateLot={a.simulateLot}
+                onSimulateRole={a.simulateRoleCompletion}
+                onSimulateAll={a.simulateAll}
+                autoAdvance={autoAdvance}
+                onAutoAdvanceChange={setAutoAdvance}
+              />
+            )}
           </div>
 
           {roundState === 'idle' && (
             <div className="py-10 text-center">
-              <p className="text-xl text-ink-soft">
-                Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
-              </p>
-              <button onClick={a.startAuction} className="btn-cta mt-10">
-                Inizia l'asta
-              </button>
+              {a.allowSimulation ? (
+                <>
+                  <p className="text-xl text-ink-soft">
+                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
+                  </p>
+                  <button onClick={a.startAuction} className="btn-cta mt-10">
+                    Inizia l'asta
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl text-ink-soft">
+                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
+                  </p>
+                  <p className="text-sm text-ink-muted mt-4">In attesa che l'asta cominci…</p>
+                </>
+              )}
             </div>
           )}
 
@@ -135,20 +156,42 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
                 <Icon name="arrow" className="w-5 h-5 text-pitch" />
                 Clicca su una riga: parte da 1 credito.
               </p>
+              {callSeconds != null && (
+                <p className="font-display text-2xl font-extrabold text-ink mt-4">
+                  Hai {callSeconds}s per scegliere
+                </p>
+              )}
             </div>
           )}
 
-          {roundState === 'bot_calling' && <BotThinking team={caller} role={currentRole} />}
+          {roundState === 'bot_calling' &&
+            (callerIsHuman ? (
+              <div className="py-6" aria-live="polite">
+                <p className="font-display text-3xl font-extrabold text-ink leading-snug">
+                  {callerMeta?.nickname ?? caller.name} sta scegliendo…
+                  {callSeconds != null && ` ${callSeconds}s`}
+                </p>
+                <p className="text-ink-soft mt-2">
+                  Sta chiamando un {ROLE_SINGULAR[currentRole]} all'asta.
+                </p>
+              </div>
+            ) : (
+              <BotThinking team={caller} role={currentRole} />
+            ))}
 
           {roundState === 'role_complete' && (
             <div className="py-10 text-center">
               <p className="text-xl text-ink-soft">
                 Ora tocca ai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
               </p>
-              <AdvanceButton auto={autoAdvance} onClick={a.continueToNextRole} className="btn-cta mt-10">
-                Avanti
-                <Icon name="arrow" className="w-7 h-7" />
-              </AdvanceButton>
+              {a.allowSimulation ? (
+                <AdvanceButton auto={autoAdvance} onClick={a.continueToNextRole} className="btn-cta mt-10">
+                  Avanti
+                  <Icon name="arrow" className="w-7 h-7" />
+                </AdvanceButton>
+              ) : (
+                <p className="text-sm text-ink-muted mt-10">Si passa al reparto successivo da soli…</p>
+              )}
             </div>
           )}
 
@@ -158,7 +201,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
               currentBid={a.currentBid}
               bidderId={currentBidderId}
               bids={a.bidHistory}
-              teams={state.teams}
+              teams={a.teams}
               userTeam={userTeam}
               timeRemaining={a.timeRemaining}
               active={roundState === 'auction_active'}
@@ -167,6 +210,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
               outbid={outbid}
               outbidKey={outbidKey}
               autoAdvance={autoAdvance}
+              allowSimulation={a.allowSimulation}
               onBid={a.userBid}
               onNext={a.confirmAssignment}
             />
@@ -179,7 +223,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
             available={remaining}
             sold={sold}
             currentRole={currentRole}
-            season={state.config?.season}
+            season={a.season}
             isSelectable={a.isUserCallingTurn && roundState === 'calling'}
             onSelectPlayer={handlePlayerSelect}
             scanId={scanId}
@@ -189,12 +233,19 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
         {/* Squadre */}
         <section className="col-span-12 lg:col-span-3 lg:min-h-0 py-6 lg:pl-6 border-t-2 border-ink lg:border-t-0">
+          {streamer && <StreamerCamZone inline />}
           <button onClick={() => setShowTeams(s => !s)} className="lg:hidden btn-ghost w-full mb-4">
             <Icon name="teams" className="w-5 h-5" />
             {showTeams ? 'Nascondi squadre' : 'Mostra squadre'}
           </button>
           <div className={`${showTeams ? '' : 'hidden'} lg:block lg:h-full`}>
-            <TeamsRecap teams={state.teams} userTeamId={userTeam?.id ?? ''} currentBidderId={currentBidderId} callerId={roundState === 'bot_calling' ? a.callerId : null} />
+            <TeamsRecap
+              teams={a.teams}
+              userTeamId={userTeam?.id ?? ''}
+              currentBidderId={currentBidderId}
+              callerId={roundState === 'bot_calling' ? a.callerId : null}
+              teamMeta={a.teamMeta}
+            />
           </div>
         </section>
       </div>

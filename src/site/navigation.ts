@@ -2,6 +2,8 @@
  * Link di navigazione del sito (navbar delle pagine pubbliche e footer).
  * Indirizzi assoluti: funzionano da qualsiasi pagina.
  */
+import { MULTIPLAYER_ENABLED } from '../config';
+
 export interface NavLink {
   label: string;
   href: string;
@@ -12,6 +14,8 @@ export const NAV_LINKS: NavLink[] = [
   { label: 'Regole', href: '/#regole' },
   { label: 'Guide', href: '/guida/' },
   { label: 'Top 11', href: '/top-11/' },
+  // Voce multiplayer solo con il flag attivo (stanza su /multiplayer/)
+  ...(MULTIPLAYER_ENABLED ? [{ label: 'Multiplayer', href: '/multiplayer/' }] : []),
 ];
 
 /** Link nel footer: gioco da una parte, guide e pagine dall'altra */

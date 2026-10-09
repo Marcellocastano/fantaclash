@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- FantaClash: martelletto d'asta (variante favicon, senza punte) -->
   <rect width="32" height="32" fill="#07492A"/>
-  <path d="M6 8.5 13.5 16 6 23.5" fill="none" stroke="#F4EEDF" stroke-width="4.5" stroke-linecap="square" stroke-linejoin="miter"/>
-  <path d="M26 8.5 18.5 16 26 23.5" fill="none" stroke="#FFD23F" stroke-width="4.5" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path fill="#F45B18" d="M 12.93 23.11 A 7.1 0.82 0 1 0 27.13 23.11 A 7.1 0.82 0 1 0 12.93 23.11 Z"/>
+  <path fill="#F4EEDF" d="M 12.76 24.66 L 27.5 24.66 Q 27.98 24.66 28.15 25.14 L 28.91 26.65 Q 20.1 28.67 11.22 26.65 L 12.04 25.14 Q 12.21 24.66 12.76 24.66 Z"/>
+  <path fill="#F4EEDF" d="M 2.61 20.13 L 14.77 13.93 Q 15.86 13.37 16.43 14.47 L 16.61 14.84 Q 17.17 15.94 16.07 16.5 L 3.91 22.69 Q 2.81 23.25 2.25 22.15 L 2.07 21.79 Q 1.51 20.69 2.61 20.13 Z"/>
+  <path fill="#F4EEDF" d="M 16.08 18.05 L 22.86 14.6 Q 23.47 14.29 23.78 14.9 L 24.48 16.27 Q 24.79 16.88 24.18 17.2 L 17.4 20.65 Q 16.79 20.96 16.48 20.35 L 15.78 18.98 Q 15.47 18.37 16.08 18.05 Z"/>
+  <path fill="#FFD23F" d="M 13.76 12.41 L 19.99 9.23 Q 20.05 9.2 20.08 9.26 L 22.7 14.39 Q 22.73 14.45 22.67 14.49 L 16.43 17.66 Q 16.37 17.69 16.34 17.63 L 13.73 12.5 Q 13.7 12.44 13.76 12.41 Z"/>
+  <path fill="#F4EEDF" d="M 12.07 9.47 L 18.85 6.02 Q 19.46 5.71 19.78 6.32 L 20.48 7.69 Q 20.79 8.3 20.18 8.62 L 13.39 12.07 Q 12.78 12.38 12.47 11.77 L 11.77 10.4 Q 11.46 9.79 12.07 9.47 Z"/>
 </svg>

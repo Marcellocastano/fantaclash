@@ -11,6 +11,8 @@ interface MatchEndProps {
   round: TournamentRound;
   onContinue: () => void;
   onConclude: () => void;
+  /** Stanza: sostituisce i due pulsanti con un'unica uscita locale */
+  exitLabel?: string;
 }
 
 const NEXT_LABEL: Record<TournamentRound, string> = {
@@ -26,7 +28,7 @@ const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
  * dell'utente. Un solo pulsante: avanti se hai vinto, chiudi il torneo se
  * hai perso.
  */
-export function MatchEnd({ result, userTeamId, round, onContinue, onConclude }: MatchEndProps) {
+export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, exitLabel }: MatchEndProps) {
   const won = result.winnerId === userTeamId;
   const champion = won && round === 'final';
   const userSide = result.homeTeamId === userTeamId ? 'home' : 'away';
@@ -109,7 +111,7 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude }: 
 
       <div className="mt-12 text-center">
         <button onClick={won ? onContinue : onConclude} className="btn-cta">
-          {won ? NEXT_LABEL[round] : 'Concludi torneo'}
+          {exitLabel ?? (won ? NEXT_LABEL[round] : 'Concludi torneo')}
           <Icon name="arrow" className="w-7 h-7" />
         </button>
       </div>

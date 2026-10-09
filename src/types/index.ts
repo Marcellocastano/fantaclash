@@ -123,6 +123,13 @@ export interface Team {
   roster: OwnedPlayer[];
   /** Configurazione bot (null se squadra utente) */
   botConfig: BotConfig | null;
+  /**
+   * Chi guida la squadra: assente nel gioco singolo (vale isUserTeam),
+   * nel multiplayer 'human' = giocatore remoto, 'autopilot' = umano assistito
+   */
+  controller?: 'human' | 'bot' | 'autopilot';
+  /** ID del giocatore remoto proprietario della squadra (multiplayer) */
+  ownerId?: string;
 }
 
 /**
@@ -200,6 +207,8 @@ export interface AuctionState {
   assignedPlayers: { playerId: string; teamId: string; price: number }[];
   /** Storico completo delle offerte dei lotti chiusi */
   bidHistory: AuctionBid[];
+  /** Durata del timer del lotto in ms (default LOT_DURATION_MS) */
+  lotDurationMs?: number;
 }
 
 /**

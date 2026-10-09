@@ -22,3 +22,14 @@ export {
   withTacticChange,
   keyEvents,
 } from './matchPlayback';
+export {
+  TICK_MS,
+  HOLD_MS,
+  KICK_SUSPENSE_MS,
+  KICK_RESULT_MS,
+  DECISIVE_EXTRA_MS,
+  tickDurationMs,
+  computeTimeline,
+  nextStop,
+} from './matchTimeline';
+export type { TimelineInput, Timeline } from './matchTimeline';

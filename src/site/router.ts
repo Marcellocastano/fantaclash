@@ -16,6 +16,7 @@ const PATTERNS: { kind: PageKind; re: RegExp; keys: string[] }[] = [
   { kind: 'top11', re: /^\/top-11\/(\d{4}-\d{2})$/, keys: ['season'] },
   { kind: 'about', re: /^\/chi-siamo$/, keys: [] },
   { kind: 'privacy', re: /^\/privacy$/, keys: [] },
+  { kind: 'multiplayer', re: /^\/multiplayer$/, keys: [] },
 ];
 
 /** Pagina corrispondente a un percorso; un indirizzo sconosciuto è la 404 */

@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useGame } from '../../context/GameContext';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { useTournamentController } from '../../hooks/tournamentController';
 import { buildTournamentSummary, TournamentState, TournamentSummary } from '../../domain/tournament';
 import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, xShareUrl } from '../../services/shareCard';
 import { playSound } from '../../services/sound';
 import { Footer } from '../Footer';
 import { Icon, IconName } from '../Icon';
+import { StreamerReserve } from '../layout/GameShell';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { useSummaryCard } from './useSummaryCard';
+import { useCountUp } from '../../hooks/useCountUp';
 
 const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
   campione: 'bg-highlight text-on-highlight',
@@ -22,20 +24,22 @@ const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
  * Un solo pulsante: nuova partita.
  */
 export function TournamentSummaryScreen() {
-  const { state, resetGame } = useGame();
-  const tournament = state.tournament;
-  const summary = useMemo(() => (tournament ? buildTournamentSummary(tournament, state.teams) : null), [tournament, state.teams]);
+  const { tournament, teams, resetGame, finalLabel, finalSlot } = useTournamentController();
+  const summary = useMemo(() => (tournament ? buildTournamentSummary(tournament, teams) : null), [tournament, teams]);
   if (!tournament || !summary) return null;
-  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} />;
+  return <Summary summary={summary} tournament={tournament} onNewGame={resetGame} newGameLabel={finalLabel} finalSlot={finalSlot} />;
 }
 
 interface SummaryProps {
   summary: TournamentSummary;
   tournament: TournamentState;
   onNewGame: () => void;
+  newGameLabel?: string;
+  /** Contenuto custom al posto di tagline+pulsante (stanza: rivincita) */
+  finalSlot?: ReactNode;
 }
 
-function Summary({ summary, tournament, onNewGame }: SummaryProps) {
+function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: SummaryProps) {
   const { card, failed } = useSummaryCard(summary);
   const [notice, setNotice] = useState<string | null>(null);
   const champion = summary.placement === 'campione';
@@ -82,9 +86,10 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
   ];
 
   return (
-    <div className="flex-1 flex flex-col">
-      {champion && <Confetti />}
-      <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
+    <StreamerReserve>
+      <div className="flex-1 flex flex-col">
+        {champion && <Confetti />}
+        <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
         <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-12 items-start">
           {/* Card + condivisione */}
           <div className="col-span-12 md:col-span-6 lg:col-span-5">
@@ -123,23 +128,26 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
               {summary.championName && !champion && <> · coppa a {summary.championName}</>}
             </p>
 
-            <dl className="flex flex-wrap mt-10 border-y-2 border-ink divide-x-2 divide-line">
-              <Stat label="Vittorie" value={`${summary.stats.wins}/${summary.stats.played}`} />
-              <Stat label="Gol fatti" value={summary.stats.goalsFor} />
-              <Stat label="Gol subiti" value={summary.stats.goalsAgainst} />
-              <Stat label="Porte inviolate" value={summary.stats.cleanSheets} />
-            </dl>
+            <StatBlocks stats={summary.stats} />
             {summary.mvp && (
-              <p className="mt-6 text-lg text-ink">
-                MVP del torneo: <span className="font-bold">{summary.mvp.name}</span>
-                <span className="text-ink-muted"> · fantavoto medio {summary.mvp.avgFantasy.toFixed(1)}</span>
+              <p className="mt-6 flex w-fit max-w-full flex-wrap items-center gap-3 border-2 border-ink bg-canvas shadow-block-sm px-3 py-2">
+                <span className="bg-highlight text-on-highlight border-2 border-ink px-2 font-display font-black">MVP</span>
+                <span className="font-display text-2xl font-black text-ink">{summary.mvp.name}</span>
+                <span className="text-ink-muted">fantavoto medio {summary.mvp.avgFantasy.toFixed(1)}</span>
               </p>
             )}
 
-            <button onClick={onNewGame} className="btn-cta mt-12">
-              Nuova partita
-              <Icon name="arrow" className="w-7 h-7" />
-            </button>
+            {finalSlot ?? (
+              <>
+                {newGameLabel === undefined && (
+                  <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+                )}
+                <button onClick={onNewGame} className={`btn-cta text-2xl sm:text-3xl py-4 sm:py-5 px-8 ${newGameLabel === undefined ? 'mt-4' : 'mt-10'}`}>
+                  {newGameLabel ?? 'Nuova partita'}
+                  <Icon name="arrow" className="w-7 h-7" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -147,18 +155,40 @@ function Summary({ summary, tournament, onNewGame }: SummaryProps) {
           <h2 className="section-heading mb-8">Il tuo torneo</h2>
           <TournamentBracket tournament={tournament} />
         </section>
-      </main>
-      <Footer linkGroups={[]} />
-    </div>
+        </main>
+        <Footer linkGroups={[]} />
+      </div>
+    </StreamerReserve>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+const STAT_STYLE = [
+  { label: 'Vittorie', cls: 'bg-pitch text-on-pitch', tilt: '-rotate-1' },
+  { label: 'Gol fatti', cls: 'bg-highlight text-on-highlight', tilt: 'rotate-1' },
+  { label: 'Gol subiti', cls: 'bg-whistle text-on-whistle', tilt: '-rotate-1' },
+  { label: 'Porte inviolate', cls: 'bg-ink text-canvas', tilt: 'rotate-1' },
+];
+
+function StatBlocks({ stats }: { stats: TournamentSummary['stats'] }) {
+  const wins = useCountUp(stats.wins);
+  const gf = useCountUp(stats.goalsFor);
+  const ga = useCountUp(stats.goalsAgainst);
+  const cs = useCountUp(stats.cleanSheets);
+  const values = [`${wins}/${stats.played}`, gf, ga, cs];
   return (
-    <div className="flex-1 min-w-[6rem] sm:min-w-[8rem] px-2 sm:px-4 py-4 first:pl-0">
-      <dt className="text-sm font-semibold text-ink-muted">{label}</dt>
-      <dd className="font-display text-5xl font-black tabular-nums text-ink leading-none mt-1">{value}</dd>
-    </div>
+    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-10">
+      {STAT_STYLE.map((s, i) => (
+        <div key={s.label} className={s.tilt}>
+          <div
+            className={`border-2 border-ink shadow-block p-3 sm:p-4 motion-safe:animate-drop ${s.cls}`}
+            style={{ animationDelay: `${i * 100}ms` }}
+          >
+            <dt className="text-sm font-bold opacity-80">{s.label}</dt>
+            <dd className="font-display text-5xl sm:text-6xl font-black tabular-nums leading-none mt-1">{values[i]}</dd>
+          </div>
+        </div>
+      ))}
+    </dl>
   );
 }
 

@@ -1,0 +1,166 @@
+import { AuctionState, DifficultyLevel, Team } from '../types';
+import { AuctionAction } from '../services/auction';
+import { TournamentAction, TournamentState } from '../domain/tournament';
+import { MatchOptions, MatchSide, Tactic, TacticChange } from '../domain/match';
+
+/**
+ * Protocollo della stanza multiplayer (host autorevole).
+ *
+ * I client mandano INTENTI; l'host li traduce in RoomAction numerate
+ * (rev) e le trasmette; tutti applicano le stesse azioni allo stesso
+ * roomReducer puro. RoomState è trasmesso per intero (SNAPSHOT):
+ * niente segreti dentro — i token stanno nell'HostBook dell'host.
+ */
+
+export type RoomPhase = 'lobby' | 'auction' | 'tournament' | 'final';
+
+export interface RoomSettings {
+  season: string;
+  difficulty: DifficultyLevel;
+  /** Nome della coppa del torneo (default: FantaClash Cup) */
+  cupName?: string;
+}
+
+export interface RoomPlayer {
+  id: string;
+  nickname: string;
+  teamName: string;
+  connected: boolean;
+  joinedAt: number;
+  /** Squadra assegnata a START_AUCTION (null in lobby) */
+  teamId: string | null;
+}
+
+export interface RoomState {
+  protocol: number;
+  code: string;
+  /** Numero di revisione: l'ultima azione applicata */
+  rev: number;
+  phase: RoomPhase;
+  hostId: string;
+  settings: RoomSettings;
+  /** Solo giocatori (max 8), in ordine di ingresso; niente spettatori */
+  players: RoomPlayer[];
+  teams: Team[];
+  auction: AuctionState | null;
+  tournament: TournamentState | null;
+  /** Scadenza del turno di chiamata di un umano (host clock), null se assente */
+  callDeadline: number | null;
+  /** Partite live del turno corrente (vuoto fuori dalle partite in corso) */
+  live: Record<string, LiveMatch>;
+}
+
+/**
+ * Stato di una partita live in stanza: nessun tick viaggia in rete.
+ * Ogni client ricalcola il tick dalla timeline ancorata a
+ * (anchorTick, anchorAt) sull'orologio dell'host; l'host pubblica solo
+ * inizio, riprese (con le scelte) e risultato.
+ */
+export interface LiveMatch {
+  matchId: string;
+  /** Lati con squadra controllata da un umano all'avvio */
+  humanSides: MatchSide[];
+  /**
+   * Piano tattico per lato umano: SEMPRE un array (anche vuoto) — con
+   * `undefined` il motore farebbe giocare l'IA al posto dell'umano.
+   */
+  plans: Partial<Record<MatchSide, TacticChange[]>>;
+  /** Ordine dei rigoristi scelto dai lati umani */
+  shootoutOrder: Partial<Record<MatchSide, string[]>>;
+  /** La timeline riparte da questo tick/istante (orologio host) */
+  anchorTick: number;
+  anchorAt: number;
+  /** Tick di arresto già superati */
+  resolvedStops: number[];
+}
+
+export type RoomAction =
+  | { type: 'PLAYER_JOINED'; player: RoomPlayer }
+  | { type: 'PLAYER_LEFT'; playerId: string }
+  | { type: 'PLAYER_CONNECTION'; playerId: string; connected: boolean }
+  | { type: 'PLAYER_KICKED'; playerId: string }
+  | { type: 'SETTINGS'; settings: Partial<RoomSettings> }
+  | { type: 'START_AUCTION'; teams: Team[]; auction: AuctionState }
+  | { type: 'AUCTION'; action: AuctionAction }
+  | { type: 'CALL_DEADLINE'; deadline: number | null }
+  | { type: 'START_TOURNAMENT'; seed: number }
+  | { type: 'TOURNAMENT'; action: Exclude<TournamentAction, { type: 'RECORD_RESULT' }> }
+  | { type: 'MATCH_RECORD'; matchId: string; seed: number; options: MatchOptions; resultHash: string }
+  | { type: 'MATCH_START'; matchId: string; startAt: number; humanSides: MatchSide[] }
+  | {
+      type: 'MATCH_RESUME';
+      matchId: string;
+      stopTick: number;
+      at: number;
+      tactics?: Partial<Record<MatchSide, Tactic>>;
+      shootoutOrder?: Partial<Record<MatchSide, string[]>>;
+    }
+  | { type: 'FINISH' }
+  | { type: 'TIME_SHIFT'; by: number }
+  | { type: 'REMATCH' };
+
+export type ClientIntent =
+  | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator'; pubKey?: JsonWebKey }
+  | { type: 'CALL'; footballerId: string }
+  | { type: 'BID'; amount: number }
+  | { type: 'PING'; t: number }
+  | { type: 'RESYNC'; fromRev: number }
+  | { type: 'TACTIC'; matchId: string; stopTick: number; tactic: Tactic }
+  | { type: 'SHOOTOUT_ORDER'; matchId: string; order: string[] };
+
+export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_token' | 'invalid' | 'name_taken';
+
+export type HostMessage =
+  | { type: 'ACTION'; rev: number; action: RoomAction; hostNow: number }
+  | { type: 'SNAPSHOT'; rev: number; state: RoomState; hash: string; hostNow: number; to?: string; hostPubKey?: JsonWebKey }
+  | { type: 'ROOM_CLOSED' }
+  | { type: 'HASH'; rev: number; hash: string }
+  | { type: 'LISTENING'; to: string }
+  | { type: 'PONG'; to: string; t: number; hostNow: number }
+  | { type: 'REJECT'; to: string; reason: RejectReason };
+
+/** Busta di trasporto: `sig` è la firma ECDSA di stableStringify(msg) */
+export interface Envelope<M> {
+  from: string;
+  msg: M;
+  sig?: string;
+}
+
+const CLIENT_INTENT_TYPES: readonly ClientIntent['type'][] = [
+  'HELLO', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER',
+];
+
+const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
+  'ACTION', 'SNAPSHOT', 'HASH', 'PONG', 'REJECT', 'LISTENING', 'ROOM_CLOSED',
+];
+
+const ROOM_ACTION_TYPES: readonly RoomAction['type'][] = [
+  'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION',
+  'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE',
+  'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'MATCH_START', 'MATCH_RESUME', 'FINISH',
+  'TIME_SHIFT', 'REMATCH',
+];
+
+/** Guard minimo sulla forma del messaggio (type noto) */
+export function isClientIntent(v: unknown): v is ClientIntent {
+  return (
+    typeof v === 'object' && v !== null &&
+    CLIENT_INTENT_TYPES.includes((v as { type: ClientIntent['type'] }).type)
+  );
+}
+
+/** Guard minimo sulla forma del messaggio host (type noto) */
+export function isHostMessage(v: unknown): v is HostMessage {
+  return (
+    typeof v === 'object' && v !== null &&
+    HOST_MESSAGE_TYPES.includes((v as { type: HostMessage['type'] }).type)
+  );
+}
+
+/** Guard minimo sulla forma dell'azione (type noto) */
+export function isRoomAction(v: unknown): v is RoomAction {
+  return (
+    typeof v === 'object' && v !== null &&
+    ROOM_ACTION_TYPES.includes((v as { type: RoomAction['type'] }).type)
+  );
+}

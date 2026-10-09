@@ -36,6 +36,31 @@ export function PrivacyPage() {
             </Li>
           </Ul>
 
+          <H2>Multiplayer</H2>
+          <p>
+            Le stanze multiplayer usano <strong>Supabase Realtime</strong> (<a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">informativa di Supabase</a>)
+            per far passare in tempo reale i messaggi tra i browser dei partecipanti a una stanza.
+          </p>
+          <Ul>
+            <Li>
+              <strong>Cosa passa</strong>: nickname, nome squadra, un identificativo casuale generato nel browser e
+              le azioni di gioco (chiamate, rilanci, scelte tattiche).
+            </Li>
+            <Li>
+              <strong>Nessun database</strong>: FantaClash non salva queste informazioni in nessun database. Lo stato
+              della stanza vive nel browser dell'host (con un salvataggio locale per riprendere la stanza dopo una
+              ricarica, cancellato quando la chiude) e ogni partecipante conserva nel proprio browser un
+              identificativo per rientrare.
+            </Li>
+            <Li>
+              <strong>Dati tecnici</strong>: come per ogni connessione internet, Supabase può trattare dati tecnici
+              come l'indirizzo IP secondo la propria informativa.
+            </Li>
+            <Li>
+              <strong>Nessun account</strong>: non serve registrarsi e non viene chiesto nessun dato di contatto.
+            </Li>
+          </Ul>
+
           <H2>Analytics</H2>
           <p>
             Per capire come viene usato il sito misuriamo le visite con <strong>GoatCounter</strong>, uno strumento
