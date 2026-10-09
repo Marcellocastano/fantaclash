@@ -71,7 +71,11 @@ export function MultiplayerApp() {
           <div className="py-16 text-center max-w-md mx-auto">
             <h1 className="font-display text-4xl font-black text-ink">Non sei entrato</h1>
             <p className="text-lg text-ink-soft mt-4">
-              {room.rejectReason ? REJECT_TEXT[room.rejectReason] : 'Richiesta rifiutata.'}
+              {room.rejectReason === 'full' && room.role === 'spectator'
+              ? 'Troppi spettatori in questa stanza'
+              : room.rejectReason
+                ? REJECT_TEXT[room.rejectReason]
+                : 'Richiesta rifiutata.'}
             </p>
             <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
               Torna indietro

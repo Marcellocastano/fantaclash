@@ -142,6 +142,10 @@ export function RoomProvider({
   }, [transportFactory, notify, watchSpectators]);
 
   const joinRoom = useCallback(async (input: JoinRoomInput) => {
+    // Un nuovo tentativo chiude la sessione precedente: niente presenze fantasma
+    const prev = sessionRef.current;
+    sessionRef.current = null;
+    if (prev) await ('destroy' in prev ? prev.destroy() : prev.close());
     const identity = getRoomIdentity(input.code);
     notify({ status: 'connecting', rejectReason: null, state: null, role: input.role, me: identity.participantId, spectatorCount: 0 });
     const transport = await transportFactory({ code: input.code, selfId: identity.participantId, role: input.role });

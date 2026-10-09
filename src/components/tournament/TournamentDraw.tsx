@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { drawOrder, TournamentState, TournamentTeam } from '../../domain/tournament';
 import { playSound } from '../../services/sound';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { TeamBadge } from './TeamBadge';
 
 interface TournamentDrawProps {
@@ -40,6 +41,7 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
   const [order] = useState(() => fixedOrder ?? drawOrder(tournament, Math.random));
   const [placed, setPlaced] = useState(0);
   const [stage, setStage] = useState<Stage>('intro');
+  const [streamer] = useStreamerMode();
   const committed = useRef(false);
   // Callback sempre aggiornati senza riavviare i timer quando il genitore si ridisegna
   const callbacks = useRef({ onDrawn, onDone });
@@ -98,11 +100,6 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
           <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none">Il sorteggio</h1>
           <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
         </div>
-        {stage !== 'outro' && (
-          <button onClick={skip} className="link-action">
-            Salta il sorteggio
-          </button>
-        )}
       </div>
 
       <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-10 items-start">
@@ -149,7 +146,8 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
         </div>
 
         {/* Quarti */}
-        <div className="col-span-12 md:col-span-7">
+        {/* Streamer: i quarti scendono sotto il riquadro della webcam */}
+        <div className={`col-span-12 md:col-span-7 ${streamer ? 'lg:pt-16 2xl:pt-24' : ''}`}>
           <h2 className="section-heading mb-6">Quarti di finale</h2>
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
             {[0, 1, 2, 3].map(i => (
@@ -162,6 +160,14 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
           </div>
         </div>
       </div>
+
+      {stage !== 'outro' && (
+        <div className="flex justify-center mt-10">
+          <button onClick={skip} className="btn-ghost">
+            Salta il sorteggio
+          </button>
+        </div>
+      )}
 
       {/* Momento della tua squadra */}
       {stage === 'user' && opponent && (

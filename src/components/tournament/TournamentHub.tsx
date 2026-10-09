@@ -9,6 +9,7 @@ import {
   TournamentTeam,
 } from '../../domain/tournament';
 import { Icon } from '../Icon';
+import { StreamerReserve } from '../layout/GameShell';
 import { TeamBadge } from './TeamBadge';
 import { REVEAL_STEP_MS, TournamentBracket } from './TournamentBracket';
 
@@ -109,13 +110,15 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   }
 
   return (
-    <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 py-8">
-      {hero}
-      {revealIds.length > 0 && <RoundResults tournament={tournament} ids={revealIds} />}
-      <section className="mt-10" aria-label="Tabellone">
-        <TournamentBracket tournament={tournament} revealIds={revealIds} />
-      </section>
-    </div>
+    <StreamerReserve>
+      <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 py-8">
+        {hero}
+        {revealIds.length > 0 && <RoundResults tournament={tournament} ids={revealIds} />}
+        <section className="mt-10" aria-label="Tabellone">
+          <TournamentBracket tournament={tournament} revealIds={revealIds} />
+        </section>
+      </div>
+    </StreamerReserve>
   );
 }
 

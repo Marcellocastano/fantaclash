@@ -10,6 +10,8 @@ import { TeamsRecap } from './TeamsRecap';
 import { useAutoAdvance, useBidFeedback, useBotScanner } from './useAuctionFx';
 import { AdvanceButton } from './AutoAdvance';
 import { isBoolean, usePersistentState } from '../../hooks/usePersistentState';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { StreamerCamZone } from '../layout/StreamerCamZone';
 
 interface AuctionRoomProps {
   onComplete: () => void;
@@ -38,6 +40,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
   const { roundState, currentRole, currentPlayer, currentBidderId } = a;
   const [showTeams, setShowTeams] = useState(false);
   const [autoAdvance, setAutoAdvance] = usePersistentState('fanta-fc-auto-advance-v2', true, isBoolean);
+  const [streamer] = useStreamerMode();
 
   const userTeam = a.myTeam;
   const caller = a.teams.find(t => t.id === a.callerId);
@@ -124,12 +127,23 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
           {roundState === 'idle' && (
             <div className="py-10 text-center">
-              <p className="text-xl text-ink-soft">
-                Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
-              </p>
-              <button onClick={a.startAuction} className="btn-cta mt-10">
-                Inizia l'asta
-              </button>
+              {a.allowSimulation ? (
+                <>
+                  <p className="text-xl text-ink-soft">
+                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
+                  </p>
+                  <button onClick={a.startAuction} className="btn-cta mt-10">
+                    Inizia l'asta
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl text-ink-soft">
+                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
+                  </p>
+                  <p className="text-sm text-ink-muted mt-4">In attesa che l'asta cominci…</p>
+                </>
+              )}
             </div>
           )}
 
@@ -219,6 +233,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
         {/* Squadre */}
         <section className="col-span-12 lg:col-span-3 lg:min-h-0 py-6 lg:pl-6 border-t-2 border-ink lg:border-t-0">
+          {streamer && <StreamerCamZone inline />}
           <button onClick={() => setShowTeams(s => !s)} className="lg:hidden btn-ghost w-full mb-4">
             <Icon name="teams" className="w-5 h-5" />
             {showTeams ? 'Nascondi squadre' : 'Mostra squadre'}

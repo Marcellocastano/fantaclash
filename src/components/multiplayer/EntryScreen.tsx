@@ -113,7 +113,7 @@ export function EntryScreen({
       <div className="panel p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div>
           <label htmlFor="mp-nick" className="block font-display text-lg font-extrabold text-ink mb-1.5">
-            Nickname
+            Nickname{asSpectator && <span className="font-semibold text-sm text-ink-muted"> (facoltativo)</span>}
           </label>
           <input
             id="mp-nick"
@@ -121,7 +121,7 @@ export function EntryScreen({
             value={nickname}
             maxLength={NICKNAME_MAX}
             onChange={e => setNickname(e.target.value)}
-            placeholder="Es. Marco"
+            placeholder={asSpectator ? 'Spettatore' : 'Es. Marco'}
             className="input-field"
           />
         </div>
@@ -208,7 +208,7 @@ export function EntryScreen({
               disabled={busy || !codeOk || (!asSpectator && !nickname.trim())}
               className="btn-cta w-full text-xl py-3"
             >
-              {busy ? 'Entro…' : 'Entra nella stanza'}
+              {busy ? 'Entro…' : asSpectator ? 'Guarda la stanza' : 'Entra nella stanza'}
               <Icon name="arrow" className="w-5 h-5" />
             </button>
             <button

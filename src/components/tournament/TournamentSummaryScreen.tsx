@@ -5,6 +5,7 @@ import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, x
 import { playSound } from '../../services/sound';
 import { Footer } from '../Footer';
 import { Icon, IconName } from '../Icon';
+import { StreamerReserve } from '../layout/GameShell';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { useSummaryCard } from './useSummaryCard';
@@ -82,9 +83,10 @@ function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps)
   ];
 
   return (
-    <div className="flex-1 flex flex-col">
-      {champion && <Confetti />}
-      <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
+    <StreamerReserve>
+      <div className="flex-1 flex flex-col">
+        {champion && <Confetti />}
+        <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
         <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-12 items-start">
           {/* Card + condivisione */}
           <div className="col-span-12 md:col-span-6 lg:col-span-5">
@@ -147,9 +149,10 @@ function Summary({ summary, tournament, onNewGame, newGameLabel }: SummaryProps)
           <h2 className="section-heading mb-8">Il tuo torneo</h2>
           <TournamentBracket tournament={tournament} />
         </section>
-      </main>
-      <Footer linkGroups={[]} />
-    </div>
+        </main>
+        <Footer linkGroups={[]} />
+      </div>
+    </StreamerReserve>
   );
 }
 

@@ -6,6 +6,9 @@ export function RoomTopBar() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b-2 border-ink/10 pb-2 mb-2 text-sm">
       <span className="font-mono font-bold text-ink tracking-widest">{room.state?.code}</span>
+      {room.role === 'spectator' && (
+        <span className="text-[10px] font-black border border-ink px-1 py-px text-ink-soft">Spettatore</span>
+      )}
       {room.isHost && (
         <span className="text-ink-muted">Tieni aperta questa scheda: se la chiudi la stanza si ferma</span>
       )}

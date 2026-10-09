@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { GamePhase } from '../../types';
 import { AppNavbar, NavStat } from '../layout/AppNavbar';
 import { journeyStep } from '../layout/journey';
+import { GameShell } from '../layout/GameShell';
 import { RoomTopBar } from './RoomTopBar';
 import { useRoom } from './RoomProvider';
 
@@ -31,7 +32,7 @@ export function RoomGameShell({ children }: { children: ReactNode }) {
       <div className="w-full max-w-[1600px] mx-auto px-4">
         <RoomTopBar />
       </div>
-      {children}
+      <GameShell floatingCam={state?.phase !== 'auction'}>{children}</GameShell>
     </div>
   );
 }

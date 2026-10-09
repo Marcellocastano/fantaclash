@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { SUPPORT_URL } from '../../config';
 import { useSoundMuted } from '../../hooks/useSound';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { Icon } from '../Icon';
 import { LogoMark } from '../Logo';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -23,6 +24,7 @@ interface AppNavbarProps {
  */
 export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarProps) {
   const [muted, setMuted] = useSoundMuted();
+  const [streamer, setStreamer] = useStreamerMode();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -90,6 +92,29 @@ export function AppNavbar({ step = null, context, links, onNewGame }: AppNavbarP
                     Nuova partita
                   </button>
                 )}
+                <div className="px-4 py-3 border-t-2 border-line" role="group" aria-label="Modalità streamer">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-semibold">Modalità streamer</span>
+                    <span className="flex gap-1">
+                      {([true, false] as const).map(v => (
+                        <button
+                          key={String(v)}
+                          type="button"
+                          aria-pressed={streamer === v}
+                          onClick={() => setStreamer(v)}
+                          className={`px-3 py-1 font-display font-extrabold text-sm border-2 border-ink transition-colors duration-150 ${
+                            streamer === v ? 'bg-ink text-canvas' : 'text-ink-soft hover:text-ink'
+                          }`}
+                        >
+                          {v ? 'Sì' : 'No'}
+                        </button>
+                      ))}
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-muted mt-1.5">
+                    Libera l'angolo in alto a destra per la webcam (solo su schermi larghi).
+                  </p>
+                </div>
                 {SUPPORT_URL ? (
                   <a
                     role="menuitem"

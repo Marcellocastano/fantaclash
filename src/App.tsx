@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback } from 'react';
 import { Landing } from './components/Landing';
 import { AppNavbar, NavStat } from './components/layout/AppNavbar';
+import { GameShell } from './components/layout/GameShell';
 import { journeyStep } from './components/layout/journey';
 import { NAV_LINKS } from './site/navigation';
 import { randomTournamentSeed } from './domain/tournament';
@@ -55,16 +56,28 @@ function GameContent() {
   switch (phase) {
     case 'SETUP':
       return <Landing onSubmit={startGame} />;
-    
+
     case 'ASTA':
-      return <AuctionPhase onComplete={handleAuctionComplete} />;
+      return (
+        <GameShell floatingCam={false}>
+          <AuctionPhase onComplete={handleAuctionComplete} />
+        </GameShell>
+      );
 
     case 'TORNEO':
-      return <TournamentPhase />;
+      return (
+        <GameShell>
+          <TournamentPhase />
+        </GameShell>
+      );
 
     case 'FINALE':
-      return <FinalPhase />;
-    
+      return (
+        <GameShell>
+          <FinalPhase />
+        </GameShell>
+      );
+
     default:
       // Mai una pagina vuota: fase sconosciuta -> possibilità di ripartire
       return (

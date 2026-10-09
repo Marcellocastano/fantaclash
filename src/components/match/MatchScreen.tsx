@@ -3,6 +3,7 @@ import { Team } from '../../types';
 import { MatchResult, MatchSide } from '../../domain/match';
 import { findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
 import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
+import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
 import { AttackIndicator } from './AttackIndicator';
@@ -102,6 +103,7 @@ export function MatchPlaybackView({
   room?: RoomMatchUi;
 }) {
   const { result, state } = pb;
+  const [streamer] = useStreamerMode();
   const [tab, setTab] = useState<'cronaca' | 'statistiche'>('cronaca');
   const tick = result.ticks[state.tick.index];
   const shoot = useShootoutKick(result, state.latest, pb.speed, pb.skipped);
@@ -119,6 +121,9 @@ export function MatchPlaybackView({
 
   return (
     <div className="flex-1">
+      {/* Modalità streamer: il riquadro WEBCAM fisso sta in alto a destra,
+          il tabellone si restringe a sinistra e la colonna laterale scende */}
+      <div className={streamer ? 'lg:pr-[432px] 2xl:pr-[496px]' : undefined}>
       <Scoreboard
         home={tournament.teams.find(t => t.id === home.id)}
         away={tournament.teams.find(t => t.id === away.id)}
@@ -130,6 +135,7 @@ export function MatchPlaybackView({
         shootout={showEnd ? state.shootout : shootoutScore}
         indicator={<AttackIndicator ball={state.tick.ball} transitionMs={pb.tickMs} homeIsUser={userSide === 'home'} />}
       />
+      </div>
 
       <div className="max-w-[1500px] mx-auto px-4 py-8">
         {showEnd ? (
@@ -221,7 +227,7 @@ export function MatchPlaybackView({
               </div>
             </div>
 
-            <aside className="col-span-12 lg:col-span-4">
+            <aside className={`col-span-12 lg:col-span-4${streamer ? ' lg:mt-40' : ''}`}>
               <div className="flex border-b-2 border-ink mb-4" role="tablist">
                 {(['cronaca', 'statistiche'] as const).map(t => (
                   <button
