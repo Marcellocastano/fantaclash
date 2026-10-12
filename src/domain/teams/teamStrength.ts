@@ -99,6 +99,23 @@ export function computeSynergy(
   };
 }
 
+/**
+ * Rigori parati: `penaltySaveProbability` nei dati è il rapporto grezzo
+ * parati/battuti, su campioni piccolissimi (3/3 -> 1.0, mai affrontati ->
+ * 0): il numero dei rigori affrontati si ricava dal rapporto e la stima
+ * viene "ristretta" verso una media a priori (PRIOR, peso W pari a un
+ * campione virtuale di 10 rigori). Mai affrontati -> PRIOR.
+ */
+export const PENALTY_SAVE_PRIOR = 0.2;
+export const PENALTY_SAVE_PRIOR_WEIGHT = 10;
+export function penaltySaveSkill(player: Player): number {
+  const saved = player.stats?.penaltiesSaved ?? 0;
+  const r = player.penaltySaveProbability;
+  // I rigori affrontati non possono essere meno di quelli parati
+  const faced = Math.max(saved, r && r > 0 ? Math.round(saved / r) : 0);
+  return (saved + PENALTY_SAVE_PRIOR_WEIGHT * PENALTY_SAVE_PRIOR) / (faced + PENALTY_SAVE_PRIOR_WEIGHT);
+}
+
 /** Forza complessiva (pesata per ruolo) riportata in scala overall */
 export function weightedRating(depts: { gk: number; def: number; mid: number; att: number }): number {
   const q =

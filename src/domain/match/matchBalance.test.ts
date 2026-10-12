@@ -112,7 +112,19 @@ describe(`equilibrio motore partita (${N} partite)`, () => {
       return rate(inBucket.map(s => s.homeWin)) + 0.5 * rate(inBucket.map(s => s.draw));
     });
     console.log('punti attesi casa per fascia di divario', winRates.map(x => x.toFixed(3)).join(' '));
-    expect(spearman(winRates.map((_, i) => i), winRates)).toBeGreaterThan(0.9);
+    // Le fasce estreme hanno ~60 partite (errore standard ~0.06): una
+    // correlazione di rango su 5 punti medi è fragile. Si misura invece la
+    // correlazione per partita (divario, punti) e la si confronta con il
+    // suo errore standard (~1/sqrt(N)): soglia a 3.29 SE (99.9%).
+    const rho = spearman(
+      samples.map(s => s.diff),
+      samples.map(s => (s.homeWin ? 1 : s.draw ? 0.5 : 0))
+    );
+    console.log(`correlazione per partita divario -> punti casa: ${rho.toFixed(3)}`);
+    expect(rho).toBeGreaterThan(3.29 / Math.sqrt(N - 1));
+    // Le fasce centrali (centinaia di partite ciascuna) restano ordinate
+    expect(winRates[1]).toBeLessThan(winRates[2]);
+    expect(winRates[2]).toBeLessThan(winRates[3]);
   });
 
   it('occasioni ed eventi per partita in un intervallo leggibile', () => {

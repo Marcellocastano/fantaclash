@@ -58,6 +58,9 @@ export function computePerformances(input: RatingsInput): MatchPlayerPerformance
   const other = (side: MatchSide): MatchSide => (side === 'home' ? 'away' : 'home');
   const goalsAgainst: Record<MatchSide, number> = { home: 0, away: 0 };
   const get = (side: MatchSide, id?: string) => (id ? perf.get(`${side}:${id}`) : undefined);
+  // Espulsi per lato: i gol subiti dopo il rosso del portiere non gli
+  // sono addebitati (non era più in campo)
+  const sentOff: Record<MatchSide, Set<string>> = { home: new Set(), away: new Set() };
 
   for (const e of events) {
     switch (e.type) {
@@ -65,16 +68,18 @@ export function computePerformances(input: RatingsInput): MatchPlayerPerformance
         const scorer = get(e.side, e.playerId);
         if (scorer) scorer.goals++;
         goalsAgainst[other(e.side)]++;
-        const gk = get(other(e.side), keeperOf(other(e.side)));
-        if (gk) gk.goalsConceded++;
+        const gkId = keeperOf(other(e.side));
+        const gk = get(other(e.side), gkId);
+        if (gk && gkId && !sentOff[other(e.side)].has(gkId)) gk.goalsConceded++;
         break;
       }
       case 'own_goal': {
         const p = get(other(e.side), e.playerId);
         if (p) p.ownGoals++;
         goalsAgainst[other(e.side)]++;
-        const gk = get(other(e.side), keeperOf(other(e.side)));
-        if (gk) gk.goalsConceded++;
+        const gkId = keeperOf(other(e.side));
+        const gk = get(other(e.side), gkId);
+        if (gk && gkId && !sentOff[other(e.side)].has(gkId)) gk.goalsConceded++;
         break;
       }
       case 'assist': {
@@ -102,6 +107,7 @@ export function computePerformances(input: RatingsInput): MatchPlayerPerformance
       case 'red_card': {
         const p = get(e.side, e.playerId);
         if (p) p.redCards++;
+        if (e.playerId) sentOff[e.side].add(e.playerId);
         break;
       }
       case 'injury': {
@@ -124,13 +130,15 @@ export function computePerformances(input: RatingsInput): MatchPlayerPerformance
       const p = perf.get(`${side}:${lp.playerId}`) as MatchPlayerPerformance;
       const q = (lp.overall - OVERALL_FLOOR) / OVERALL_SPAN;
       const conceded = goalsAgainst[side];
-      p.cleanSheet = finished && conceded === 0;
+      // Un espulso non può prendere il bonus porta inviolata
+      p.cleanSheet = finished && conceded === 0 && p.redCards === 0;
 
       let rating = 6 + (lp.form - 1) * 5 + 0.6 * (q - 0.55) + 0.25 * diff;
       rating += 0.5 * p.goals + 0.25 * p.assists;
       if (p.role === 'P') {
-        rating += Math.min(1, 0.25 * p.saves) - 0.25 * Math.max(0, conceded - 1);
-        if (conceded === 0) rating += 0.25;
+        // Al portiere contano solo i gol subiti con lui in campo
+        rating += Math.min(1, 0.25 * p.saves) - 0.25 * Math.max(0, p.goalsConceded - 1);
+        if (p.goalsConceded === 0 && p.redCards === 0) rating += 0.25;
       } else if (p.role === 'D') {
         rating += conceded === 0 ? 0.25 : -Math.min(0.5, 0.15 * conceded);
       }

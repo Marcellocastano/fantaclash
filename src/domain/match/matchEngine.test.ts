@@ -1,18 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { Player, PlayerRole } from '../../types';
+import { FANTASY_BONUSES, Player, PlayerRole } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { SEASON_PLAYERS, strongTeam, teamFromRank, weakTeam } from '../../test/matchFixtures';
-import { departmentStrength } from '../teams/teamStrength';
+import { assertInvariants, possessionMismatches, scoreBefore, SIDES, TACTICS } from '../../test/matchAudit';
+import { departmentStrength, penaltySaveSkill, rosterRating } from '../teams/teamStrength';
 import {
+  computePerformances,
   getPlaybackState,
   lastTick,
+  MatchEvent,
+  MatchEventType,
+  MatchOptions,
   MatchResult,
   MatchSide,
   MatchTeamInput,
   shortName,
   simulateMatch,
+  TacticChange,
   withTacticChange,
 } from './index';
+import { LineupPlayer } from './matchTypes';
+import { SHOOTOUT_MAX_ROUNDS } from './matchEngine';
 import { BALL_BOX_MAX, BALL_BOX_MIN } from './matchBall';
 
 const MID = teamFromRank('mid', 4);
@@ -281,5 +289,289 @@ describe('cronaca', () => {
     expect(shortName('MILINKOVIC-SAVIC Sergej')).toBe('Milinkovic-Savic');
     expect(shortName('DE ROSSI Daniele')).toBe('De Rossi');
     expect(shortName('Mike Maignan')).toBe('Maignan');
+  });
+});
+
+describe('motore partita — audit D1-D9', () => {
+  it('deterministica con tattiche e ordine dei rigori fissati su entrambi i lati', () => {
+    const options: MatchOptions = {
+      tactics: {
+        home: [{ fromTick: 8, tactic: 'attacca' }],
+        away: [{ fromTick: 20, tactic: 'difendi' }],
+      },
+      shootoutOrder: {
+        home: [...MID.players.map(p => p.id)].reverse(),
+        away: [...OPP.players.map(p => p.id)].reverse(),
+      },
+    };
+    const a = simulateMatch({ home: MID, away: OPP, seed: 99, options });
+    const b = simulateMatch({ home: MID, away: OPP, seed: 99, options });
+    expect(b).toEqual(a);
+  });
+
+  it('ingressi clonati -> stesso risultato; gli ingressi non vengono mutati', () => {
+    const home = structuredClone(MID);
+    const away = structuredClone(OPP);
+    const before = JSON.stringify({ home, away });
+    const r1 = simulateMatch({ home, away, seed: 11 });
+    expect(JSON.stringify({ home, away })).toBe(before);
+    const r2 = simulateMatch({ home: structuredClone(MID), away: structuredClone(OPP), seed: 11 });
+    expect(r2).toEqual(r1);
+  });
+
+  it('un cambio tattico al tick k non riscrive il passato (tutti i punti di decisione, entrambi i lati)', () => {
+    for (let i = 0; i < 40; i++) {
+      const seed = 1000 + i * 104729;
+      const base = simulateMatch({ home: MID, away: OPP, seed });
+      // Piano fisso dal tick 1: aggiungere un cambio al tick k non deve
+      // alterare il passato (il piano sostituisce anche l'IA precedente)
+      for (const k of base.decisionTicks) {
+        for (const side of SIDES) {
+          for (const tactic of TACTICS) {
+            const plan: TacticChange[] = [{ fromTick: 1, tactic: 'equilibrata' }];
+            const changed = simulateMatch({
+              home: MID,
+              away: OPP,
+              seed,
+              options: { tactics: { [side]: [...plan, { fromTick: k, tactic }] } },
+            });
+            const fixed = simulateMatch({ home: MID, away: OPP, seed, options: { tactics: { [side]: plan } } });
+            expect(changed.events.filter(e => e.tick < k)).toEqual(fixed.events.filter(e => e.tick < k));
+            // Il pallone (`ball`) è presentazione: calcolato a posteriori
+            // da TUTTI gli eventi, può differire anche prima di k
+            const strip = (r: MatchResult) =>
+              r.ticks.slice(0, k).map(t => {
+                const { ball, ...rest } = t;
+                void ball;
+                return rest;
+              });
+            expect(strip(changed)).toEqual(strip(fixed));
+          }
+        }
+      }
+    }
+  });
+
+  it('la tattica non rimescola cartellini e infortuni (stream casuali separati)', () => {
+    // Con carte/infortuni sullo stream "discipline" e le decisioni di gioco
+    // su "tick", attacca ed equilibrata (stesso moltiplicatore cartellini)
+    // devono produrre gli stessi eventi rari prima del primo gol/rosso.
+    // Gli id degli eventi sono contatori globali: si confronta il contenuto
+    const rare = (r: MatchResult, cutoff: number) =>
+      r.events
+        .filter(
+          e => e.tick < cutoff && (e.type === 'yellow_card' || e.type === 'red_card' || e.type === 'injury')
+        )
+        .map(e => ({ tick: e.tick, type: e.type, side: e.side, playerId: e.playerId, secondYellow: e.secondYellow }));
+    const cut = (r: MatchResult) =>
+      Math.min(
+        r.events.find(e => e.type === 'goal' || e.type === 'own_goal')?.tick ?? Infinity,
+        r.events.find(e => e.type === 'red_card')?.tick ?? Infinity
+      );
+    for (let i = 0; i < 300; i++) {
+      const seed = 5000 + i * 97;
+      const att = simulateMatch({ home: MID, away: OPP, seed, options: { tactics: { home: [{ fromTick: 1, tactic: 'attacca' }] } } });
+      const equ = simulateMatch({ home: MID, away: OPP, seed, options: { tactics: { home: [{ fromTick: 1, tactic: 'equilibrata' }] } } });
+      const cutoff = Math.min(cut(att), cut(equ));
+      expect(rare(att, cutoff)).toEqual(rare(equ, cutoff));
+    }
+  });
+
+  it('invarianti su 400 partite, possesso motore = riproduzione', () => {
+    const strong = strongTeam();
+    const weak = weakTeam();
+    const mismatchesBefore = possessionMismatches.count;
+    for (let i = 0; i < 100; i++) {
+      for (const [h, a] of [[MID, OPP], [strong, weak]] as const) {
+        assertInvariants(simulateMatch({ home: h, away: a, seed: 7000 + i * 31 }));
+        assertInvariants(
+          simulateMatch({
+            home: h,
+            away: a,
+            seed: 9000 + i * 17,
+            options: {
+              tactics: {
+                home: [{ fromTick: 1, tactic: 'attacca' }],
+                away: [{ fromTick: 1, tactic: 'difendi' }],
+              },
+            },
+          })
+        );
+      }
+    }
+    expect(possessionMismatches.count).toBe(mismatchesBefore);
+  });
+});
+
+describe('pagelle — portiere espulso (D3)', () => {
+  const lp = (playerId: string, role: PlayerRole): LineupPlayer => ({
+    playerId,
+    name: playerId,
+    role,
+    club: 'X',
+    overall: 80,
+    form: 1,
+  });
+  const ev = (tick: number, type: MatchEventType, side: MatchSide, playerId?: string): MatchEvent => ({
+    id: `e-${tick}-${type}`,
+    tick,
+    minute: tick,
+    extra: 0,
+    type,
+    teamId: side === 'home' ? 'h' : 'a',
+    side,
+    playerId,
+    impact: 1,
+    description: '',
+  });
+  const lineups = {
+    home: [lp('h-gk', 'P'), lp('h-d', 'D')],
+    away: [lp('a-gk', 'P'), lp('a-f', 'A')],
+  };
+  const teamIds = { home: 'h', away: 'a' };
+
+  it('i gol subiti dopo il rosso non vanno al portiere espulso, niente porta inviolata', () => {
+    const perfs = computePerformances({
+      teamIds,
+      lineups,
+      events: [ev(10, 'red_card', 'home', 'h-gk'), ev(20, 'goal', 'away', 'a-f')],
+      finished: true,
+    });
+    const gk = perfs.find(p => p.playerId === 'h-gk')!;
+    expect(gk.goalsConceded).toBe(0);
+    expect(gk.cleanSheet).toBe(false);
+    // Nessun malus GOAL_CONCEDED: resta solo quello del rosso
+    expect(gk.bonus).toBe(FANTASY_BONUSES.RED_CARD);
+    expect(gk.rating).toBeLessThanOrEqual(5);
+    // Il difensore continua a scontare il gol di squadra
+    const d = perfs.find(p => p.playerId === 'h-d')!;
+    expect(d.cleanSheet).toBe(false);
+  });
+
+  it('un gol subito prima del rosso resta sul conto del portiere', () => {
+    const perfs = computePerformances({
+      teamIds,
+      lineups,
+      events: [ev(5, 'goal', 'away', 'a-f'), ev(10, 'red_card', 'home', 'h-gk')],
+      finished: true,
+    });
+    const gk = perfs.find(p => p.playerId === 'h-gk')!;
+    expect(gk.goalsConceded).toBe(1);
+    expect(gk.bonus).toBe(FANTASY_BONUSES.RED_CARD + FANTASY_BONUSES.GOAL_CONCEDED);
+  });
+
+  it('vale anche a partita in corso (finished=false)', () => {
+    const perfs = computePerformances({
+      teamIds,
+      lineups,
+      events: [ev(10, 'red_card', 'home', 'h-gk'), ev(20, 'goal', 'away', 'a-f')],
+      finished: false,
+    });
+    const gk = perfs.find(p => p.playerId === 'h-gk')!;
+    expect(gk.goalsConceded).toBe(0);
+    expect(gk.cleanSheet).toBe(false);
+  });
+});
+
+describe('penaltySaveSkill — shrinkage verso la media a priori (D2)', () => {
+  const gk = (saved: number | undefined, r?: number) =>
+    ({ stats: saved === undefined ? undefined : { penaltiesSaved: saved }, penaltySaveProbability: r }) as unknown as Player;
+
+  it('rapporto assente o zero -> media a priori 0.2', () => {
+    expect(penaltySaveSkill(gk(0, undefined))).toBeCloseTo(0.2);
+    expect(penaltySaveSkill(gk(0, 0))).toBeCloseTo(0.2);
+  });
+
+  it('campione piccolo viene ristretto verso il prior', () => {
+    expect(penaltySaveSkill(gk(3, 1))).toBeCloseTo((3 + 2) / 13);
+    expect(penaltySaveSkill(gk(2, 0.5))).toBeCloseTo((2 + 2) / 14);
+  });
+
+  it('resta sempre in (0, 1)', () => {
+    for (const saved of [0, 1, 3, 20]) {
+      for (const r of [undefined, 0, 0.1, 0.5, 1]) {
+        const s = penaltySaveSkill(gk(saved, r));
+        expect(s).toBeGreaterThan(0);
+        expect(s).toBeLessThan(1);
+      }
+    }
+  });
+});
+
+describe('rigori oltre il cap: decide la monetina (D5)', () => {
+  // Rose piatte a overall 130 e portieri mai testati sui rigori:
+  // le serie si allungano fino a superare SHOOTOUT_MAX_ROUNDS.
+  const flat = (id: string, src: MatchTeamInput): MatchTeamInput => ({
+    id,
+    name: id,
+    players: src.players.map(p => ({ ...p, overall: 130, penaltySaveProbability: 0 })),
+  });
+  const H = flat('piatti', teamFromRank('a', 4));
+  const A = flat('specchio', teamFromRank('b', 5));
+  // Semi trovati con una scansione offline (20M di semi): ognuno produce
+  // una lotteria che supera SHOOTOUT_MAX_ROUNDS turni a testa
+  const SEEDS: number[] = [
+    1099491, 2549294, 2718992, 3156514, 3675764, 5485171,
+    5831320, 8599138, 8660970, 9417493, 13841063, 15509757,
+  ];
+
+  it('serie oltre il cap decise dalla monetina, vincitori di entrambi i lati', () => {
+    const winners = new Set<string>();
+    for (const seed of SEEDS) {
+      const r = simulateMatch({ home: H, away: A, seed });
+      assertInvariants(r);
+      expect(r.shootout).not.toBeNull();
+      const kicks = r.events.filter(e => e.type === 'shootout_kick');
+      expect(kicks.length).toBeGreaterThanOrEqual(2 * SHOOTOUT_MAX_ROUNDS + 1);
+      winners.add(r.winnerId);
+    }
+    expect(winners).toContain('piatti');
+    expect(winners).toContain('specchio');
+  });
+});
+
+describe('rose vuote o ridotte al minimo (D6)', () => {
+  it('una squadra col solo portiere non blocca il motore', () => {
+    const soloGk: MatchTeamInput = { id: 'solo-p', name: 'solo-p', players: MID.players.filter(p => p.role === 'P') };
+    for (let i = 0; i < 2000; i++) {
+      assertInvariants(simulateMatch({ home: soloGk, away: OPP, seed: i + 1 }));
+    }
+  });
+
+  it('una squadra senza giocatori non blocca il motore', () => {
+    const empty: MatchTeamInput = { id: 'vuota', name: 'vuota', players: [] };
+    for (const seed of [1, 2, 3, 42, 12345]) {
+      assertInvariants(simulateMatch({ home: empty, away: OPP, seed }));
+      assertInvariants(simulateMatch({ home: OPP, away: empty, seed }));
+    }
+  });
+});
+
+describe('IA e informazioni nascoste (D8)', () => {
+  // Coppia di rose con forza "da tabellone" diversa di 1-2 punti:
+  // la differenza non basta per giustificare "attacca" a punteggio pari.
+  const strong = strongTeam('top');
+  const quasi: MatchTeamInput = {
+    id: 'quasi',
+    name: 'quasi',
+    players: strong.players.map((p, i) => (i === 0 ? { ...p, overall: playerOverall(p) - 6 } : p)),
+  };
+
+  it('rosterRating delle due squadre differisce di 1 o 2', () => {
+    const diff = rosterRating(strong.players) - rosterRating(quasi.players);
+    expect(diff === 1 || diff === 2).toBe(true);
+  });
+
+  it('a punteggio pari l\u2019IA non passa mai ad "attacca" per via del rating', () => {
+    for (let i = 0; i < 300; i++) {
+      const seed = 60000 + i * 13;
+      // La squadra forte gioca fuori casa ed è guidata dall'IA
+      const r = simulateMatch({ home: quasi, away: strong, seed });
+      const k = r.decisionTicks[2];
+      if (scoreBefore(r, k, 'away') !== 0) continue;
+      const ev = r.events.find(e => e.tick === k && e.type === 'tactic' && e.side === 'away');
+      if (ev) expect(ev.tactic).not.toBe('attacca');
+      expect(r.ticks[k].tactic.away).not.toBe('attacca');
+    }
   });
 });

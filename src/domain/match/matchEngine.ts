@@ -6,7 +6,9 @@ import {
   departmentStrength,
   formFromUniforms,
   INJURY_FACTOR,
+  penaltySaveSkill,
   playerQuality,
+  rosterRating,
   weightedRating,
 } from '../teams/teamStrength';
 import { shortName, text } from './matchEvents';
@@ -38,10 +40,17 @@ import {
  * che la UI la riproduca: stessa coppia di squadre + stesso seme + stesso
  * piano tattico = stesso MatchResult.
  *
- * Ogni minuto (tick) usa un Rng derivato da hashSeed(seed, 'tick', i):
- * cambiare tattica al tick k lascia identici tutti gli eventi prima di k,
- * così la partita interattiva può essere ri-simulata dal punto di
- * decisione senza riscrivere il passato.
+ * Ogni minuto (tick) usa TRE stream casuali separati:
+ *   - rng        = hashSeed(seed, 'tick', t):       possesso, occasioni,
+ *                 risoluzione, tiratore/assist/autogol;
+ *   - discipline = hashSeed(seed, 'discipline', t): eventi rari
+ *                 (cartellini, infortuni) e le loro scelte giocatore;
+ *   - textRng    = hashSeed(seed, 'text', t):       varianti di cronaca
+ *                 (text.*) e la "papera" cosmetica del portiere.
+ * Così un cambio tattico al tick k, una nuova variante di cronaca o un
+ * diverso tasso di cartellini non rimescolano gli altri stream: gli
+ * eventi prima di k restano identici e la partita interattiva può
+ * ri-simulare dal punto di decisione senza riscrivere il passato.
  *
  * Pipeline di ogni tick:
  *   reparti (forma, sinergia, espulsioni) -> controllo del gioco
@@ -68,6 +77,8 @@ export const ASSIST_RATE = 0.72;
 export const YELLOW_RATE = 0.0095;
 export const STRAIGHT_RED_RATE = 0.0006;
 export const INJURY_RATE = 0.0012;
+/** Rigori: oltre questo numero di turni a testa decide la monetina */
+export const SHOOTOUT_MAX_ROUNDS = 30;
 /** Decadimento del momentum per tick */
 export const MOMENTUM_DECAY = 0.9;
 /** Malus di controllo per ogni espulso */
@@ -78,9 +89,11 @@ export const TACTIC_EFFECTS: Record<
   Tactic,
   { chance: number; concede: number; control: number; energyDrain: number; cards: number }
 > = {
-  attacca: { chance: 1.22, concede: 1.18, control: 0.03, energyDrain: 0.55, cards: 1 },
+  // L'atteggiamento cambia quante occasioni crei/concedi e l'energia,
+  // non il controllo del gioco (control: 0 per tutti)
+  attacca: { chance: 1.22, concede: 1.18, control: 0, energyDrain: 0.55, cards: 1 },
   equilibrata: { chance: 1, concede: 1, control: 0, energyDrain: 0.33, cards: 1 },
-  difendi: { chance: 0.75, concede: 0.78, control: -0.03, energyDrain: 0.2, cards: 1.15 },
+  difendi: { chance: 0.75, concede: 0.78, control: 0, energyDrain: 0.2, cards: 1.15 },
 };
 
 /** Peso del ruolo nella scelta del tiratore e dell'assistman */
@@ -144,7 +157,6 @@ interface SideState {
   energy: number;
   goals: number;
   reds: number;
-  possessionSum: number;
   stats: Omit<TeamMatchStats, 'possession'>;
 }
 
@@ -204,7 +216,6 @@ function buildSide(team: MatchTeamInput, side: MatchSide, seed: number, plan: Ta
     energy: 100,
     goals: 0,
     reds: 0,
-    possessionSum: 0,
     stats: { chances: 0, bigChances: 0, shots: 0, shotsOnTarget: 0, yellowCards: 0, redCards: 0 },
   };
 }
@@ -262,6 +273,9 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     away: buildSide(away, 'away', seed, options.tactics?.away ?? null),
   };
   const profiles = { home: profileOf(sides.home), away: profileOf(sides.away) };
+  // L'IA decide sulla forza "da tabellone" (forma neutra): la forma del
+  // giorno è un'informazione nascosta che il bot non deve vedere
+  const aiRatings = { home: rosterRating(home.players), away: rosterRating(away.players) };
   const homeAdvantage = options.homeAdvantage ?? HOME_ADVANTAGE;
   const events: MatchEvent[] = [];
   const ticks: MatchTick[] = [];
@@ -300,8 +314,9 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     ticks.push({
       ...tickInfo,
       ball: 0,
-      pressure: Math.round(clamp(1.2 * (homeControl - 0.5) + 0.7 * momentum, -1, 1) * 1000) / 1000,
-      homeControl: Math.round(homeControl * 1000) / 1000,
+      // `+ 0` normalizza -0: -0 non sopravvive al JSON e sporca i confronti
+      pressure: Math.round(clamp(1.2 * (homeControl - 0.5) + 0.7 * momentum, -1, 1) * 1000) / 1000 + 0,
+      homeControl: Math.round(homeControl * 1000) / 1000 + 0,
       energy: { home: Math.round(sides.home.energy), away: Math.round(sides.away.energy) },
       tactic: { home: sides.home.tactic, away: sides.away.tactic },
     });
@@ -320,13 +335,14 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   const scoreGoal = (
     att: SideState,
     rng: Rng,
+    textRng: Rng,
     scorer: LivePlayer,
     kind: ChanceKind | 'rigore',
     gkError = false
   ) => {
     att.goals++;
     att.stats.shotsOnTarget++;
-    emit('goal', att.side, text.goal(rng, nm(scorer), kind, gkError), 3, {
+    emit('goal', att.side, text.goal(textRng, nm(scorer), kind, gkError), 3, {
       playerId: scorer.player.id,
       isPenalty: kind === 'rigore',
       chanceKind: kind === 'rigore' ? undefined : kind,
@@ -349,7 +365,9 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     momentum = clamp(momentum + sgn(att.side) * 0.3, -1, 1);
   };
 
-  const resolveChance = (att: SideState, def: SideState, d: Record<MatchSide, Depts>, rng: Rng) => {
+  const resolveChance = (att: SideState, def: SideState, d: Record<MatchSide, Depts>, rng: Rng, textRng: Rng) => {
+    // Senza giocatori attivi in attacco non si risolve nessuna occasione
+    if (active(att).length === 0) return;
     att.stats.chances++;
     const roll = rng();
     const gk = keeper(def);
@@ -363,10 +381,10 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
         relatedPlayerId: fouled.player.id,
       });
       att.stats.shots++;
-      const gkPen = gk ? gk.player.penaltySaveProbability ?? 0.2 : 0.05;
+      const gkPen = gk ? penaltySaveSkill(gk.player) : 0.05;
       const pScore = clamp(0.84 - 0.45 * gkPen + 0.05 * (taker.quality - 0.5), 0.55, 0.9);
       if (rng() < pScore) {
-        scoreGoal(att, rng, taker, 'rigore');
+        scoreGoal(att, rng, textRng, taker, 'rigore');
       } else {
         const saved = !!gk && rng() < 0.75;
         if (saved) att.stats.shotsOnTarget++;
@@ -403,7 +421,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       CHANCE_QUALITY[kind] * (0.85 + 0.25 * shooterQ) * (1.1 - 0.18 * d[def.side].def) * energyFactor;
 
     if (kind !== 'normale') {
-      emit('chance', att.side, text.chance(rng, kind, att.name, nm(shooter)), 1, {
+      emit('chance', att.side, text.chance(textRng, kind, att.name, nm(shooter)), 1, {
         playerId: shooter.player.id,
         chanceKind: kind,
       });
@@ -414,15 +432,15 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
 
     const pGoal = clamp(quality * (1.2 - 0.35 * d[def.side].gk), 0.02, 0.85);
     if (rng() < pGoal) {
-      scoreGoal(att, rng, shooter, kind, !!gk && rng() < 0.06);
+      scoreGoal(att, rng, textRng, shooter, kind, !!gk && textRng() < 0.06);
       return;
     }
     const r = rng();
     if (r < 0.08) {
-      emit('woodwork', att.side, text.woodwork(rng, nm(shooter)), 2, { playerId: shooter.player.id, chanceKind: kind });
+      emit('woodwork', att.side, text.woodwork(textRng, nm(shooter)), 2, { playerId: shooter.player.id, chanceKind: kind });
     } else if (gk && r < 0.5 + 0.15 * d[def.side].gk) {
       att.stats.shotsOnTarget++;
-      emit('save', att.side, text.save(rng, nm(gk), nm(shooter)), kind === 'normale' ? 1 : 2, {
+      emit('save', att.side, text.save(textRng, nm(gk), nm(shooter)), kind === 'normale' ? 1 : 2, {
         playerId: shooter.player.id,
         relatedPlayerId: gk.player.id,
         chanceKind: kind,
@@ -430,7 +448,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     } else {
       const blockers = active(def).filter(p => p.player.role === 'D');
       const blocker = blockers.length && rng() < 0.4 ? blockers[Math.floor(rng() * blockers.length)] : null;
-      emit('miss', att.side, text.miss(rng, nm(shooter), blocker ? nm(blocker) : null), 0, {
+      emit('miss', att.side, text.miss(textRng, nm(shooter), blocker ? nm(blocker) : null), 0, {
         playerId: shooter.player.id,
         relatedPlayerId: blocker?.player.id,
         chanceKind: kind,
@@ -439,6 +457,8 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   };
 
   const rareEvents = (s: SideState, rng: Rng) => {
+    // Nessun evento per una squadra senza giocatori attivi
+    if (active(s).length === 0) return;
     const losing = s.goals < sides[opp(s.side)].goals;
     if (rng() < YELLOW_RATE * TACTIC_EFFECTS[s.tactic].cards * (losing ? 1.15 : 1)) {
       const cands = active(s);
@@ -484,7 +504,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       let next = s.tactic;
       if (s.plan) next = planTactic(s.plan, t);
       else if (decisionIndex >= 0) {
-        next = aiTactic(decisionIndex, s.goals - o.goals, profiles[side].rating - profiles[opp(side)].rating);
+        next = aiTactic(decisionIndex, s.goals - o.goals, aiRatings[side] - aiRatings[opp(side)]);
       }
       if (next !== s.tactic) {
         s.tactic = next;
@@ -499,6 +519,8 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   for (let t = 1; t <= schedule.fullTimeTick; t++) {
     tickInfo = schedule.ticks[t];
     const rng = createRng(hashSeed(seed, 'tick', t));
+    const discipline = createRng(hashSeed(seed, 'discipline', t));
+    const textRng = createRng(hashSeed(seed, 'text', t));
     if (t === 1) emit('kickoff', 'home', "Calcio d'inizio!", 0);
     applyTactics(t);
 
@@ -518,8 +540,6 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       0.2,
       0.8
     );
-    sides.home.possessionSum += homeControl;
-    sides.away.possessionSum += 1 - homeControl;
     momentum *= MOMENTUM_DECAY;
 
     const attSide: MatchSide = rng() < homeControl ? 'home' : 'away';
@@ -533,10 +553,10 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       TACTIC_EFFECTS[att.tactic].chance *
       TACTIC_EFFECTS[def.tactic].concede *
       energyFactor;
-    if (rng() < pChance) resolveChance(att, def, d, rng);
+    if (rng() < pChance) resolveChance(att, def, d, rng, textRng);
 
-    rareEvents(sides.home, rng);
-    rareEvents(sides.away, rng);
+    rareEvents(sides.home, discipline);
+    rareEvents(sides.away, discipline);
 
     if (t === schedule.halfTimeTick) {
       const sc = score();
@@ -586,6 +606,10 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     shootoutOrder = { home: order.home.map(p => p.player.id), away: order.away.map(p => p.player.id) };
     const taken = { home: 0, away: 0 };
     const last = schedule.ticks[schedule.fullTimeTick];
+    // Oltre SHOOTOUT_MAX_ROUNDS turni decide la monetina, estratta una
+    // volta sola dallo stream dei rigori: il lato scelto segna, l'altro
+    // sbaglia (niente più vantaggio a tavolino per i padroni di casa)
+    let capCoin: MatchSide | null = null;
     let round = 0;
     const decided = () => {
       if (round < 5) {
@@ -598,18 +622,29 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     while (!decided()) {
       for (const side of ['home', 'away'] as MatchSide[]) {
         if (decided()) break;
-        const kicker = order[side][taken[side] % order[side].length];
+        const kicker = order[side].length ? order[side][taken[side] % order[side].length] : undefined;
         const gk = keeper(sides[opp(side)]);
-        const gkPen = gk ? gk.player.penaltySaveProbability ?? 0.2 : 0.05;
-        // In caso di serie infinita (oltre 30 rigori a testa) decide la monetina
-        const p = round >= 30 ? (side === 'home' ? 1 : 0) : clamp(0.8 - 0.4 * gkPen + 0.08 * (kicker.quality - 0.5), 0.5, 0.92);
-        const scored = rng() < p;
+        const gkPen = gk ? penaltySaveSkill(gk.player) : 0.05;
+        let scored: boolean;
+        let line: string;
+        if (!kicker) {
+          // Squadra senza rigoristi: il calcio è sempre un errore
+          scored = false;
+          line = 'Nessun rigorista disponibile.';
+        } else {
+          const p =
+            round >= SHOOTOUT_MAX_ROUNDS
+              ? ((capCoin ??= rng() < 0.5 ? 'home' : 'away') === side ? 1 : 0)
+              : clamp(0.8 - 0.4 * gkPen + 0.08 * (kicker.quality - 0.5), 0.5, 0.92);
+          scored = rng() < p;
+          line = text.shootoutKick(nm(kicker), scored);
+        }
         if (scored) result[side]++;
         taken[side]++;
         tickInfo = { index: ticks.length, period: 2, minute: last.minute, extra: last.extra };
-        emit('shootout_kick', side, text.shootoutKick(nm(kicker), scored), 2, {
-          playerId: kicker.player.id,
-          relatedPlayerId: gk?.player.id,
+        emit('shootout_kick', side, line, 2, {
+          playerId: kicker?.player.id,
+          relatedPlayerId: kicker ? gk?.player.id : undefined,
           scored,
           score: { ...result },
         });
@@ -629,17 +664,21 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     fullTimeTick: schedule.fullTimeTick,
   });
   ballPath.forEach((ball, i) => {
-    ticks[i].ball = ball;
+    ticks[i].ball = ball + 0; // +0 normalizza -0 (non sopravvive al JSON)
   });
 
   const teamIds = { home: home.id, away: away.id };
   const lineups = { home: sides.home.players.map(p => p.lineup), away: sides.away.players.map(p => p.lineup) };
   const playerPerformances = computePerformances({ teamIds, lineups, events, finished: true });
   const { mvpId, worstId } = pickMvpAndWorst(playerPerformances, lineups);
+  // Possesso dalla media dei valori già arrotondati nei tick, identico
+  // al calcolo della riproduzione (getPlaybackState)
   const playedTicks = schedule.fullTimeTick;
+  const controlSum = ticks.slice(1, playedTicks + 1).reduce((s, t) => s + t.homeControl, 0);
+  const homePossession = Math.round((100 * controlSum) / playedTicks);
   const stats = {
-    home: { ...sides.home.stats, possession: Math.round((100 * sides.home.possessionSum) / playedTicks) },
-    away: { ...sides.away.stats, possession: 100 - Math.round((100 * sides.home.possessionSum) / playedTicks) },
+    home: { ...sides.home.stats, possession: homePossession },
+    away: { ...sides.away.stats, possession: 100 - homePossession },
   };
   const teamPerformance = {
     home: playerPerformances.filter(p => p.side === 'home').reduce((s, p) => s + p.fantasyScore, 0),

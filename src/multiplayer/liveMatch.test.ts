@@ -36,14 +36,26 @@ function makeTeams(): Team[] {
   ];
 }
 
-/** Seme di torneo per cui la partita dei due umani finisce ai rigori */
+/** Seme di torneo per cui la partita dei due umani finisce ai rigori.
+ *  Simula con i piani tattici finali che il test fa scegliere ai due
+ *  umani (l'esito cambia con la tattica: serve il pareggio A SCELTE FATTE) */
 function shootoutSeed(teams: Team[]): { seed: number; order: string[]; matchId: string } {
   const order = [teams[0].id, teams[1].id, ...teams.slice(2).map(t => t.id)];
-  for (let s = 1; s < 400; s++) {
+  for (let s = 1; s < 4000; s++) {
     let t = createTournament({ teams, seasonId: '2024-25', seed: s });
     t = tournamentReducer(t, { type: 'DRAW', order });
     const m = roundMatches(t.bracket, 'quarterfinals')[0];
-    const r = simulateBracketMatch(t, teams, m.id, {});
+    const r0 = simulateBracketMatch(t, teams, m.id, {});
+    const plans = {
+      tactics: {
+        home: [{ fromTick: 1, tactic: 'difendi' as const }],
+        away: [
+          { fromTick: 1, tactic: 'attacca' as const },
+          { fromTick: r0.decisionTicks[1], tactic: 'difendi' as const },
+        ],
+      },
+    };
+    const r = simulateBracketMatch(t, teams, m.id, plans);
     if (r.shootout) return { seed: s, order, matchId: m.id };
   }
   throw new Error('nessun seme con rigori trovato');

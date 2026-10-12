@@ -5,8 +5,8 @@ import { MAX_TEAM_NAME_LENGTH } from '../mock/teamNames';
  * Costanti del protocollo multiplayer (host autorevole).
  */
 
-/** Versione del protocollo: client e host devono concordare */
-export const PROTOCOL_VERSION = 2;
+/** Versione del protocollo: client e host devono concordare (v3: esiti del motore partita) */
+export const PROTOCOL_VERSION = 3;
 
 /** Giocatori umani massimi in stanza (uno per squadra) */
 export const MAX_PLAYERS = LEAGUE_SIZE;
