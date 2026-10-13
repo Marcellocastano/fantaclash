@@ -6,7 +6,7 @@ import { MatchResult, MatchTeamInput } from './matchTypes';
 import { buildRoster, createTestTeam } from '../../test/testUtils';
 import { toMatchTeam } from '../tournament';
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 const home: MatchTeamInput = toMatchTeam(createTestTeam({ id: 'h', roster: buildRoster(FULL) }));
 const away: MatchTeamInput = toMatchTeam(createTestTeam({ id: 'a', roster: buildRoster(FULL) }));
 const result: MatchResult = simulateMatch({ home, away, seed: 42 });

@@ -4,6 +4,7 @@ import { TOURNAMENT_NAME } from '../../domain/tournament';
 import { loadSeasonIndex, SeasonInfo } from '../../services/seasons';
 import { Icon } from '../Icon';
 import { SeasonPicker } from '../SeasonPicker';
+import { CompetitionPicker } from '../CompetitionPicker';
 import { TeamBadge } from '../tournament/TeamBadge';
 import { useRoom } from './RoomProvider';
 import { RoomExitLink } from './RoomExitLink';
@@ -83,6 +84,9 @@ export function LobbyScreen({
               Serie A {state.settings.season}
             </span>
           )}
+          <span className="inline-block border-2 border-canvas/50 px-3 py-1 font-display font-bold text-lg text-canvas">
+            {state.settings.format === 'groups' ? 'Gironi + fase finale' : 'Eliminazione diretta'}
+          </span>
         </p>
         {room.isHost && seasons && (
           <div className="mt-5 max-w-md mx-auto text-left">
@@ -93,6 +97,14 @@ export function LobbyScreen({
                 seasons={seasons}
                 value={state.settings.season}
                 onChange={season => room.updateSettings({ season })}
+                disabled={starting}
+              />
+            </div>
+            <p className="font-display text-lg font-extrabold text-canvas/80 mb-2 mt-4 text-center">Competizione</p>
+            <div className="bg-canvas border-2 border-ink p-3">
+              <CompetitionPicker
+                value={state.settings.format ?? 'knockout'}
+                onChange={format => room.updateSettings({ format })}
                 disabled={starting}
               />
             </div>

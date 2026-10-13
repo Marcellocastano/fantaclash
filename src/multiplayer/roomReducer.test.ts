@@ -40,7 +40,7 @@ describe('roomReducer CALL_DEADLINE', () => {
 describe('nome della coppa (settings.cupName)', () => {
   const auctionDone = (room: RoomState): RoomState => ({
     ...room,
-    phase: 'auction',
+    phase: 'lineup',
     auction: { ...createInitialAuctionState([]), phase: 'complete' },
   });
 

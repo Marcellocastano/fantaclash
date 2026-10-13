@@ -11,6 +11,7 @@ import { EntryScreen } from './EntryScreen';
 import { Icon } from '../Icon';
 import { LobbyScreen } from './LobbyScreen';
 import { RoomAuctionScreen } from './RoomAuctionScreen';
+import { RoomLineupScreen } from './RoomLineupScreen';
 import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
 import { useRoom } from './RoomProvider';
 import { useRoomExit } from './useRoomExit';
@@ -140,6 +141,7 @@ export function MultiplayerApp() {
             </div>
           )}
           {state.phase === 'auction' && <RoomGameShell><RoomAuctionScreen /></RoomGameShell>}
+          {state.phase === 'lineup' && <RoomGameShell><RoomLineupScreen /></RoomGameShell>}
           {state.phase === 'tournament' && <RoomGameShell><RoomTournamentScreen /></RoomGameShell>}
           {state.phase === 'final' && <RoomGameShell><RoomFinalScreen /></RoomGameShell>}
         </>

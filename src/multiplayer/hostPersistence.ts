@@ -2,6 +2,8 @@ import { RoomKeyPair } from './crypto';
 import { HostBook } from './host';
 import { HostSession } from './hostSession';
 import { RoomState } from './protocol';
+import type { Lineup } from '../domain/teams/formations';
+import { PROTOCOL_VERSION } from './constants';
 
 /**
  * Salvataggio della stanza dell'host: se ricarica la pagina la stanza
@@ -16,6 +18,7 @@ export interface HostSave {
     tokens: Record<string, string>;
     kicked: string[];
     publicKeys: Record<string, JsonWebKey>;
+    lineupChoices: Record<string, Lineup>;
   };
   hostKey: RoomKeyPair;
   savedAt: number;
@@ -40,7 +43,7 @@ export function loadHostSave(code: string, hostId: string): HostSave | null {
     const raw = localStorage.getItem(keyFor(code));
     if (!raw) return null;
     const save = JSON.parse(raw) as HostSave;
-    if (save.state?.hostId !== hostId || save.state?.code !== code) return null;
+    if (save.state?.hostId !== hostId || save.state?.code !== code || save.state?.protocol !== PROTOCOL_VERSION) return null;
     if (Date.now() - save.savedAt > HOST_SAVE_TTL_MS) return null;
     if (!save.hostKey?.privateJwk || !save.book) return null;
     return save;
@@ -62,6 +65,7 @@ export function serializeBook(book: HostBook): HostSave['book'] {
     tokens: book.tokens,
     kicked: [...book.kicked],
     publicKeys: book.publicKeys,
+    lineupChoices: book.lineupChoices,
   };
 }
 
@@ -71,6 +75,7 @@ export function deserializeBook(saved: HostSave['book']): HostBook {
     kicked: new Set(saved.kicked ?? []),
     publicKeys: saved.publicKeys ?? {},
     matchChoices: {},
+    lineupChoices: saved.lineupChoices ?? {},
   };
 }
 

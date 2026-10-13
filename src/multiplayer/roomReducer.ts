@@ -1,10 +1,12 @@
 import { Team } from '../types';
+import { bestLineup, isValidLineup } from '../domain/teams/formations';
+import { toTournamentTeam } from '../domain/tournament/tournamentEngine';
 import { auctionReducer, AuctionWorld } from '../services/auction';
 import {
   createTournament,
-  findMatch,
-  getMatchStatus,
-  simulateBracketMatch,
+  currentStageMatches,
+  findCompetitionMatch,
+  simulateCompetitionMatch,
   tournamentReducer,
 } from '../domain/tournament';
 import { MatchOptions, withTacticChange } from '../domain/match';
@@ -62,12 +64,13 @@ export function createRoom({ code, hostId, host, settings, now }: CreateRoomInpu
     rev: 0,
     phase: 'lobby',
     hostId,
-    settings: { ...settings, cupName: cleanCupName(settings.cupName) },
+    settings: { ...settings, format: settings.format ?? 'knockout', cupName: cleanCupName(settings.cupName) },
     players: [hostPlayer],
     teams: [],
     auction: null,
     tournament: null,
     callDeadline: null,
+    lineupWindow: null,
     live: {},
   };
 }
@@ -169,8 +172,38 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return { ...state, callDeadline: action.deadline };
     }
 
+    case 'LINEUP_WINDOW': {
+      if (state.lineupWindow || new Set(action.window.teamIds).size !== action.window.teamIds.length) return state;
+      if (action.window.kind === 'post_auction') {
+        if (state.phase !== 'auction' || state.auction?.phase !== 'complete') return state;
+        if (action.window.teamIds.some(id => !state.teams.some(team => team.id === id && team.controller !== 'bot'))) return state;
+        return { ...state, phase: 'lineup', lineupWindow: action.window };
+      }
+      if (state.phase !== 'tournament' || !state.tournament || Object.keys(state.live).length > 0) return state;
+      if (action.window.teamIds.some(id => !state.teams.some(team => team.id === id && team.controller !== 'bot'))) return state;
+      return { ...state, lineupWindow: action.window };
+    }
+
+    case 'SET_LINEUPS': {
+      const window = state.lineupWindow;
+      if (!window || window.kind === 'pre_stage' && Object.keys(state.live).length > 0) return state;
+      const teams = state.teams.map(team => {
+        const lineup = action.lineups[team.id] ?? team.lineup ?? bestLineup(team.roster, team.botConfig?.preferredFormation ?? '2-3-2');
+        return isValidLineup(team.roster, lineup) ? { ...team, lineup } : team;
+      });
+      if (teams.some(team => !team.lineup || !isValidLineup(team.roster, team.lineup))) return state;
+      const tournament = state.tournament
+        ? { ...state.tournament, teams: state.tournament.teams.map(entry => {
+            const updated = teams.find(team => team.id === entry.id);
+            return updated ? toTournamentTeam(updated) : entry;
+          }) }
+        : null;
+      return { ...state, teams, tournament, lineupWindow: null };
+    }
+
     case 'START_TOURNAMENT': {
-      if (state.phase !== 'auction' || state.auction?.phase !== 'complete') return state;
+      if (state.phase !== 'lineup' || state.lineupWindow || state.auction?.phase !== 'complete') return state;
+      if (state.teams.some(team => !team.lineup || !isValidLineup(team.roster, team.lineup))) return state;
       return {
         ...state,
         phase: 'tournament',
@@ -179,6 +212,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           seasonId: state.settings.season,
           seed: action.seed,
           name: state.settings.cupName,
+          format: state.settings.format ?? 'knockout',
         }),
       };
     }
@@ -192,8 +226,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
 
     case 'MATCH_RECORD': {
       if (state.phase !== 'tournament' || !state.tournament) return state;
-      const match = findMatch(state.tournament.bracket, action.matchId);
-      // Il seme della partita vive nel tabellone: deve coincidere
+      const match = findCompetitionMatch(state.tournament, action.matchId);
       if (!match || match.seed !== action.seed) return state;
       // Per una partita live le opzioni autorevoli sono quelle accumulate
       // nella stanza (piani tattici e ordini dei rigori dei lati umani)
@@ -201,7 +234,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       const options: MatchOptions = live
         ? { tactics: live.plans, shootoutOrder: live.shootoutOrder }
         : action.options;
-      const result = simulateBracketMatch(state.tournament, state.teams, action.matchId, options);
+      const result = simulateCompetitionMatch(state.tournament, state.teams, action.matchId, options);
       if (resultHash(result) !== action.resultHash) return state;
       const next = tournamentReducer(state.tournament, {
         type: 'RECORD_RESULT',
@@ -216,9 +249,9 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
 
     case 'MATCH_START': {
       if (state.phase !== 'tournament' || !state.tournament) return state;
-      const match = findMatch(state.tournament.bracket, action.matchId);
-      if (!match || getMatchStatus(state.tournament, match) !== 'ready') return state;
-      if (state.live[action.matchId]) return state;
+      const match = findCompetitionMatch(state.tournament, action.matchId);
+      if (!match || !currentStageMatches(state.tournament).some(candidate => candidate.id === action.matchId)) return state;
+      if (state.lineupWindow || state.live[action.matchId]) return state;
       return {
         ...state,
         live: {
@@ -282,6 +315,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
         ...state,
         auction,
         callDeadline: state.callDeadline !== null ? state.callDeadline + action.by : null,
+        lineupWindow: state.lineupWindow ? { ...state.lineupWindow, deadline: state.lineupWindow.deadline + action.by } : null,
         live,
       };
     }
@@ -307,6 +341,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
         tournament: null,
         live: {},
         callDeadline: null,
+        lineupWindow: null,
       };
     }
 

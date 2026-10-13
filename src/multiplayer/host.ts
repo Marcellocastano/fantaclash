@@ -1,4 +1,6 @@
 import { Player, Team } from '../types';
+import { isValidLineup } from '../domain/teams/formations';
+import type { Lineup } from '../domain/teams/formations';
 import {
   auctionReducer,
   AuctionWorld,
@@ -24,7 +26,7 @@ import { sameKey } from './crypto';
 import { stateHash } from './hash';
 import { isOffensiveName } from './moderation';
 import { MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
-import { findMatch, simulateBracketMatch } from '../domain/tournament';
+import { findCompetitionMatch, simulateCompetitionMatch } from '../domain/tournament';
 import {
   ClientIntent,
   HostMessage,
@@ -64,10 +66,11 @@ export interface HostBook {
    * restano in memoria dell'host, mai in RoomState.
    */
   matchChoices: Record<string, PendingMatchChoices>;
+  lineupChoices: Record<string, Lineup>;
 }
 
 export function createHostBook(): HostBook {
-  return { tokens: {}, kicked: new Set(), publicKeys: {}, matchChoices: {} };
+  return { tokens: {}, kicked: new Set(), publicKeys: {}, matchChoices: {}, lineupChoices: {} };
 }
 
 export interface HandleResult {
@@ -101,7 +104,7 @@ function teamIdOf(state: RoomState, playerId: string): string | null {
 
 /** Lato della partita live occupato dal giocatore, null se non gioca */
 function liveSideOf(state: RoomState, matchId: string, playerId: string): MatchSide | null {
-  const match = state.tournament ? findMatch(state.tournament.bracket, matchId) : undefined;
+  const match = state.tournament ? findCompetitionMatch(state.tournament, matchId) : null;
   const teamId = teamIdOf(state, playerId);
   if (!match || !teamId) return null;
   if (match.homeId === teamId) return 'home';
@@ -113,7 +116,7 @@ function liveSideOf(state: RoomState, matchId: string, playerId: string): MatchS
 function liveResult(state: RoomState, matchId: string): MatchResult | null {
   const live = state.live[matchId];
   if (!state.tournament || !live) return null;
-  return simulateBracketMatch(state.tournament, state.teams, matchId, {
+  return simulateCompetitionMatch(state.tournament, state.teams, matchId, {
     tactics: live.plans,
     shootoutOrder: live.shootoutOrder,
   });
@@ -224,6 +227,18 @@ export function handleIntent(
       };
       if (auctionReducer(world, action) === world) return ok();
       return ok([{ type: 'AUCTION', action }]);
+    }
+
+    case 'LINEUP': {
+      const window = state.lineupWindow;
+      const team = state.teams.find(candidate => candidate.ownerId === fromPlayerId);
+      if (!window || hostNow > window.deadline || !team || !window.teamIds.includes(team.id)) return ok();
+      if (!isValidLineup(team.roster, intent.lineup)) return ok();
+      return {
+        actions: [],
+        replies: [],
+        book: { ...book, lineupChoices: { ...book.lineupChoices, [team.id]: intent.lineup } },
+      };
     }
 
     case 'TACTIC': {

@@ -16,10 +16,9 @@ export const body: GuideBody = () => (
 
     <H2>1. Decidi prima dove spendere</H2>
     <p>
-      Cento crediti divisi in 8 posti significano circa 12 a giocatore, ma nessuno deve spenderli davvero così. Le
-      scuole di pensiero sono due: il "totem", con due campioni e sei giocatori di fascia bassa, e la rosa bilanciata,
-      con tutti i titolari di fascia media-alta. Non esiste una risposta giusta, esiste solo sceglierla prima
-      dell'asta: chi decide durante compra i primi troppo cari e gli ultimi troppo tardi.
+      In FantaClash sono 250 crediti per 12 acquisti, ma il budget non si divide in parti uguali. Decidi in anticipo
+      quali ruoli e quali titolari vuoi per il modulo scelto; tieni una quota per completare le riserve e non pagare
+      campioni in ogni reparto. Il piano migliore lascia spazio per adattarsi alle chiamate e ai rilanci degli avversari.
     </p>
 
     <H2>2. I primi lotti costano di più, sempre</H2>
@@ -61,10 +60,11 @@ export const body: GuideBody = () => (
     <Table
       head={['Personalità', 'Come si comporta', 'Come batterla']}
       rows={[
-        ['Il parsimonioso', 'Offre solo per il massimo valore per credito', 'Lo logori rilanciando, non rischia mai'],
-        ['Lo stratega', 'Ti fa alzare i prezzi senza voler comprare', 'Non seguirlo su giocatori che non ti interessano'],
-        ['Il cacciatore', 'Vince sempre i suoi pupilli, a qualsiasi prezzo', 'Digli "prego" e tieni i crediti per dopo'],
-        ['Il furbo', 'Aspetta gli ultimi giocatori di reparto', 'Non aspettarlo: compra prima tu'],
+        ['L’aggressivo', 'Rilancia presto e spende sui giocatori di valore', 'Fissa un prezzo massimo e lascialo superare il suo'],
+        ['Il parsimonioso', 'Aspetta il rapporto qualità/prezzo e conserva crediti', 'Non scambiare la sua attesa per disinteresse'],
+        ['Lo stratega', 'Chiama lotti drain per far spendere gli avversari', 'Non seguirlo su giocatori che non vuoi'],
+        ['Il cacciatore', 'Assegna priorità ai propri pupilli, entro i limiti', 'Valuta se vuoi davvero pagare per sottrarglieli'],
+        ['L’equilibrato', 'Bilancia i reparti e completa gli slot', 'Approfitta delle occasioni senza sbilanciarti'],
       ]}
     />
     <p>

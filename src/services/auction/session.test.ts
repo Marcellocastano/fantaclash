@@ -46,7 +46,7 @@ describe('session reducer', () => {
   });
 
   it('START va direttamente a complete se nessun ruolo è giocabile', () => {
-    const teams = makeTeams().map(t => ({ ...t, roster: buildRoster({ P: 1, D: 2, C: 3, A: 2 }) }));
+    const teams = makeTeams().map(t => ({ ...t, roster: buildRoster({ P: 1, D: 4, C: 4, A: 3 }) }));
     const world: AuctionWorld = { teams, auction: createInitialAuctionState(makePool()) };
     const next = auctionReducer(world, { type: 'START', callingOrder: ['t0', 't1', 't2'] });
     expect(next.auction.phase).toBe('complete');
@@ -210,7 +210,7 @@ describe('session reducer', () => {
   it('ADVANCE a fine asta va in complete', () => {
     const teams = makeTeams().map(t => ({
       ...t,
-      roster: buildRoster({ D: 2, C: 3, A: 2 }), // manca solo 1 P a ciascuno
+      roster: buildRoster({ D: 4, C: 4, A: 3 }), // manca solo 1 P a ciascuno
     }));
     // Pool con 2 soli P: dopo il secondo il pool P è vuoto e tutti hanno finito... no:
     // con 2 P e 3 squadre serve che una resti scoperta; usiamo 3 P.

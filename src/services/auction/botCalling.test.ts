@@ -44,7 +44,7 @@ describe('botCalling', () => {
   it('free_pick del migliore quando nessun rivale necessita il ruolo', () => {
     for (const diff of ['normale', 'difficile'] as const) {
       const bot = createTestTeam({ botConfig: createTestBotConfig(diff) });
-      const full = () => createTestTeam({ roster: buildRoster({ A: 2 }) });
+      const full = () => createTestTeam({ roster: buildRoster({ A: 3 }) });
       const d = chooseBotCall(bot, role, ctx([bot, full(), full()], pool), createRng(3));
       expect(d!.strategy).toBe('free_pick');
       expect(d!.player.id).toBe('a-star');

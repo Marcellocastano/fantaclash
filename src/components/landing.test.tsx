@@ -6,7 +6,7 @@ import { BOT_TEAM_NAMES, MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/te
 const SEASONS = ['2013-14', '2014-15', '2015-16'].map(season => ({
   season,
   label: `Serie A ${season}`,
-  playerCount: 96,
+  playerCount: 144,
 }));
 
 beforeEach(() => {
@@ -42,7 +42,17 @@ describe('landing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected });
+    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected, format: 'knockout' });
+  });
+
+  it('permette di scegliere i gironi + fase finale nel setup', async () => {
+    const onSubmit = vi.fn();
+    render(<Landing onSubmit={onSubmit} />);
+    await screen.findByRole('group', { name: 'Annata' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Gironi + fase finale' }));
+    fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].format).toBe('groups');
   });
 
   it('mostra regole e footer con il bottone di supporto', () => {

@@ -188,7 +188,7 @@ export function breadcrumbJsonLd(items: Breadcrumb[]): object {
 }
 
 const HOME_DESCRIPTION =
-  "Gioco di fantacalcio online gratis: scegli un'annata della Serie A dal 2003-04, vinci l'asta contro 7 bot e porta la tua rosa fino alla finale.";
+  "Fantacalcio d'asta gratis: rosa da 12, sei moduli e sette bot. Scegli una stagione storica e gioca knockout o gironi con fase finale.";
 
 export const HOME_ROUTE: SiteRoute = {
   path: '/',
@@ -268,7 +268,7 @@ export function buildRoutes(seasonIds: string[] = [], top11JsonLd: Record<string
   return [
     HOME_ROUTE,
     staticRoute('rules', '/regole/', 'Regole di FantaClash: asta, rosa e torneo',
-      'Tutte le regole del gioco: asta da 100 crediti con rilanci, modulo 1-2-3-2, torneo a eliminazione diretta, bonus e malus del fantavoto.', 0.8),
+      'Tutte le regole del gioco: asta da 250 crediti, rose da 12, sei moduli tattici e due competizioni: eliminazione diretta o gironi con fase finale.', 0.8),
     staticRoute('faq', '/faq/', 'Domande frequenti su FantaClash · FantaClash',
       "Costo, registrazione, stagioni disponibili, funzionamento dell'asta e del torneo: le risposte alle domande più comuni su FantaClash.", 0.6,
       [

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { GamePhase } from '../../types';
 import { AppNavbar, NavStat } from '../layout/AppNavbar';
-import { journeyStep } from '../layout/journey';
+import { journeyStep, journeySteps } from '../layout/journey';
 import { GameShell } from '../layout/GameShell';
 import { RoomTopBar } from './RoomTopBar';
 import { useRoom } from './RoomProvider';
@@ -9,6 +9,7 @@ import { useRoomExit } from './useRoomExit';
 
 const ROOM_PHASE: Record<string, GamePhase> = {
   auction: 'ASTA',
+  lineup: 'FORMAZIONE',
   tournament: 'TORNEO',
   final: 'FINALE',
 };
@@ -24,7 +25,7 @@ export function RoomGameShell({ children }: { children: ReactNode }) {
   const sessionExit = useRoomExit();
   const state = room.state;
   const phase = state ? ROOM_PHASE[state.phase] : undefined;
-  const step = phase ? journeyStep(phase, state?.tournament?.status) : null;
+  const step = phase ? journeyStep(phase, state?.tournament?.status, state?.settings.format ?? 'knockout') : null;
   // In asta il riquadro webcam è in flusso nella colonna "Squadre", ma sulla
   // schermata di fine asta (done) serve quello fisso come nelle altre fasi.
   const floatingCam = state?.phase !== 'auction' || state.auction?.phase === 'complete';
@@ -32,6 +33,7 @@ export function RoomGameShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <AppNavbar
         step={step}
+        steps={journeySteps(state?.settings.format ?? 'knockout')}
         context={state ? <NavStat label="Annata" value={state.settings.season} /> : null}
         sessionExit={sessionExit}
       />

@@ -17,7 +17,7 @@ export function RulesPage() {
         <Prose>
           <p>
             FantaClash è un gioco di fantacalcio ad asta sulle stagioni storiche della Serie A: scegli un'annata, vinci
-            l'asta contro 7 avversari comandati dal computer e porta la tua squadra a una coppa a eliminazione diretta.
+            l'asta contro 7 avversari comandati dal computer e scegli tra coppa a eliminazione diretta e gironi con fase finale.
             Qui trovi tutte le regole, con i numeri esatti usati dal gioco.
           </p>
 
@@ -29,19 +29,32 @@ export function RulesPage() {
               reparto).
             </Li>
             <Li>
-              <strong>100 crediti</strong> per squadra, identici per tutti.
+              <strong>250 crediti</strong> per squadra, identici per tutti.
             </Li>
             <Li>
-              <strong>Rosa da 8 giocatori</strong> con modulo fisso <strong>1-2-3-2</strong>: un portiere, due
-              difensori, tre centrocampisti e due attaccanti. Niente panchina: ogni acquisto conta.
+              <strong>Rosa da 12 giocatori</strong>: un portiere, quattro difensori, quattro centrocampisti e tre
+              attaccanti. Prima di ogni partita scegli 8 titolari e 4 riserve; le riserve non entrano automaticamente.
             </Li>
+          </Ul>
+
+          <H2>La formazione e i moduli</H2>
+          <p>
+            Puoi scegliere tra sei moduli (2-3-2, 3-2-2, 2-2-3, 3-3-1, 2-4-1 e 3-1-3). I numeri indicano i
+            giocatori di movimento; il portiere è sempre in campo. I ruoli sono rigidi. Il modulo influenza possesso,
+            creazione di occasioni, solidità, contropiedi e consumo di energie; non aggiunge un bonus fisso alla forza.
+          </p>
+
+          <H2>Le competizioni</H2>
+          <Ul>
+            <Li>Eliminazione diretta: quarti, semifinali e finale; il pareggio porta ai rigori.</Li>
+            <Li>Gironi + fase finale: due gironi da quattro, andata e ritorno (sei partite garantite), poi semifinali, finale e finale per il terzo posto. Nei gironi il pareggio vale un punto.</Li>
           </Ul>
 
           <H2>Il listone</H2>
           <p>
-            Ogni annata ha un listone di <strong>96 giocatori reali</strong>: 12 portieri, 24 difensori, 36
-            centrocampisti e 24 attaccanti. Sono i migliori della Serie A di quella stagione, scelti per valore di
-            listone. Accanto al nome trovi l'overall, un punteggio da 70 a 99 che riassume rendimento in campo e
+            Ogni annata ha un listone di <strong>144 giocatori reali</strong>: 12 portieri, 48 difensori, 48
+            centrocampisti e 36 attaccanti. Sono i migliori della Serie A di quella stagione, scelti per valore di
+            listone. Accanto al nome trovi l'overall, un punteggio da 50 a 95 che riassume rendimento in campo e
             reputazione nel fantacalcio di quell'anno. I giocatori sono divisi in fasce: bronzo fino a 79, argento da
             80 a 84, oro da 85 a 89, fuoriclasse da 90 in su.
           </p>
@@ -67,24 +80,25 @@ export function RulesPage() {
             </Li>
             <Li>
               Chi vince paga il prezzo dell'ultima offerta e il giocatore entra in rosa. L'asta continua finché tutte
-              le 8 squadre non hanno gli 8 giocatori.
+              le 8 squadre non hanno i 12 giocatori.
             </Li>
           </Ul>
 
           <H2>Il torneo</H2>
           <Ul>
             <Li>
-              Coppa a eliminazione diretta a 8 squadre: <strong>quarti di finale, semifinali e finale</strong>, con il
-              sorteggio degli accoppiamenti dopo l'asta.
+              A 8 squadre puoi scegliere <strong>eliminazione diretta</strong> (quarti, semifinali e finale) oppure
+              <strong> gironi + fase finale</strong>: due gironi da quattro, andata e ritorno, semifinali, finale e finale
+              per il terzo posto.
             </Li>
             <Li>
               Le partite si svolgono minuto per minuto: occasione, tiro, parata o gol, con cartellini, rigori ed
-              eventi rari. In caso di pareggio si va ai <strong>calci di rigore</strong> ad oltranza.
+              eventi rari. Nei gironi il pareggio vale un punto; in eliminazione diretta si va ai <strong>calci di rigore</strong>.
             </Li>
             <Li>
-              Nella tua partita scegli lo <strong>stile di gioco</strong> (attacca, equilibrata o difendi) al calcio
-              d'inizio, all'intervallo e al 75'. Ogni stile cambia le occasioni e il consumo di fiato della squadra:
-              più attacchi, più corri, più ti stanchi.
+              Prima di ogni partita scegli un modulo e otto titolari compatibili; le quattro riserve non entrano
+              automaticamente. Durante la partita puoi cambiare lo <strong>stile di gioco</strong> (attacca, equilibrata
+              o difendi) al calcio d'inizio, all'intervallo e al 75'. Ogni stile cambia le occasioni e il consumo di fiato.
             </Li>
             <Li>
               Se si va ai rigori scegli tu <strong>l'ordine dei rigoristi</strong>: chi tira per primo conta, perché le

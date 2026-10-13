@@ -5,7 +5,7 @@ import { createInitialAuctionState, auctionReducer, getCurrentCallerId, AuctionW
 import { buildAuctionPool, LEAGUE_SIZE, getMaxBid } from './rules';
 import { PLAYERS_DATABASE } from '../../mock/players';
 import { generateAllTeams } from '../teamGenerator';
-import { ROSTER_REQUIREMENTS, DifficultyLevel } from '../../types';
+import { ROSTER_REQUIREMENTS, TOTAL_ROSTER_SIZE, DifficultyLevel } from '../../types';
 
 function makeWorld(difficulty: DifficultyLevel): AuctionWorld {
   const pool = buildAuctionPool(PLAYERS_DATABASE);
@@ -42,7 +42,7 @@ describe('simulator — asta completa', () => {
         });
 
         expect(world.auction.phase).toBe('complete');
-        expect(world.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * 8);
+        expect(world.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * TOTAL_ROSTER_SIZE);
 
         // Nessun giocatore assegnato due volte
         const ids = world.auction.assignedPlayers.map(a => a.playerId);
@@ -50,7 +50,7 @@ describe('simulator — asta completa', () => {
 
         for (const team of world.teams) {
           // Rosa completa P1 D2 C3 A2
-          expect(team.roster).toHaveLength(8);
+          expect(team.roster).toHaveLength(TOTAL_ROSTER_SIZE);
           const counts = { P: 0, D: 0, C: 0, A: 0 };
           for (const o of team.roster) counts[o.player.role]++;
           for (const role of ['P', 'D', 'C', 'A'] as const) {
@@ -120,8 +120,8 @@ describe('simulator — utente scriptato (userPolicy)', () => {
 
     expect(end.auction.phase).toBe('complete');
     // Esattamente una chiamata a onLotClosed per lotto: 64 lotti, giocatori distinti
-    expect(closedLots).toHaveLength(LEAGUE_SIZE * 8);
-    expect(new Set(closedLots).size).toBe(LEAGUE_SIZE * 8);
+    expect(closedLots).toHaveLength(LEAGUE_SIZE * TOTAL_ROSTER_SIZE);
+    expect(new Set(closedLots).size).toBe(LEAGUE_SIZE * TOTAL_ROSTER_SIZE);
     // L'utente ha chiamato almeno una volta e ha rilanciato in almeno un lotto
     expect(userCalls).toBeGreaterThan(0);
     expect(userBids.length).toBeGreaterThan(0);
@@ -250,7 +250,7 @@ describe('simulator — condizioni di stop', () => {
     expect(result.auction.phase).toBe('complete');
     const ids = result.auction.assignedPlayers.map(a => a.playerId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(result.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * 8);
+    expect(result.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * TOTAL_ROSTER_SIZE);
     expect(ids.filter(id => id === playerId)).toHaveLength(1);
   });
 });

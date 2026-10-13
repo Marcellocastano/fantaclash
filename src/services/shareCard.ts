@@ -1,6 +1,7 @@
 import { TournamentSummary, shareText } from '../domain/tournament';
 import type { Placement, SummaryMatch } from '../domain/tournament';
-import { PlayerRole } from '../types';
+import { FORMATIONS } from '../domain/teams/formations';
+import type { PlayerRole } from '../types';
 import { TIER_COLORS, tierOf } from './playerTier';
 
 /**
@@ -9,7 +10,7 @@ import { TIER_COLORS, tierOf } from './playerTier';
  * mostrata nel riepilogo, quindi ciò che si vede è ciò che si scarica.
  *
  * Composizione: fascia verde con esito e squadra, timbro dell'annata, il
- * percorso come tre "biglietti", la formazione 1-2-3-2 su un mini campo e
+ * percorso su tre "biglietti", la formazione scelta su un mini campo e
  * in fondo MVP, gol e marcatori.
  */
 
@@ -35,18 +36,18 @@ const PLACEMENT_COLOR: Record<Placement, string> = {
   finalista: '#D5DADD',
   semifinalista: '#D9A577',
   quarti: CREAM,
+  terzo: '#D9A577',
+  quarto: CREAM,
+  fuori_ai_gironi: CREAM,
 };
 
 const ROUND_NAME: Record<SummaryMatch['round'], string> = {
   quarterfinals: 'Quarti',
   semifinals: 'Semifinale',
   final: 'Finale',
+  third_place: 'Terzo posto',
+  groups: 'Gironi',
 };
-
-/** Colonne della formazione sul mini campo (attacco verso destra), in % */
-const FORMATION_X: Record<PlayerRole, number> = { P: 0.09, D: 0.3, C: 0.56, A: 0.84 };
-/** Altezze dei giocatori di un reparto, in % (il centrale dei 3 è più avanzato) */
-const FORMATION_Y: Record<number, number[]> = { 1: [0.5], 2: [0.3, 0.7], 3: [0.2, 0.5, 0.8] };
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -196,7 +197,7 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   block(ctx, x, y, w, h, CREAM);
   ctx.fillStyle = MUTED;
   ctx.font = `800 28px ${DISPLAY}`;
-  ctx.fillText(ROUND_NAME[round], x + 22, y + 44);
+  ctx.fillText(m && round === 'groups' ? `Gironi · ${m.roundShort}` : ROUND_NAME[round], x + 22, y + 44);
   ctx.fillStyle = INK;
   ctx.fillText(fitFont(ctx, `vs ${m.opponentName}`, w - 44, 600, SANS, 24, 16), x + 22, y + 80);
   ctx.font = `900 92px ${DISPLAY}`;
@@ -214,21 +215,20 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.save();
   ctx.translate(sx, sy);
   ctx.rotate(-0.2);
-  ctx.fillStyle = m.won ? YELLOW : RED;
+  ctx.fillStyle = m.draw ? MUTED : m.won ? YELLOW : RED;
   ctx.fillRect(-34, -34, 68, 68);
   ctx.strokeStyle = INK;
   ctx.lineWidth = 4;
   ctx.strokeRect(-34, -34, 68, 68);
-  ctx.fillStyle = m.won ? INK : '#FFFFFF';
+  ctx.fillStyle = m.won || m.draw ? INK : '#FFFFFF';
   ctx.font = `900 48px ${DISPLAY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(m.won ? 'V' : 'P', 0, 3);
+  ctx.fillText(m.draw ? 'N' : m.won ? 'V' : 'P', 0, 3);
   ctx.restore();
 }
 
-/** Mini campo a strisce con la formazione 1-2-3-2 e i cognomi */
-function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup: TournamentSummary['lineup']) {
+function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup: TournamentSummary['lineup'], formation: TournamentSummary['formation']) {
   const stripes = 12;
   for (let i = 0; i < stripes; i++) {
     ctx.fillStyle = i % 2 ? FIELD_LIGHT : FIELD_DARK;
@@ -251,29 +251,31 @@ function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup
   ctx.lineWidth = 4;
   ctx.strokeRect(x, y, w, h);
 
-  for (const role of ['P', 'D', 'C', 'A'] as PlayerRole[]) {
-    const players = lineup.filter(p => p.role === role);
-    players.forEach((p, i) => {
-      const ys = FORMATION_Y[players.length] ?? players.map((_, k) => (k + 1) / (players.length + 1));
-      const forward = players.length === 3 && i === 1 ? 0.07 : 0;
-      const cx = x + w * (FORMATION_X[role] + forward);
-      const cy = y + h * ys[i] - 12;
-      const tier = TIER_COLORS[tierOf(p.overall)];
-      // Badge overall
-      block(ctx, cx - 30, cy - 30, 60, 48, tier.bg, 4);
-      ctx.fillStyle = tier.ink;
-      ctx.font = `900 34px ${DISPLAY}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(p.overall), cx, cy - 5);
-      // Cognome su etichetta scura per la leggibilità sulle strisce
-      const label = fitFont(ctx, p.name, 170, 700, SANS, 22, 15);
-      const lw = ctx.measureText(label).width + 16;
-      ctx.fillStyle = 'rgba(7, 73, 42, 0.85)';
-      ctx.fillRect(cx - lw / 2, cy + 24, lw, 30);
-      ctx.fillStyle = CREAM;
-      ctx.fillText(label, cx, cy + 40);
-    });
+  const byRole: Record<PlayerRole, TournamentSummary['lineup']> = {
+    P: lineup.filter(player => player.role === 'P'),
+    D: lineup.filter(player => player.role === 'D'),
+    C: lineup.filter(player => player.role === 'C'),
+    A: lineup.filter(player => player.role === 'A'),
+  };
+  const indexes: Record<PlayerRole, number> = { P: 0, D: 0, C: 0, A: 0 };
+  for (const slot of FORMATIONS[formation].layout) {
+    const p = byRole[slot.role][indexes[slot.role]++];
+    if (!p) continue;
+    const cx = x + w * (1 - slot.y);
+    const cy = y + h * slot.x - 12;
+    const tier = TIER_COLORS[tierOf(p.overall)];
+    block(ctx, cx - 30, cy - 30, 60, 48, tier.bg, 4);
+    ctx.fillStyle = tier.ink;
+    ctx.font = `900 34px ${DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(p.overall), cx, cy - 5);
+    const label = fitFont(ctx, p.name, 170, 700, SANS, 22, 15);
+    const lw = ctx.measureText(label).width + 16;
+    ctx.fillStyle = 'rgba(7, 73, 42, 0.85)';
+    ctx.fillRect(cx - lw / 2, cy + 24, lw, 30);
+    ctx.fillStyle = CREAM;
+    ctx.fillText(label, cx, cy + 40);
   }
 }
 
@@ -330,18 +332,35 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   ctx.fillText(fitFont(ctx, summary.placementLabel.toUpperCase(), W - 2 * M, 900, DISPLAY, champion ? 150 : 120, 70), W / 2, champion ? 400 : 350);
   ctx.fillStyle = CREAM;
   ctx.fillText(fitFont(ctx, summary.teamName, W - 2 * M, 800, DISPLAY, 64, 34), W / 2, champion ? 462 : 440);
+  if (summary.groupRecord) {
+    ctx.font = `700 24px ${SANS}`;
+    ctx.fillText(`Girone ${summary.groupRecord.position}° · ${summary.groupRecord.points} punti`, W / 2, 486);
+  }
 
   // Percorso: tre biglietti
   const ticketY = 548;
   const ticketH = 200;
   const gap = 28;
   const ticketW = (W - 2 * M - 2 * gap) / 3;
-  (['quarterfinals', 'semifinals', 'final'] as const).forEach((round, i) => {
-    drawTicket(ctx, M + i * (ticketW + gap), ticketY, ticketW, ticketH, round, summary.matches.find(m => m.round === round));
+  const groupMatches = summary.matches.filter(match => match.round === 'groups');
+  const lastGroupMatch = groupMatches[groupMatches.length - 1];
+  const path = summary.groupRecord
+    ? [
+        ['groups', lastGroupMatch],
+        ['semifinals', summary.matches.find(match => match.round === 'semifinals')],
+        [summary.matches.some(match => match.round === 'third_place') ? 'third_place' : 'final', summary.matches.find(match => match.round === 'third_place' || match.round === 'final')],
+      ] as const
+    : (['quarterfinals', 'semifinals', 'final'] as const).map(round => [round, summary.matches.find(match => match.round === round)] as const);
+  path.forEach(([round, match], i) => {
+    drawTicket(ctx, M + i * (ticketW + gap), ticketY, ticketW, ticketH, round, match);
   });
 
   // Formazione
-  drawLineup(ctx, M, 790, W - 2 * M, 330, summary.lineup);
+  ctx.fillStyle = INK;
+  ctx.font = `800 28px ${DISPLAY}`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Modulo ${summary.formation}`, M, 778);
+  drawLineup(ctx, M, 790, W - 2 * M, 330, summary.lineup, summary.formation);
 
   // In fondo: MVP, gol, marcatori
   const footY = 1170;

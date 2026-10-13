@@ -11,15 +11,20 @@ describe('sanitizeGameState', () => {
     expect(sanitizeGameState(s)).toEqual(s);
   });
 
-  it('fase sconosciuta (vecchio CAMPIONATO) con asta finita -> torna alla fine dell\'asta', () => {
+  it('fase sconosciuta con asta finita -> torna alla formazione', () => {
     const s = { phase: 'CAMPIONATO', config, teams: [], auction: completeAuction, calendar: [] };
     const out = sanitizeGameState(s);
-    expect(out?.phase).toBe('ASTA');
+    expect(out?.phase).toBe('FORMAZIONE');
     expect(out?.tournament).toBeNull();
   });
 
-  it('TORNEO senza torneo -> fine asta, oppure null se l\'asta non è finita', () => {
-    expect(sanitizeGameState({ phase: 'TORNEO', config, teams: [], auction: completeAuction })?.phase).toBe('ASTA');
+  it("riprende la fase di formazione dopo un'asta completa", () => {
+    const s = { phase: 'FORMAZIONE', config, teams: [], auction: completeAuction, tournament: null };
+    expect(sanitizeGameState(s)).toEqual(s);
+  });
+
+  it("TORNEO senza torneo -> formazione, oppure null se l'asta non è finita", () => {
+    expect(sanitizeGameState({ phase: 'TORNEO', config, teams: [], auction: completeAuction })?.phase).toBe('FORMAZIONE');
     expect(sanitizeGameState({ phase: 'TORNEO', config, teams: [], auction: null })).toBeNull();
   });
 

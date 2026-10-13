@@ -1,4 +1,5 @@
 import { GamePhase, GameState } from '../types';
+import { isValidLineup } from '../domain/teams/formations';
 
 /**
  * Chiave utilizzata per salvare lo stato del gioco in localStorage
@@ -9,7 +10,7 @@ const STORAGE_KEY = 'fanta-fc-game-state';
  * Versione dello schema di salvataggio
  * Incrementare quando si modifica la struttura di GameState
  */
-const STORAGE_VERSION = 6;
+const STORAGE_VERSION = 7;
 
 /**
  * Struttura del dato salvato in localStorage
@@ -69,7 +70,7 @@ export function loadGameState(): GameState | null {
   }
 }
 
-const PHASES: GamePhase[] = ['SETUP', 'ASTA', 'TORNEO', 'FINALE'];
+const PHASES: GamePhase[] = ['SETUP', 'ASTA', 'FORMAZIONE', 'TORNEO', 'FINALE'];
 
 /**
  * Valida e ripara uno stato caricato. Uno stato può essere stato salvato
@@ -93,11 +94,16 @@ export function sanitizeGameState(raw: unknown): GameState | null {
     tournament: s.tournament ?? null,
   };
   const needsTournament = state.phase === 'TORNEO' || state.phase === 'FINALE';
+  const canResumeFormation = state.auction?.phase === 'complete' && !!state.config;
   if (!PHASES.includes(state.phase) || (needsTournament && !state.tournament)) {
-    if (state.auction?.phase === 'complete' && state.config) return { ...state, phase: 'ASTA', tournament: null };
+    if (canResumeFormation) return { ...state, phase: 'FORMAZIONE', tournament: null };
     return null;
   }
   if (state.phase !== 'SETUP' && !state.config) return null;
+  if (state.phase === 'FORMAZIONE' && state.auction?.phase !== 'complete') return null;
+  if (needsTournament && state.teams.some(team => !team.lineup || !isValidLineup(team.roster, team.lineup))) {
+    return canResumeFormation ? { ...state, phase: 'FORMAZIONE', tournament: null } : null;
+  }
   return state;
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Team } from '../../types';
 import { MatchResult, MatchSide } from '../../domain/match';
-import { findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
+import { findCompetitionMatch, findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
 import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { playSound } from '../../services/sound';
@@ -19,6 +19,7 @@ import { TacticOverlay } from './TacticOverlay';
 import { useShootoutKick } from './useShootoutKick';
 
 export type MatchExit = 'continue' | 'conclude';
+type MatchStage = TournamentRound | 'groups';
 
 interface MatchScreenProps {
   tournament: TournamentState;
@@ -35,16 +36,19 @@ const SPEEDS: PlaybackSpeed[] = [1, 2, 4];
  * dei rigori.
  */
 export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScreenProps) {
-  const match = findMatch(tournament.bracket, matchId);
-  const homeTeam = teams.find(t => t.id === match?.homeId);
-  const awayTeam = teams.find(t => t.id === match?.awayId);
+  const fixture = findCompetitionMatch(tournament, matchId);
+  const knockout = findMatch(tournament.bracket, matchId);
+  const homeTeam = teams.find(team => team.id === fixture?.homeId);
+  const awayTeam = teams.find(team => team.id === fixture?.awayId);
   const home = useMemo(() => (homeTeam ? toMatchTeam(homeTeam) : null), [homeTeam]);
   const away = useMemo(() => (awayTeam ? toMatchTeam(awayTeam) : null), [awayTeam]);
-  if (!match || !home || !away) return null;
-  return <MatchPlayer tournament={tournament} home={home} away={away} seed={match.seed} round={match.round} onFinish={onFinish} />;
+  if (!fixture || !home || !away) return null;
+  const round: MatchStage = knockout?.round ?? 'groups';
+  const roundLabel = knockout ? ROUND_LABELS[knockout.round] : fixture.label;
+  return <MatchPlayer tournament={tournament} home={home} away={away} seed={fixture.seed} round={round} roundLabel={roundLabel} onFinish={onFinish} />;
 }
 
-function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPlayerProps) {
+function MatchPlayer({ tournament, home, away, seed, round, roundLabel, onFinish }: MatchPlayerProps) {
   const userSide = home.id === tournament.userTeamId ? 'home' : 'away';
   const pb = useMatchPlayback({ home, away, seed, userSide });
   return (
@@ -53,6 +57,7 @@ function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPla
       home={home}
       away={away}
       round={round}
+      roundLabel={roundLabel}
       pb={pb}
       userSide={userSide}
       onFinish={onFinish}
@@ -65,7 +70,8 @@ interface MatchPlayerProps {
   home: ReturnType<typeof toMatchTeam>;
   away: ReturnType<typeof toMatchTeam>;
   seed: number;
-  round: TournamentRound;
+  round: MatchStage;
+  roundLabel: string;
   onFinish: (result: MatchResult, exit: MatchExit) => void;
 }
 
@@ -88,6 +94,7 @@ export function MatchPlaybackView({
   home,
   away,
   round,
+  roundLabel,
   pb,
   userSide,
   onFinish,
@@ -96,7 +103,8 @@ export function MatchPlaybackView({
   tournament: TournamentState;
   home: ReturnType<typeof toMatchTeam>;
   away: ReturnType<typeof toMatchTeam>;
-  round: TournamentRound;
+  round: MatchStage;
+  roundLabel?: string;
   pb: MatchPlayback;
   userSide: MatchSide;
   onFinish: (result: MatchResult, exit: MatchExit) => void;
@@ -128,7 +136,7 @@ export function MatchPlaybackView({
         home={tournament.teams.find(t => t.id === home.id)}
         away={tournament.teams.find(t => t.id === away.id)}
         state={state}
-        roundLabel={ROUND_LABELS[round]}
+        roundLabel={roundLabel ?? (round === 'groups' ? 'Fase a gironi' : ROUND_LABELS[round])}
         tactics={result.ticks[Math.max(1, state.tick.index)].tactic}
         userFiato={tick.energy[userSide]}
         userSide={userSide}

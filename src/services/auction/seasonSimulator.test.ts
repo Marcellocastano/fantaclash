@@ -4,7 +4,7 @@ import { createRng, hashSeed } from './rng';
 import { createInitialAuctionState, auctionReducer, AuctionWorld } from './session';
 import { buildAuctionPool, LEAGUE_SIZE } from './rules';
 import { generateAllTeams } from '../teamGenerator';
-import { ROSTER_REQUIREMENTS, DifficultyLevel, Player } from '../../types';
+import { ROSTER_REQUIREMENTS, TOTAL_ROSTER_SIZE, DifficultyLevel, Player } from '../../types';
 import seasonDoc from '../../../public/data/seasons/2015-16.json';
 
 const SEASON_PLAYERS = seasonDoc.players as Player[];
@@ -44,13 +44,13 @@ describe('simulator — asta su dati storici 2015-16', () => {
         });
 
         expect(world.auction.phase).toBe('complete');
-        expect(world.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * 8);
+        expect(world.auction.assignedPlayers).toHaveLength(LEAGUE_SIZE * TOTAL_ROSTER_SIZE);
 
         const ids = world.auction.assignedPlayers.map(a => a.playerId);
         expect(new Set(ids).size).toBe(ids.length);
 
         for (const team of world.teams) {
-          expect(team.roster).toHaveLength(8);
+          expect(team.roster).toHaveLength(TOTAL_ROSTER_SIZE);
           const counts = { P: 0, D: 0, C: 0, A: 0 };
           for (const o of team.roster) counts[o.player.role]++;
           for (const role of ['P', 'D', 'C', 'A'] as const) {

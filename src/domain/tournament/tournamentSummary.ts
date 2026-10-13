@@ -1,8 +1,11 @@
 import { PlayerRole, Team } from '../../types';
 import { SITE_URL } from '../../config';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { autoLineup, lineupPlayers } from '../teams/formations';
+import type { FormationId } from '../teams/formations';
 import { shortName } from '../match/matchEvents';
 import { ROUND_SHORT, userPath } from './bracket';
+import { computeStandings } from './groups';
 import { TournamentRound, TournamentState } from './tournamentTypes';
 
 /**
@@ -10,28 +13,33 @@ import { TournamentRound, TournamentState } from './tournamentTypes';
  * schermata finale e la card condivisibile.
  */
 
-export type Placement = 'campione' | 'finalista' | 'semifinalista' | 'quarti';
+export type Placement = 'campione' | 'finalista' | 'terzo' | 'quarto' | 'semifinalista' | 'quarti' | 'fuori_ai_gironi';
 
 export const PLACEMENT_LABELS: Record<Placement, string> = {
   campione: 'Campione',
   finalista: 'Finalista',
   semifinalista: 'Semifinalista',
   quarti: 'Eliminato ai quarti',
+  terzo: 'Terzo posto',
+  quarto: 'Quarto posto',
+  fuori_ai_gironi: 'Eliminato ai gironi',
 };
 
 export interface SummaryMatch {
   matchId: string;
-  round: TournamentRound;
+  round: TournamentRound | 'groups';
   roundShort: string;
   opponentName: string;
   goalsFor: number;
   goalsAgainst: number;
   shootout: { for: number; against: number } | null;
   won: boolean;
+  draw: boolean;
 }
 
 export interface TournamentSummary {
   tournamentName: string;
+  format: TournamentState['format'];
   seasonId: string;
   teamName: string;
   placement: Placement;
@@ -40,7 +48,9 @@ export interface TournamentSummary {
   scorers: { playerId: string; name: string; goals: number }[];
   mvp: { playerId: string; name: string; role: PlayerRole; avgFantasy: number } | null;
   lineup: { playerId: string; name: string; role: PlayerRole; overall: number }[];
-  stats: { played: number; wins: number; goalsFor: number; goalsAgainst: number; cleanSheets: number };
+  formation: FormationId;
+  stats: { played: number; wins: number; draws: number; losses: number; goalsFor: number; goalsAgainst: number; cleanSheets: number };
+  groupRecord: { position: number; points: number; wins: number; draws: number; losses: number } | null;
   championName: string | null;
   opponents: string[];
 }
@@ -55,27 +65,39 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
   const matches: SummaryMatch[] = [];
   const goals = new Map<string, number>();
   const fantasy = new Map<string, number[]>();
-  for (const m of userPath(state)) {
-    const r = state.matches[m.id];
-    if (!r) continue;
-    const home = r.homeTeamId === userId;
+  const appendResult = (matchId: string, round: TournamentRound | 'groups', roundShort: string) => {
+    const result = state.matches[matchId];
+    if (!result) return;
+    const home = result.homeTeamId === userId;
     matches.push({
-      matchId: m.id,
-      round: m.round,
-      roundShort: ROUND_SHORT[m.round],
-      opponentName: home ? r.awayName : r.homeName,
-      goalsFor: home ? r.homeScore : r.awayScore,
-      goalsAgainst: home ? r.awayScore : r.homeScore,
-      shootout: r.shootout
-        ? { for: home ? r.shootout.home : r.shootout.away, against: home ? r.shootout.away : r.shootout.home }
+      matchId,
+      round,
+      roundShort,
+      opponentName: home ? result.awayName : result.homeName,
+      goalsFor: home ? result.homeScore : result.awayScore,
+      goalsAgainst: home ? result.awayScore : result.homeScore,
+      shootout: result.shootout
+        ? { for: home ? result.shootout.home : result.shootout.away, against: home ? result.shootout.away : result.shootout.home }
         : null,
-      won: r.winnerId === userId,
+      won: result.winnerId === userId,
+      draw: result.winnerId === null,
     });
-    for (const p of r.playerPerformances) {
-      if (p.teamId !== userId) continue;
-      if (p.goals) goals.set(p.playerId, (goals.get(p.playerId) ?? 0) + p.goals);
-      fantasy.set(p.playerId, [...(fantasy.get(p.playerId) ?? []), p.fantasyScore]);
+    for (const performance of result.playerPerformances) {
+      if (performance.teamId !== userId) continue;
+      if (performance.goals) goals.set(performance.playerId, (goals.get(performance.playerId) ?? 0) + performance.goals);
+      fantasy.set(performance.playerId, [...(fantasy.get(performance.playerId) ?? []), performance.fantasyScore]);
     }
+  };
+  if (state.format === 'groups') {
+    for (const fixture of state.groups?.fixtures ?? []) {
+      if (fixture.homeId === userId || fixture.awayId === userId) appendResult(fixture.id, 'groups', `G${fixture.matchday}`);
+    }
+    const cupMatches = state.bracket
+      .filter(match => (match.round === 'semifinals' || match.round === 'final' || match.round === 'third_place') && (match.homeId === userId || match.awayId === userId))
+      .sort((a, b) => (a.round === 'semifinals' ? 0 : 1) - (b.round === 'semifinals' ? 0 : 1));
+    for (const match of cupMatches) appendResult(match.id, match.round, ROUND_SHORT[match.round]);
+  } else {
+    for (const match of userPath(state)) appendResult(match.id, match.round, ROUND_SHORT[match.round]);
   }
 
   const roster = [...(user?.roster ?? [])]
@@ -93,9 +115,33 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
   }
 
   const last = matches[matches.length - 1];
-  const placement: Placement =
-    state.winnerId === userId
-      ? 'campione'
+  const lastResult = last ? state.matches[last.matchId] : undefined;
+  const lastSide = lastResult?.homeTeamId === userId ? 'home' : 'away';
+  const lineup = lastResult
+    ? lineupPlayers(roster, {
+        formation: lastResult.formations[lastSide],
+        starters: lastResult.lineups[lastSide].map(player => player.playerId),
+      })
+    : lineupPlayers(roster, autoLineup(roster, user?.lineup?.formation ?? '2-3-2'));
+  const group = state.groups?.groups.A.includes(userId) ? 'A' : state.groups?.groups.B.includes(userId) ? 'B' : null;
+  const standing = group ? computeStandings(state, group).find(row => row.teamId === userId) : undefined;
+  const groupRecord = standing ? {
+    position: standing.position,
+    points: standing.points,
+    wins: standing.wins,
+    draws: standing.draws,
+    losses: standing.losses,
+  } : null;
+  const placement: Placement = state.winnerId === userId
+    ? 'campione'
+    : state.format === 'groups'
+      ? last?.round === 'third_place'
+        ? last.won ? 'terzo' : 'quarto'
+        : last?.round === 'final'
+          ? 'finalista'
+          : !groupRecord || groupRecord.position > 2
+            ? 'fuori_ai_gironi'
+            : 'semifinalista'
       : last?.round === 'final'
         ? 'finalista'
         : last?.round === 'semifinals'
@@ -104,6 +150,7 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
 
   return {
     tournamentName: state.name,
+    format: state.format,
     seasonId: state.seasonId,
     teamName: user?.name ?? '',
     placement,
@@ -113,14 +160,18 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
       .map(([playerId, n]) => ({ playerId, name: playerName(playerId), goals: n }))
       .sort((a, b) => b.goals - a.goals),
     mvp,
-    lineup: roster.map(p => ({ playerId: p.id, name: shortName(p.name), role: p.role, overall: playerOverall(p) })),
+    lineup: lineup.map(p => ({ playerId: p.id, name: shortName(p.name), role: p.role, overall: playerOverall(p) })),
+    formation: lastResult?.formations[lastSide] ?? user?.lineup?.formation ?? '2-3-2',
     stats: {
       played: matches.length,
-      wins: matches.filter(m => m.won).length,
+      wins: matches.filter(match => match.won).length,
+      draws: matches.filter(match => match.draw).length,
+      losses: matches.filter(match => !match.won && !match.draw).length,
       goalsFor: matches.reduce((s, m) => s + m.goalsFor, 0),
       goalsAgainst: matches.reduce((s, m) => s + m.goalsAgainst, 0),
       cleanSheets: matches.filter(m => m.goalsAgainst === 0).length,
     },
+    groupRecord,
     championName: state.winnerId ? nameOf(state.winnerId) : null,
     opponents: matches.map(m => m.opponentName),
   };

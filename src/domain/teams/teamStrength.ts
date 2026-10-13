@@ -1,5 +1,6 @@
 import { Player, PlayerRole, ROSTER_REQUIREMENTS } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { autoLineup, FORMATIONS, FORMATION_IDS, FormationId, isValidLineup, lineupPlayers } from './formations';
 
 /**
  * Forza di squadra per il motore partita.
@@ -20,11 +21,13 @@ export const OVERALL_SPAN = 25;
 export const MAX_QUALITY = 1.4;
 
 /** Pesi dei reparti nella forza complessiva mostrata in UI */
-export const ROLE_WEIGHTS: Record<PlayerRole, number> = {
-  P: 0.15,
-  D: 0.25,
-  C: 0.3,
-  A: 0.3,
+export const FORMATION_RATING_WEIGHTS: Record<FormationId, Record<PlayerRole, number>> = {
+  '2-3-2': { P: 0.1, D: 0.25, C: 0.35, A: 0.3 },
+  '3-2-2': { P: 0.12, D: 0.35, C: 0.3, A: 0.23 },
+  '2-2-3': { P: 0.08, D: 0.2, C: 0.28, A: 0.44 },
+  '3-3-1': { P: 0.08, D: 0.22, C: 0.48, A: 0.22 },
+  '2-4-1': { P: 0.08, D: 0.2, C: 0.5, A: 0.22 },
+  '3-1-3': { P: 0.08, D: 0.3, C: 0.22, A: 0.4 },
 };
 
 /** Qualità normalizzata di un giocatore con la forma del giorno */
@@ -55,8 +58,7 @@ export const EMERGENCY_GK_QUALITY = 0.1;
  * Forza di un reparto: media dei giocatori attivi × sqrt(attivi/richiesti).
  * Un'espulsione indebolisce il reparto senza azzerarlo.
  */
-export function departmentStrength(players: StrengthPlayer[], role: PlayerRole): number {
-  const required = ROSTER_REQUIREMENTS[role].total;
+export function departmentStrength(players: StrengthPlayer[], role: PlayerRole, required = ROSTER_REQUIREMENTS[role].total): number {
   const active = players.filter(p => p.role === role && p.active);
   if (active.length === 0) return role === 'P' ? EMERGENCY_GK_QUALITY : 0;
   const mean =
@@ -117,30 +119,50 @@ export function penaltySaveSkill(player: Player): number {
 }
 
 /** Forza complessiva (pesata per ruolo) riportata in scala overall */
-export function weightedRating(depts: { gk: number; def: number; mid: number; att: number }): number {
-  const q =
-    ROLE_WEIGHTS.P * depts.gk +
-    ROLE_WEIGHTS.D * depts.def +
-    ROLE_WEIGHTS.C * depts.mid +
-    ROLE_WEIGHTS.A * depts.att;
+export function weightedRating(depts: { gk: number; def: number; mid: number; att: number }, formation: FormationId = '2-3-2'): number {
+  const weights = FORMATION_RATING_WEIGHTS[formation];
+  const q = weights.P * depts.gk + weights.D * depts.def + weights.C * depts.mid + weights.A * depts.att;
   return Math.round(OVERALL_FLOOR + OVERALL_SPAN * q);
 }
 
-/** Forza "da tabellone" di una rosa (forma neutra), per sorteggio e UI */
-export function rosterRating(players: Player[]): number {
-  const sp: StrengthPlayer[] = players.map(p => ({
-    role: p.role,
-    quality: playerQuality(p),
+export function lineupRating(players: Player[], formation: FormationId): number {
+  const lineup = players.length > 8 ? lineupPlayers(players, autoLineup(players, formation)) : players;
+  const sp: StrengthPlayer[] = lineup.map(player => ({
+    role: player.role,
+    quality: playerQuality(player),
     active: true,
     injured: false,
   }));
   const { synergy } = computeSynergy(
-    players.map(p => ({ role: p.role, quality: playerQuality(p), club: p.team }))
+    lineup.map(player => ({ role: player.role, quality: playerQuality(player), club: player.team }))
   );
-  return weightedRating({
-    gk: departmentStrength(sp, 'P') * synergy,
-    def: departmentStrength(sp, 'D') * synergy,
-    mid: departmentStrength(sp, 'C') * synergy,
-    att: departmentStrength(sp, 'A') * synergy,
-  });
+  const counts = FORMATIONS[formation].counts;
+  const depts = {
+    gk: departmentStrength(sp, 'P', 1) * synergy,
+    def: departmentStrength(sp, 'D', counts.D) * synergy,
+    mid: departmentStrength(sp, 'C', counts.C) * synergy,
+    att: departmentStrength(sp, 'A', counts.A) * synergy,
+  };
+  const weights = FORMATION_RATING_WEIGHTS[formation];
+  const q = weights.P * depts.gk + weights.D * depts.def + weights.C * depts.mid + weights.A * depts.att;
+  return Math.round(OVERALL_FLOOR + OVERALL_SPAN * q);
+}
+
+export function rosterRating(players: Player[]): number {
+  if (players.length === 8) {
+    const compatible = FORMATION_IDS.find(formation => {
+      const expected = FORMATIONS[formation].layout;
+      return (['P', 'D', 'C', 'A'] as PlayerRole[]).every(role => expected.filter(slot => slot.role === role).length === players.filter(player => player.role === role).length);
+    });
+    return lineupRating(players, compatible ?? '2-3-2');
+  }
+  return Math.max(...FORMATION_IDS.map(formation => lineupRating(players, formation)), 0);
+}
+
+export function teamRating(team: import('../../types').Team): number {
+  const players = team.roster.map(owned => owned.player);
+  const lineup = team.lineup && isValidLineup(players, team.lineup)
+    ? team.lineup
+    : autoLineup(players, team.botConfig?.preferredFormation ?? '2-3-2');
+  return lineupRating(lineupPlayers(players, lineup), lineup.formation);
 }

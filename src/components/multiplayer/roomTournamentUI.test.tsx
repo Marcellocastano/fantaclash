@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createRoom, roomReducer } from '../../multiplayer/roomReducer';
 import { buildRoundRecords } from '../../multiplayer/hostTournament';
+import { postAuctionLineupActions } from '../../multiplayer/testHelpers';
 import { RoomAction, RoomState } from '../../multiplayer/protocol';
 import { createInitialAuctionState } from '../../services/auction';
 import { buildRoster, createTestBotConfig, createTestPlayer, createTestTeam } from '../../test/testUtils';
@@ -18,7 +19,7 @@ vi.mock('./RoomProvider', () => ({
   useRoom: () => mockRoom,
 }));
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function teams(): Team[] {
   const mk = (id: string, name: string, ownerId: string | null): Team =>
@@ -36,11 +37,11 @@ function teams(): Team[] {
 }
 
 /** Asta completata -> torneo sorteggiato (ordine deterministico) */
-function tournamentState(opts: { finish?: boolean } = {}): RoomState {
+function tournamentState(opts: { finish?: boolean; format?: 'knockout' | 'groups' } = {}): RoomState {
   let s = createRoom({
     code: 'ABCDE', hostId: 'h1',
     host: { nickname: 'Host', teamName: 'Host FC' },
-    settings: { season: '2024-25', difficulty: 'normale' },
+    settings: { season: '2024-25', difficulty: 'normale', format: opts.format ?? 'knockout' },
     now: Date.now(),
   });
   s = roomReducer(s, {
@@ -52,6 +53,7 @@ function tournamentState(opts: { finish?: boolean } = {}): RoomState {
     teams: teams(),
     auction: { ...createInitialAuctionState([createTestPlayer({ id: 'p1', role: 'P' })]), phase: 'complete' },
   });
+  for (const action of postAuctionLineupActions(s)) s = roomReducer(s, action);
   s = roomReducer(s, { type: 'START_TOURNAMENT', seed: 42 });
   s = roomReducer(s, {
     type: 'TOURNAMENT',
@@ -97,7 +99,7 @@ describe('torneo in stanza (UI)', () => {
     dispatched.length = 0;
   });
 
-  it("l'host avvia il torneo dall'asta completata, l'ospite aspetta", () => {
+  it("l'host apre la finestra delle formazioni dopo l'asta", () => {
     const s = createRoom({
       code: 'ABCDE', hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
@@ -112,35 +114,50 @@ describe('torneo in stanza (UI)', () => {
 
     setRoom(done, 'h1', 'host');
     const { unmount } = render(<RoomAuctionScreen />);
-    fireEvent.click(screen.getByText('Avvia il torneo'));
-    expect(dispatched).toEqual([{ type: 'START_TOURNAMENT', seed: expect.any(Number) }]);
+    fireEvent.click(screen.getByText('Scegli le formazioni'));
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]).toMatchObject({
+      type: 'LINEUP_WINDOW',
+      window: { kind: 'post_auction', teamIds: ['th', 'tc'] },
+    });
     unmount();
 
     setRoom(done, 'c1', 'player');
     render(<RoomAuctionScreen />);
-    expect(screen.getByText(/attesa che l'host avvii il torneo/)).toBeInTheDocument();
-    expect(screen.queryByText('Avvia il torneo')).toBeNull();
+    expect(screen.getByText(/attesa che l'host apra la scelta delle formazioni/)).toBeInTheDocument();
+    expect(screen.queryByText('Scegli le formazioni')).toBeNull();
   });
 
-  it("l'host vede 'Gioca il turno' e avvia le partite live, l'ospite aspetta", () => {
+  it("l'host apre la finestra di scelta delle formazioni per il turno", () => {
     const s = tournamentState();
     setRoom(s, 'h1', 'host');
     const { unmount } = render(<RoomTournamentScreen />);
     // La propria partita non si gioca dal tasto dell'hub: nessun "Gioca i quarti"
     expect(screen.queryByText(/Gioca i quarti/)).toBeNull();
-    fireEvent.click(screen.getByText('Gioca il turno'));
-    // Le partite con umani vanno live; i record dei bot li manda il driver
-    expect(dispatched.every(a => a.type === 'MATCH_START')).toBe(true);
-    expect(dispatched).toHaveLength(1); // th vs tc, gli altri quarti sono tra bot
-    expect(dispatched[0]).toMatchObject({ humanSides: ['home', 'away'], startAt: expect.any(Number) });
+    fireEvent.click(screen.getByText('Prepara le formazioni e gioca'));
+    expect(dispatched).toHaveLength(1);
+    expect(dispatched[0]).toMatchObject({ type: 'LINEUP_WINDOW', window: { kind: 'pre_stage', teamIds: ['th', 'tc'] } });
     unmount();
 
     dispatched.length = 0;
     setRoom(s, 'c1', 'player');
     render(<RoomTournamentScreen />);
     expect(screen.getByText(/attesa che l'host avvii il turno/)).toBeInTheDocument();
-    expect(screen.queryByText('Gioca il turno')).toBeNull();
+    expect(screen.queryByText('Prepara le formazioni e gioca')).toBeNull();
     expect(screen.queryByText(/Gioca i quarti/)).toBeNull();
+  });
+
+  it('mostra il calendario dei gironi in stanza e apre la lineup window prima della giornata', () => {
+    const s = tournamentState({ format: 'groups' });
+    setRoom(s, 'h1', 'host');
+    render(<RoomTournamentScreen />);
+    expect(screen.getByRole('heading', { name: 'Girone A' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Girone B' })).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Prepara le formazioni e gioca'));
+    expect(dispatched[0]).toMatchObject({
+      type: 'LINEUP_WINDOW',
+      window: { kind: 'pre_stage', teamIds: ['th', 'tc'] },
+    });
   });
 
   it("a torneo chiuso l'host va al riepilogo con FINISH", () => {

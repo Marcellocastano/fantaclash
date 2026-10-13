@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Player, PlayerRole } from '../types';
+import { Player, PlayerRole, ROSTER_REQUIREMENTS, TOTAL_ROSTER_SIZE } from '../types';
 import { playerOverall } from '../services/auction/teamStrength';
 import { loadSeasonPlayers } from '../services/seasons';
 import { PlayerCard } from './player/PlayerCard';
 
-/** Figurine della pagina: i migliori dell'annata nel modulo 1-2-3-2, più una casella vuota al centro */
-const PER_ROLE: Record<PlayerRole, number> = { P: 1, D: 2, C: 3, A: 2 };
-const EMPTY_SLOTS = [4];
-const SLOTS = 9;
+/** Figurine della pagina: i migliori dell'annata nei quattro ruoli della rosa, più una casella vuota al centro */
+const PER_ROLE: Record<PlayerRole, number> = {
+  P: ROSTER_REQUIREMENTS.P.total,
+  D: ROSTER_REQUIREMENTS.D.total,
+  C: ROSTER_REQUIREMENTS.C.total,
+  A: ROSTER_REQUIREMENTS.A.total,
+};
+const EMPTY_SLOTS = [6];
+const SLOTS = TOTAL_ROSTER_SIZE + EMPTY_SLOTS.length;
 /** Leggera inclinazione di ogni figurina, fissa per posizione */
-const TILT = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2', '', '-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2'];
+const TILT = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2', '', '-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2', '-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2'];
 
 /** I più forti dell'annata, reparto per reparto */
 function albumStars(players: Player[]): Player[] {

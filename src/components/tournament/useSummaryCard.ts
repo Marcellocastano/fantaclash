@@ -28,6 +28,7 @@ export function useSummaryCard(summary: TournamentSummary) {
 
 /** Descrizione testuale della card (alt dell'immagine e ripiego senza canvas) */
 export function summaryAlt(summary: TournamentSummary): string {
-  const results = summary.matches.map(m => `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst} contro ${m.opponentName}`).join(', ');
-  return `${summary.placementLabel}: ${summary.teamName}, ${summary.tournamentName} Serie A ${summary.seasonId}. ${results}.`;
+  const results = summary.matches.map(m => `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst} ${m.draw ? 'pareggio' : m.won ? 'vittoria' : 'sconfitta'} contro ${m.opponentName}`).join(', ');
+  const group = summary.groupRecord ? `Girone ${summary.groupRecord.position}° con ${summary.groupRecord.points} punti. ` : '';
+  return `${summary.placementLabel}: ${summary.teamName}, ${summary.tournamentName} Serie A ${summary.seasonId}. Modulo ${summary.formation}. ${group}${results}.`;
 }

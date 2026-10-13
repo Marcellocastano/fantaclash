@@ -7,6 +7,7 @@ import { runAuction } from '../services/auction/simulator';
 import { playerOverall } from '../services/auction/teamStrength';
 import { generateAllTeams } from '../services/teamGenerator';
 import { rosterRating } from '../domain/teams/teamStrength';
+import { autoLineup, lineupPlayers } from '../domain/teams/formations';
 import {
   getPlaybackState,
   lastTick,
@@ -62,7 +63,9 @@ export function auctionTeams(seasons: string[], seedsPerSeason: number): MatchTe
         userAutopilot: true,
       });
       for (const t of end.teams) {
-        out.push({ id: `${season}-${s}-${t.id}`, name: t.name, players: t.roster.map(o => o.player) });
+        const roster = t.roster.map(owned => owned.player);
+        const formation = t.botConfig?.preferredFormation ?? '2-3-2';
+        out.push({ id: `${season}-${s}-${t.id}`, name: t.name, players: lineupPlayers(roster, autoLineup(roster, formation)), formation });
       }
     }
   }
@@ -98,12 +101,13 @@ export function shifted(
     id,
     name: id,
     players: t.players.map((p, i) => (filter(p, i) ? { ...p, overall: playerOverall(p) + delta } : p)),
+    formation: t.formation,
   };
 }
 
 /** Variante con overall fisso per tutti */
 export function flat(t: MatchTeamInput, id: string, overall: number): MatchTeamInput {
-  return { id, name: id, players: t.players.map(p => ({ ...p, overall })) };
+  return { id, name: id, players: t.players.map(p => ({ ...p, overall })), formation: t.formation };
 }
 
 export function firstOfRole(t: MatchTeamInput, role: PlayerRole): (p: Player) => boolean {

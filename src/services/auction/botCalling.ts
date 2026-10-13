@@ -36,7 +36,7 @@ export const BUDGET_FILL_MAX_PRICE = 2;
 export const BUDGET_FILL_MAX_FAIR = 3;
 
 /** Bonus allo score quando il candidato vincente è un pupillo del bot */
-export const PUPILLO_CALL_BONUS = 5;
+export const PUPILLO_CALL_BONUS = 12;
 
 /**
  * Strategia con cui il bot ha scelto il giocatore

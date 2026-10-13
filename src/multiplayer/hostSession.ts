@@ -4,16 +4,17 @@ import {
   ABSENT_AFTER_MS,
   DECISION_TIMEOUT_MS,
   HASH_INTERVAL_MS,
+  MATCH_LEAD_MS,
   MATCH_SPEED,
   MAX_SPECTATORS,
   SHOOTOUT_ORDER_TIMEOUT_MS,
 } from './constants';
 import { computeTimeline, lastTick, MatchOptions, MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
-import { findMatch, simulateBracketMatch } from '../domain/tournament';
-import { resultHash } from './hash';
-import { buildBotRecords } from './hostTournament';
+import { bestLineup, isValidLineup } from '../domain/teams/formations';
+import { buildStartTournament, buildBotRecords, buildRoundStart } from './hostTournament';
+import { simulateCompetitionMatch, findCompetitionMatch } from '../domain/tournament';
+import { resultHash, stateHash } from './hash';
 import { RoomKeyPair, serialQueue, signPayload, verifyPayload } from './crypto';
-import { stateHash } from './hash';
 import {
   buildStartAuction,
   buildStartCalling,
@@ -158,8 +159,10 @@ export function createHostSession({
     if (intent.type !== 'HELLO' && state.players.some(p => p.id === from && !p.connected)) {
       broadcast({ type: 'LISTENING', to: from });
     }
+    const previousBook = book;
     const r = handleIntent(state, book, from, intent, now(), rng);
     book = r.book;
+    if (book !== previousBook && intent.type === 'LINEUP') emit();
     for (const action of r.actions) dispatch(action);
     for (const reply of r.replies) broadcast(reply);
     if (intent.type === 'HELLO' && intent.role === 'player') {
@@ -244,7 +247,7 @@ export function createHostSession({
       const key = JSON.stringify(options);
       let result = resultCache.get(matchId)?.key === key ? resultCache.get(matchId)!.result : null;
       if (!result) {
-        result = simulateBracketMatch(state.tournament, state.teams, matchId, options);
+        result = simulateCompetitionMatch(state.tournament, state.teams, matchId, options);
         resultCache.set(matchId, { key, result });
       }
       const stop = nextStop(result, live.anchorTick, live.resolvedStops, live.humanSides.length > 0);
@@ -264,7 +267,7 @@ export function createHostSession({
         dispatch({
           type: 'MATCH_RECORD',
           matchId,
-          seed: findMatch(state.tournament.bracket, matchId)!.seed,
+          seed: findCompetitionMatch(state.tournament, matchId)!.seed,
           options,
           resultHash: resultHash(result),
         });
@@ -310,6 +313,34 @@ export function createHostSession({
       liveRoundPending = true;
     }
   }
+
+  function checkLineupWindow() {
+    const window = state.lineupWindow;
+    if (!window) return;
+    const t = now();
+    const allChosen = window.teamIds.every(teamId => !!book.lineupChoices[teamId]);
+    if (!allChosen && t < window.deadline) return;
+    const lineups = Object.fromEntries(state.teams.map(team => {
+      const submitted = book.lineupChoices[team.id];
+      const lineup = submitted && isValidLineup(team.roster, submitted)
+        ? submitted
+        : team.lineup && isValidLineup(team.roster, team.lineup)
+          ? team.lineup
+          : bestLineup(team.roster, team.botConfig?.preferredFormation ?? '2-3-2');
+      return [team.id, lineup];
+    }));
+    if (!dispatch({ type: 'SET_LINEUPS', lineups })) return;
+    book = { ...book, lineupChoices: {} };
+    if (window.kind === 'post_auction') {
+      dispatch(buildStartTournament(rng));
+      return;
+    }
+    const starts = buildRoundStart(state, now() + MATCH_LEAD_MS);
+    if (starts.length) starts.forEach(dispatch);
+    else buildBotRecords(state).forEach(dispatch);
+  }
+
+  cleanups.push(tick(checkLineupWindow, 250));
 
   // Assenza applicativa: chi non si fa sentire da troppo è disconnesso
   cleanups.push(
@@ -369,7 +400,7 @@ export function createHostSession({
     },
 
     rematch() {
-      book = { ...book, matchChoices: {} };
+      book = { ...book, matchChoices: {}, lineupChoices: {} };
       resultCache.clear();
       dispatch({ type: 'REMATCH' });
     },

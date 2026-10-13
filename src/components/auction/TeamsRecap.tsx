@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { TeamMeta } from '../../hooks/auctionController';
-import { Team, PlayerRole, ROSTER_REQUIREMENTS } from '../../types';
+import { Team, PlayerRole, ROSTER_REQUIREMENTS, TOTAL_ROSTER_SIZE } from '../../types';
+import { getMaxBid, getTotalRemainingSlots } from '../../services/auction';
+import { formationCoverage, FORMATION_IDS, FORMATIONS } from '../../domain/teams/formations';
 import { shortName } from '../../utils/playerName';
 import { Icon } from '../Icon';
 import { TeamBadge } from '../tournament/TeamBadge';
@@ -25,7 +27,7 @@ const ROLE_FILL: Record<PlayerRole, string> = {
   A: 'bg-role-A',
 };
 
-/** Rose delle 8 squadre: crediti e 8 caselle colorate per ruolo */
+/** Rose delle 8 squadre: crediti e dodici caselle colorate per ruolo */
 export function TeamsRecap({ teams, userTeamId, currentBidderId, callerId, teamMeta }: TeamsRecapProps) {
   const [expanded, setExpanded] = useState<string | null>(userTeamId);
   const sorted = [...teams].sort((a, b) => (a.isUserTeam ? -1 : b.isUserTeam ? 1 : a.name.localeCompare(b.name)));
@@ -63,6 +65,7 @@ interface TeamRowProps {
 
 function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle }: TeamRowProps) {
   const byRole = (role: PlayerRole) => team.roster.filter(o => o.player.role === role);
+  const coverageByFormation = formationCoverage(team.roster);
   const status = isBidding ? (isUser ? 'in testa' : 'rilancia') : isCalling ? 'chiama' : null;
   const tone = isBidding ? (isUser ? 'bg-highlight' : 'bg-whistle/15') : isCalling ? 'bg-surface' : '';
 
@@ -111,7 +114,7 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
         </span>
 
         {/* Una casella per ogni posto in rosa */}
-        <span className="flex gap-1 mt-2.5" aria-label={`${team.roster.length} giocatori su 8`}>
+        <span className="flex gap-1 mt-2.5" aria-label={`${team.roster.length} giocatori su ${TOTAL_ROSTER_SIZE}`}>
           {ROLE_ORDER.flatMap(role =>
             Array.from({ length: ROSTER_REQUIREMENTS[role].total }, (_, i) => (
               <span
@@ -126,6 +129,23 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
 
       {expanded && (
         <div className="px-2 pb-3 space-y-1 motion-safe:animate-reveal">
+          {isUser && (
+            <>
+              <p className="text-xs font-semibold text-ink-soft">
+                {getTotalRemainingSlots(team)} posti da completare · minimo {getTotalRemainingSlots(team)} crediti · offerta massima {Math.max(0, getMaxBid(team))}
+              </p>
+              <div className="grid grid-cols-3 gap-1 py-2" aria-label="Compatibilità della rosa con i moduli">
+                {FORMATION_IDS.map(formation => {
+                  const coverage = coverageByFormation[formation];
+                  return (
+                    <span key={formation} className="border border-line-strong px-1 py-1 text-center text-[10px] font-bold text-ink-soft" title={FORMATIONS[formation].identity}>
+                      {formation} {coverage.filled}/8
+                    </span>
+                  );
+                })}
+              </div>
+            </>
+          )}
           {team.roster.length === 0 && <p className="text-sm text-ink-muted">Ancora nessun giocatore.</p>}
           {ROLE_ORDER.flatMap(role =>
             byRole(role).map(o => (

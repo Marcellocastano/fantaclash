@@ -24,8 +24,8 @@ describe('teamStrength', () => {
     it('media degli overall della rosa', () => {
       const team = createTestTeam({
         roster: [
-          { player: createTestPlayer({ overall: 80 }), purchasePrice: 10, isStarter: true, formationPosition: 1 },
-          { player: createTestPlayer({ overall: 60 }), purchasePrice: 10, isStarter: true, formationPosition: 2 },
+          { player: createTestPlayer({ overall: 80 }), purchasePrice: 10 },
+          { player: createTestPlayer({ overall: 60 }), purchasePrice: 10 },
         ],
       });
       expect(teamStrength(team)).toBe(70);
@@ -34,8 +34,8 @@ describe('teamStrength', () => {
     it('usa il ripiego media voto per i giocatori senza overall', () => {
       const team = createTestTeam({
         roster: [
-          { player: createTestPlayer({ avgRating: 7.0 }), purchasePrice: 10, isStarter: true, formationPosition: 1 },
-          { player: createTestPlayer({ overall: 50 }), purchasePrice: 10, isStarter: true, formationPosition: 2 },
+          { player: createTestPlayer({ avgRating: 7.0 }), purchasePrice: 10 },
+          { player: createTestPlayer({ overall: 50 }), purchasePrice: 10 },
         ],
       });
       expect(teamStrength(team)).toBe(72.5);
@@ -46,7 +46,7 @@ describe('teamStrength', () => {
     });
 
     it('rosa piena da buildRoster è finita e positiva', () => {
-      const team = createTestTeam({ roster: buildRoster({ P: 1, D: 2, C: 3, A: 2 }) });
+      const team = createTestTeam({ roster: buildRoster({ P: 1, D: 4, C: 4, A: 3 }) });
       const s = teamStrength(team);
       expect(s).toBeGreaterThan(0);
       expect(s).toBeLessThanOrEqual(95);

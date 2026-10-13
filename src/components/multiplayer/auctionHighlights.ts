@@ -1,5 +1,6 @@
 import { OwnedPlayer, Team } from '../../types';
-import { playerOverall, teamStrength } from '../../services/auction/teamStrength';
+import { playerOverall } from '../../services/auction/teamStrength';
+import { teamRating } from '../../domain/teams/teamStrength';
 
 /**
  * I tre "titoli" della schermata di fine asta, derivati dalle rose.
@@ -59,7 +60,7 @@ export function strongestTeam(teams: Team[]): { team: Team; strength: number } |
   let bestS = -1;
   for (const team of teams) {
     if (team.roster.length === 0) continue;
-    const s = teamStrength(team);
+    const s = teamRating(team);
     if (s > bestS) {
       best = team;
       bestS = s;

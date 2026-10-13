@@ -324,11 +324,10 @@ describe.skipIf(!RUN)('audit motore partita', () => {
     rows.push(summaryRow('sinergia: 8 dello stesso club vs 8 club diversi', summarize(play(sameClub, allDiff, s, { sides: 'both' }))));
     const weakerSame = shifted(sameClub, 'A', -1);
     rows.push(summaryRow('stesso club con overall -1 vs club diversi', summarize(play(weakerSame, allDiff, s, { sides: 'both' }))));
-    // Un uomo in meno dall'inizio (equivale a un'espulsione al 1')
-    const minusC = { ...base, id: 'A', players: base.players.filter((p, i) => !(p.role === 'C' && i === base.players.findIndex(q => q.role === 'C'))) };
-    rows.push(summaryRow('un centrocampista in meno dal 1\'', summarize(play(minusC, mirror, s, { sides: 'both' }))));
-    const minusA = { ...base, id: 'A', players: base.players.filter(p => p.id !== base.players.find(q => q.role === 'A')!.id) };
-    rows.push(summaryRow('un attaccante in meno dal 1\'', summarize(play(minusA, mirror, s, { sides: 'both' }))));
+    const weakMid = shifted(base, 'A', -25, p => p.role === 'C');
+    rows.push(summaryRow('centrocampo indebolito', summarize(play(weakMid, mirror, s, { sides: 'both' }))));
+    const weakAttack = shifted(base, 'A', -25, p => p.role === 'A');
+    rows.push(summaryRow('attacco indebolito', summarize(play(weakAttack, mirror, s, { sides: 'both' }))));
     log(table(`3. sensibilità alla forza (${N} semi x 2 campi, stessi semi per ogni riga)`, SUMMARY_HEADER, rows));
     for (let i = 1; i < advs.length; i++) expect(advs[i]).toBeGreaterThan(advs[i - 1]);
   });
@@ -534,10 +533,9 @@ describe.skipIf(!RUN)('audit motore partita', () => {
       ['overall 50 vs 99', flat(base, 'A', 50), flat(base, 'B', 99)],
       ['overall 50 vs 50', flat(base, 'A', 50), flat(base, 'B', 50)],
       ['overall 120 vs 120', flat(base, 'A', 120), flat(base, 'B', 120)],
-      ['senza attaccanti', { ...base, id: 'A', players: base.players.filter(p => p.role !== 'A') }, mirror],
-      ['senza portiere', { ...base, id: 'A', players: base.players.filter(p => p.role !== 'P') }, mirror],
-      ['solo il portiere', { ...base, id: 'A', players: base.players.filter(p => p.role === 'P') }, mirror],
-      ['9 giocatori (un C in più)', { ...base, id: 'A', players: [...base.players, { ...base.players.find(p => p.role === 'C')!, id: 'extra-c' }] }, mirror],
+      ['overall minimo vs massimo', flat(base, 'A', 50), flat(mirror, 'B', 95)],
+      ['centrocampo depotenziato', shifted(base, 'A', -20, p => p.role === 'C'), mirror],
+      ['attacco depotenziato', shifted(base, 'A', -20, p => p.role === 'A'), mirror],
       ['statistiche a zero', { ...base, id: 'A', players: base.players.map(p => ({ ...p, goalProbability: 0, assistProbability: 0, yellowCardProbability: 0, redCardProbability: 0, penaltySaveProbability: 0 })) }, mirror],
       ['paraRigori assente / 1.0', { ...base, id: 'A', players: base.players.map(p => ({ ...p, penaltySaveProbability: undefined })) }, { ...base, id: 'B', name: 'B', players: base.players.map(p => ({ ...p, penaltySaveProbability: p.role === 'P' ? 1 : undefined })) }],
       ['cartellini a raffica (prob. 1)', { ...base, id: 'A', players: base.players.map(p => ({ ...p, yellowCardProbability: 1, redCardProbability: 1 })) }, mirror],
@@ -548,6 +546,13 @@ describe.skipIf(!RUN)('audit motore partita', () => {
       const sm = summarize(os);
       rows.push([label, sm.n, pct(sm.win), pct(sm.draw), f2(sm.gf), f2(sm.ga), pct(os.filter(o => o.r.shootout).length / os.length), Math.max(...os.map(o => o.r.events.filter(e => e.type === 'shootout_kick').length))]);
     }
+    const malformed: MatchTeamInput[] = [
+      { ...base, players: [] },
+      { ...base, players: base.players.filter(player => player.role !== 'P') },
+      { ...base, formation: '2-2-3', players: base.players },
+      { ...base, players: [...base.players, { ...base.players[0], id: 'duplicate-extra' }] },
+    ];
+    for (const invalid of malformed) expect(() => simulateMatch({ home: invalid, away: mirror, seed: 1 })).toThrow(/Formazione/);
     for (const seed of [0, 1, -1, 2 ** 32 - 1, 2 ** 32, Number.MAX_SAFE_INTEGER, 0.5, -123456.789]) {
       const r = simulateMatch({ home: base, away: mirror, seed });
       assertInvariants(r);

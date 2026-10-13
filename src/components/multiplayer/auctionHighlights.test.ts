@@ -5,10 +5,8 @@ import { OwnedPlayer, PlayerRole } from '../../types';
 
 let pos = 0;
 const own = (role: PlayerRole, overall: number, price: number, id?: string): OwnedPlayer => ({
-  player: createTestPlayer({ id: id ?? `pl-${pos}`, role, overall, name: `X ${id ?? pos}` }),
+  player: createTestPlayer({ id: id ?? `pl-${pos}`, role, overall, name: `X ${id ?? pos++}` }),
   purchasePrice: price,
-  isStarter: false,
-  formationPosition: pos++,
 });
 
 describe('auctionHighlights', () => {
@@ -34,9 +32,15 @@ describe('auctionHighlights', () => {
     expect(bargain!.team.name).toBe('Alfa');
   });
 
-  it('rosa più forte: media overall più alta', () => {
-    const a = createTestTeam({ name: 'Alfa', roster: [own('P', 80, 1), own('D', 90, 1)] });
-    const b = createTestTeam({ name: 'Beta', roster: [own('P', 90, 1), own('D', 90, 1)] });
+  it('rosa più forte: valuta gli otto titolari di rose complete', () => {
+    const fullRoster = (overall: number) => [
+      own('P', overall, 1),
+      ...Array.from({ length: 4 }, () => own('D', overall, 1)),
+      ...Array.from({ length: 4 }, () => own('C', overall, 1)),
+      ...Array.from({ length: 3 }, () => own('A', overall, 1)),
+    ].map((owned, index) => ({ ...owned, player: { ...owned.player, team: `Club ${index}` } }));
+    const a = createTestTeam({ name: 'Alfa', roster: fullRoster(80) });
+    const b = createTestTeam({ name: 'Beta', roster: fullRoster(90) });
     const { strongest } = auctionHighlights([a, b]);
     expect(strongest!.team.name).toBe('Beta');
     expect(strongest!.strength).toBeCloseTo(90);

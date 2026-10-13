@@ -1,8 +1,9 @@
 import { BotConfig, DifficultyLevel, Player, Team, TOTAL_ROSTER_SIZE } from '../../types';
-import { ROLE_ORDER, getMaxBid, getRemainingSlots, getTotalRemainingSlots, needsRole } from './rules';
-import { MarketSnapshot, getExpectedSpend, getFairPrice } from './market';
+import { getMaxBid, getTotalRemainingSlots, needsRole } from './rules';
+import { MarketSnapshot, getFairPrice } from './market';
 import { createRng, hashSeed } from './rng';
 import { ARCHETYPE_PROFILES, MAX_SOFT_CAP_SHARE } from './personalities';
+import { BENCH_CAP_SHARE, BENCH_EXPECTED_PRICE, BENCH_VALUE, getSquadPlan, isStarterTarget } from './squadPlan';
 
 /**
  * Valutazione dei bot: quanto è disposto a spendere un bot per un giocatore.
@@ -47,7 +48,7 @@ export const DIFFICULTY_PROFILES: Record<DifficultyLevel, DifficultyProfile> = {
     personalityWeight: 1,
   },
   difficile: {
-    valueFactor: 1.05,
+    valueFactor: 1.1,
     noise: 0.05,
     wealthSensitivity: 1.0,
     callTemperature: 0.08,
@@ -65,6 +66,7 @@ export const PUPILLO_PACING_FACTOR = 0.5;
 export interface ValuationContext {
   teams: Team[];
   market: MarketSnapshot;
+  pool?: Player[];
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -99,14 +101,13 @@ interface ValuationCache {
   leagueSlots?: number;
   wealthAdj: Map<string, number>;
   rivalCap: Map<string, number>;
-  pacingSpend: Map<string, number>;
 }
 const valuationCaches = new WeakMap<ValuationContext, ValuationCache>();
 
 function ctxCache(ctx: ValuationContext): ValuationCache {
   let c = valuationCaches.get(ctx);
   if (!c) {
-    c = { wealthAdj: new Map(), rivalCap: new Map(), pacingSpend: new Map() };
+    c = { wealthAdj: new Map(), rivalCap: new Map() };
     valuationCaches.set(ctx, c);
   }
   return c;
@@ -189,6 +190,11 @@ export function getBotLimit(
   const isPupillo = config.pupilli.includes(player.id);
   const rolePref = clamp(config.rolePreferences[player.role], 0.88, 1.12);
   const starFactor = getStarFactor(config, player, ctx.market);
+  const plan = getSquadPlan(bot, ctx);
+  const ownedRole = bot.roster.filter(owned => owned.player.role === player.role).map(owned => owned.player);
+  const weakestOwned = ownedRole.sort((a, b) => (a.overall ?? a.baseValue) - (b.overall ?? b.baseValue))[0];
+  const preferredOpportunity = config.difficulty === 'difficile' && weakestOwned && (player.overall ?? player.baseValue) >= (weakestOwned.overall ?? weakestOwned.baseValue);
+  const starterTarget = isStarterTarget(bot, player, ctx) || !!preferredOpportunity;
 
   let noise = 1;
   if (lotSeed !== undefined) {
@@ -196,6 +202,11 @@ export function getBotLimit(
     noise = 1 + profile.noise * (2 * u - 1);
   }
 
+  const slotDensity = (plan.starterSlots[player.role] - 2) / 2;
+  const fitBonus = starterTarget ? 1 + 0.08 * clamp(slotDensity, -1, 1) : 1;
+  const qualityGain = preferredOpportunity && weakestOwned
+    ? 1 + 0.5 * clamp(((player.overall ?? player.baseValue) - (weakestOwned.overall ?? weakestOwned.baseValue)) / 45, 0, 1)
+    : 1;
   const raw =
     fair *
     profile.valueFactor *
@@ -204,49 +215,34 @@ export function getBotLimit(
     rolePref *
     starFactor *
     wealthAdj *
+    fitBonus *
+    qualityGain *
+    (starterTarget ? 1 : BENCH_VALUE) *
     noise;
 
   const slots = getTotalRemainingSlots(bot);
+  const freeBudget = Math.max(0, bot.credits - slots);
   const baseShare = isPupillo ? archetype.pupilloMaxShare : archetype.maxShareOfBudget;
-  // Il soft cap si allenta man mano che la rosa si riempie: con 8 slot
-  // vale la quota dell'archetipo, con 2 slot quasi tutto il budget libero
-  // (la riserva per l'ultimo slot la garantisce già il pacingCap)
   const fillProgress = 1 - (slots - 1) / (TOTAL_ROSTER_SIZE - 1);
   const share = Math.min(
     MAX_SOFT_CAP_SHARE,
-    baseShare * config.rolePreferences[player.role] + (1 - baseShare) * fillProgress
+    baseShare * rolePref + (1 - baseShare) * fillProgress
   );
-  const softCap = slots > 1 ? 1 + share * (bot.credits - slots) : Infinity;
-
-  // Piano di spesa: tiene da parte una quota della spesa attesa per gli
-  // altri slot (ai prezzi medi correnti), pesata dalle preferenze di ruolo.
-  // La spesa attesa è fissa per (contesto, bot, ruolo): memoizzata.
-  const spendKey = `${bot.id}:${player.role}`;
-  const cache = ctxCache(ctx);
-  let expectedSpend = cache.pacingSpend.get(spendKey);
-  if (expectedSpend === undefined) {
-    const otherSlots = getRemainingSlots(bot);
-    otherSlots[player.role]--;
-    // Il reparto del giocatore in asta non è pesato: la preferenza non deve
-    // far risparmiare il bot contro sé stesso nel suo reparto focus
-    for (const role of ROLE_ORDER) {
-      if (role !== player.role) otherSlots[role] *= config.rolePreferences[role];
-    }
-    expectedSpend = getExpectedSpend(otherSlots, ctx.market);
-    cache.pacingSpend.set(spendKey, expectedSpend);
-  }
-  const pacingCap =
-    1 +
-    (bot.credits - slots) -
-    archetype.pacingReserve *
-      (isPupillo ? PUPILLO_PACING_FACTOR : 1) *
-      expectedSpend;
+  const softCap = slots > 1 ? 1 + share * freeBudget : Infinity;
+  const roleBudgetCap = starterTarget
+    ? 1 + Math.max(plan.budgetByRole[player.role] * 1.4, freeBudget * 0.2)
+    : Math.max(2, Math.floor(freeBudget * BENCH_CAP_SHARE));
+  const currentExpected = starterTarget
+    ? ctx.market.inflation * ctx.market.avgSurplus[player.role]
+    : BENCH_EXPECTED_PRICE;
+  const pacingSpend = Math.max(0, plan.expectedSpend - currentExpected);
+  const pacingCap = 1 + freeBudget - archetype.pacingReserve * (isPupillo ? PUPILLO_PACING_FACTOR : 1) * pacingSpend;
 
   const rivalCap = getRivalCap(bot, player.role, ctx);
 
   return Math.max(
     1,
-    Math.floor(Math.min(raw, softCap, pacingCap, rivalCap, getMaxBid(bot)))
+    Math.floor(Math.min(raw, softCap, roleBudgetCap, pacingCap, rivalCap, getMaxBid(bot)))
   );
 }
 

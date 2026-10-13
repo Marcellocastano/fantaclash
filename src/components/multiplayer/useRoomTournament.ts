@@ -23,6 +23,7 @@ export function useRoomTournament(): TournamentController {
     myTeamId: projection?.myTeamId ?? null,
     dispatchTournament: noop,
     setTournament: noop,
+    setLineup: noop,
     finishTournament: noop,
     resetGame: () => void leave(),
     inRoom: true,

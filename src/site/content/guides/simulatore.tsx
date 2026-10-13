@@ -21,8 +21,7 @@ export const body: GuideBody = () => (
         su un giocatore che vuoi davvero. Avere il polso già allenato conta.
       </Li>
       <Li>
-        <strong>Quanto vale un giocatore.</strong> Dopo un'asta sai che i portieri buoni costano tra 8 e 15 e che gli
-        ultimi attaccanti partono a poco. Il prezzo giusto non si legge in una lista, si impara facendola.
+        <strong>Quanto vale un giocatore.</strong> Il prezzo dipende dal ruolo, dai crediti degli avversari e dagli slot ancora necessari. Confrontare più aste aiuta a capire quando un'offerta è sostenibile.
       </Li>
       <Li>
         <strong>La gestione dei crediti.</strong> Nessuno si accorge di aver sforato il budget finché non deve
@@ -42,8 +41,7 @@ export const body: GuideBody = () => (
       rigiocarla su un'altra stagione o cambiare strategia.
     </p>
     <p>
-      Dopo l'asta la stagione non finisce: le otto rose entrano in un torneo a eliminazione diretta e guardi le
-      partite con cronaca e pagelle. Così la stessa asta diventa anche una prova di quanto hai comprato bene.
+      Dopo l'asta scegli il modulo e gli otto titolari, poi giochi una coppa a eliminazione diretta oppure due gironi da quattro con ritorno e fase finale. Il modulo e la qualità dei titolari influenzano il motore partita; le riserve non entrano automaticamente.
     </p>
 
     <H2>Due livelli di difficoltà</H2>
@@ -55,7 +53,7 @@ export const body: GuideBody = () => (
 
     <H2>Allenarsi su un'asta vera, più corta</H2>
     <p>
-      L'asta di FantaClash è più corta di una classica asta di fantacalcio: 96 giocatori in listone, 8 per rosa. Il
+      L'asta di FantaClash è più corta di una classica asta di fantacalcio: 144 giocatori in listone, 12 per rosa. Il
       vantaggio è che una sessione dura pochi minuti, e in una serata ne fai tre. Il ritmo del timer, la rotazione dei
       chiamanti e la logica dei rilanci però sono quelli veri: chi si allena qui arriva all'asta reale già abituato.
     </p>

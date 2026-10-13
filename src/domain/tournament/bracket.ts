@@ -22,12 +22,14 @@ export const ROUND_LABELS: Record<TournamentRound, string> = {
   quarterfinals: 'Quarti di finale',
   semifinals: 'Semifinali',
   final: 'Finale',
+  third_place: 'Finale per il terzo posto',
 };
 
 export const ROUND_SHORT: Record<TournamentRound, string> = {
   quarterfinals: 'QF',
   semifinals: 'SF',
   final: 'F',
+  third_place: '3P',
 };
 
 /** Crea il tabellone vuoto con i semi deterministici delle 7 partite */
@@ -59,6 +61,26 @@ export function createBracket(tournamentSeed: number): TournamentBracket {
 }
 
 /** Riempie i quarti con l'ordine del sorteggio: [0] vs [1], [2] vs [3], ... */
+export function createFinalFourBracket(tournamentSeed: number): TournamentBracket {
+  const match = (id: string, round: TournamentRound, index: number, next: BracketMatch['next'], loserNext: BracketMatch['loserNext'] = null): BracketMatch => ({
+    id,
+    round,
+    index,
+    homeId: null,
+    awayId: null,
+    seed: hashSeed(tournamentSeed, id),
+    next,
+    loserNext,
+    winnerId: null,
+  });
+  return [
+    match('SF1', 'semifinals', 0, { matchId: 'F', slot: 'home' }, { matchId: '3P', slot: 'home' }),
+    match('SF2', 'semifinals', 1, { matchId: 'F', slot: 'away' }, { matchId: '3P', slot: 'away' }),
+    match('F', 'final', 0, null),
+    match('3P', 'third_place', 0, null),
+  ];
+}
+
 export function fillQuarterfinals(bracket: TournamentBracket, order: string[]): TournamentBracket {
   return bracket.map(match =>
     match.round === 'quarterfinals'
@@ -77,13 +99,13 @@ export function findMatch(bracket: TournamentBracket, id: string): BracketMatch 
 
 /** Turno in corso (null durante il sorteggio o a torneo concluso) */
 export function currentRound(status: TournamentStatus): TournamentRound | null {
-  return status === 'draw' || status === 'completed' ? null : status;
+  return status === 'draw' || status === 'groups' || status === 'completed' ? null : status;
 }
 
 export function getMatchStatus(state: TournamentState, match: BracketMatch): BracketMatchStatus {
   if (match.winnerId) return 'completed';
   if (state.currentMatchId === match.id) return 'in_progress';
-  if (match.homeId && match.awayId && currentRound(state.status) === match.round) return 'ready';
+  if (match.homeId && match.awayId && (currentRound(state.status) === match.round || state.format === 'groups' && state.status === 'final' && match.round === 'third_place')) return 'ready';
   return 'upcoming';
 }
 

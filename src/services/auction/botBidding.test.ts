@@ -30,7 +30,7 @@ function league() {
       createTestPlayer({ id: `a-${i}`, role: 'A' as const, baseValue: 12 })
     ),
   ];
-  const ctx = { teams: others, market: buildMarketSnapshot(others, pool) };
+  const ctx = { teams: others, market: buildMarketSnapshot(others, pool), pool };
   return { bots, others, ctx, pool };
 }
 
@@ -60,7 +60,7 @@ describe('botBidding', () => {
     const bot = createTestTeam({
       id: 'full-a',
       botConfig: createTestBotConfig('normale'),
-      roster: buildRoster({ A: 2 }),
+      roster: buildRoster({ A: 3 }),
     });
     const rng = createRng(3);
     expect(decideBotBid(bot, makeLot(), ctx, rng)).toBeNull();

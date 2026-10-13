@@ -5,6 +5,7 @@ import { createMemoryNetwork } from './transport/memory';
 import { createRoom } from './roomReducer';
 import { stateHash } from './hash';
 import { buildRoundStart } from './hostTournament';
+import { postAuctionLineupActions } from './testHelpers';
 import { MATCH_LEAD_MS, DECISION_TIMEOUT_MS, MATCH_SPEED } from './constants';
 import { computeTimeline, nextStop } from '../domain/match';
 import { createInitialAuctionState, createRng } from '../services/auction';
@@ -14,7 +15,7 @@ import { LiveMatch, RoomState } from './protocol';
 import { Player, Team } from '../types';
 
 const CODE = 'ABCDE';
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function makePool(): Player[] {
   return [createTestPlayer({ id: 'p1', role: 'P', baseValue: 40 })];
@@ -128,6 +129,7 @@ describe('partita live umano contro umano (host autorevole)', () => {
       teams,
       auction: { ...createInitialAuctionState(makePool()), phase: 'complete' },
     })).toBe(true);
+    for (const action of postAuctionLineupActions(host.getState())) expect(host.dispatch(action)).toBe(true);
     expect(host.dispatch({ type: 'START_TOURNAMENT', seed })).toBe(true);
     expect(host.dispatch({ type: 'TOURNAMENT', action: { type: 'DRAW', order } })).toBe(true);
     await pumpUntil(() => guest.getState()?.phase === 'tournament', 20000);

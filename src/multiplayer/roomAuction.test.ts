@@ -14,7 +14,7 @@ import { Player, Team } from '../types';
 
 const T0 = 1_000_000;
 const CODE = 'ABCDE';
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function makePool(): Player[] {
   return [

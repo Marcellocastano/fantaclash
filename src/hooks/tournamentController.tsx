@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, ReactNode } from 'react';
 import { useGame } from '../context/GameContext';
 import { Team } from '../types';
+import type { Lineup } from '../domain/teams/formations';
 import {
   simulateRemaining,
   TournamentAction,
@@ -19,6 +20,8 @@ export interface TournamentController {
   dispatchTournament: (action: TournamentAction) => void;
   /** Sostituisce lo stato del torneo */
   setTournament: (next: TournamentState) => void;
+  /** Salva la formazione predefinita della squadra */
+  setLineup: (teamId: string, lineup: Lineup) => void;
   /** Simula tutto il resto del torneo e passa alla fase FINALE */
   finishTournament: (next?: TournamentState) => void;
   resetGame: () => void;
@@ -63,6 +66,11 @@ export function useLocalTournament(): TournamentController {
     [dispatch]
   );
 
+  const setLineup = useCallback(
+    (teamId: string, lineup: Lineup) => dispatch({ type: 'SET_TEAM_LINEUP', payload: { teamId, lineup } }),
+    [dispatch]
+  );
+
   const finishTournament = useCallback(
     (next: TournamentState | undefined) => {
       const current = next ?? tournament;
@@ -79,6 +87,7 @@ export function useLocalTournament(): TournamentController {
     myTeamId,
     dispatchTournament,
     setTournament,
+    setLineup,
     finishTournament,
     resetGame,
     inRoom: false,

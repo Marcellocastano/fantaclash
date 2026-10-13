@@ -8,7 +8,7 @@ import { createRng } from '../services/auction';
 import { createTestTeam, buildRoster } from '../test/testUtils';
 import { Team } from '../types';
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function teams(): Team[] {
   return Array.from({ length: 8 }, (_, i) =>

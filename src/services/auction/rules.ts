@@ -12,7 +12,7 @@ export const ROLE_ORDER: PlayerRole[] = ['P', 'D', 'C', 'A'];
 export const LEAGUE_SIZE = 8;
 
 /** Crediti iniziali di ogni squadra */
-export const INITIAL_CREDITS = 100;
+export const INITIAL_CREDITS = 250;
 
 /** Durata del timer del lotto in millisecondi (ogni rilancio lo resetta) */
 export const LOT_DURATION_MS = 5000;

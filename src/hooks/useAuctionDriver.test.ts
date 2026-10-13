@@ -105,7 +105,7 @@ describe('useAuctionDriver', () => {
 
   it('il lotto si chiude alla deadline quando nessuno rilancia', () => {
     // Rose complete: nessun bot ha bisogno del ruolo -> nessun rilancio
-    const fullRoster = buildRoster({ P: 1, D: 2, C: 3, A: 2 });
+    const fullRoster = buildRoster({ P: 1, D: 4, C: 4, A: 3 });
     const bots = makeTeams({ roster: fullRoster });
     const { actions, step, getWorld } = setup(biddingWorld(bots));
     for (let i = 0; i < 60 && getWorld().auction.phase !== 'sold'; i++) step(100);
@@ -135,7 +135,7 @@ describe('useAuctionDriver', () => {
   // ------------------------------------------------------------------
 
   it('closeGraceMs ritarda la chiusura del lotto oltre la deadline', () => {
-    const fullRoster = buildRoster({ P: 1, D: 2, C: 3, A: 2 });
+    const fullRoster = buildRoster({ P: 1, D: 4, C: 4, A: 3 });
     const { actions, step, getWorld } = setup(biddingWorld(makeTeams({ roster: fullRoster })), true, {
       closeGraceMs: 500,
     });
@@ -159,8 +159,8 @@ describe('useAuctionDriver', () => {
       createTestPlayer({ id: 'p1', role: 'P', baseValue: 40 }),
       createTestPlayer({ id: 'c1', role: 'C', baseValue: 30 }),
     ];
-    const teams = makeTeams({ roster: buildRoster({ P: 1, D: 2, C: 3, A: 2 }) });
-    teams[0] = { ...teams[0], roster: buildRoster({ D: 2, A: 2 }) };
+    const teams = makeTeams({ roster: buildRoster({ P: 1, D: 4, C: 4, A: 3 }) });
+    teams[0] = { ...teams[0], roster: buildRoster({ D: 4, C: 3, A: 3 }) };
     let w: AuctionWorld = { teams, auction: createInitialAuctionState(pool) };
     w = auctionReducer(w, { type: 'START', callingOrder: ['me', 'b1', 'b2'] });
     w = auctionReducer(w, { type: 'CALL_PLAYER', teamId: 'me', playerId: 'p1', now: Date.now(), seed: 5 });
@@ -182,8 +182,8 @@ describe('useAuctionDriver', () => {
       createTestPlayer({ id: 'p1', role: 'P', baseValue: 40 }),
       createTestPlayer({ id: 'c1', role: 'C', baseValue: 30 }),
     ];
-    const teams = makeTeams({ roster: buildRoster({ P: 1, D: 2, C: 3, A: 2 }) });
-    teams[0] = { ...teams[0], roster: buildRoster({ D: 2, A: 2 }) };
+    const teams = makeTeams({ roster: buildRoster({ P: 1, D: 4, C: 4, A: 3 }) });
+    teams[0] = { ...teams[0], roster: buildRoster({ D: 4, C: 3, A: 3 }) };
     let w: AuctionWorld = { teams, auction: createInitialAuctionState(pool) };
     w = auctionReducer(w, { type: 'START', callingOrder: ['me', 'b1', 'b2'] });
     w = auctionReducer(w, { type: 'CALL_PLAYER', teamId: 'me', playerId: 'p1', now: Date.now(), seed: 5 });

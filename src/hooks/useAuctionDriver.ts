@@ -212,6 +212,7 @@ export function useAuctionDriver({
     const ctx: ValuationContext = {
       teams: w.teams,
       market: buildMarketSnapshot(w.teams, w.auction.remainingPlayers),
+      pool: w.auction.remainingPlayers,
     };
     const responder = chooseBotResponder(bots, currentLot, ctx, Math.random);
     if (!responder) {

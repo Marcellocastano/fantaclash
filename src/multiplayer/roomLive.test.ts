@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { createRoom, roomReducer } from './roomReducer';
 import { createHostBook, handleIntent } from './host';
-import { buildBotRecords, buildRoundStart, liveHumanSides } from './hostTournament';
-import { findMatch, roundMatches, simulateBracketMatch } from '../domain/tournament';
+import { buildBotRecords, buildLineupWindow, buildRoundStart, liveHumanSides } from './hostTournament';
+import { postAuctionLineupActions } from './testHelpers';
+import { findCompetitionMatch, findMatch, roundMatches, simulateBracketMatch, simulateCompetitionMatch } from '../domain/tournament';
 import { createInitialAuctionState } from '../services/auction';
 import { resultHash } from './hash';
 import { buildRoster, createTestBotConfig, createTestPlayer, createTestTeam } from '../test/testUtils';
 import { RoomState } from './protocol';
 import { Team } from '../types';
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function teams(): Team[] {
   const mk = (id: string, ownerId: string | null): Team =>
@@ -34,6 +35,7 @@ function tournamentRoom(): RoomState {
     teams: teams(),
     auction: { ...createInitialAuctionState([createTestPlayer({ id: 'p1', role: 'P' })]), phase: 'complete' },
   });
+  for (const action of postAuctionLineupActions(s)) s = roomReducer(s, action);
   s = roomReducer(s, { type: 'START_TOURNAMENT', seed: 7 });
   // th vs tc ai quarti
   const order = ['th', 'tc', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
@@ -44,6 +46,37 @@ function tournamentRoom(): RoomState {
 const QF0 = () => roundMatches(tournamentRoom().tournament!.bracket, 'quarterfinals')[0].id;
 
 describe('partite live: reducer, intenti, helper host', () => {
+  it('avvia le partite live dei gironi con formazione condivisa e senza rigori', () => {
+    let state = createRoom({
+      code: 'ABCDE', hostId: 'h1', host: { nickname: 'H', teamName: 'T' },
+      settings: { season: '2024-25', difficulty: 'normale', format: 'groups' }, now: 1000,
+    });
+    state = roomReducer(state, {
+      type: 'START_AUCTION', teams: teams(),
+      auction: { ...createInitialAuctionState([createTestPlayer({ id: 'p1', role: 'P' })]), phase: 'complete' },
+    });
+    for (const action of postAuctionLineupActions(state)) state = roomReducer(state, action);
+    state = roomReducer(state, { type: 'START_TOURNAMENT', seed: 7 });
+    state = roomReducer(state, { type: 'TOURNAMENT', action: { type: 'DRAW', order: ['th', 'tc', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6'] } });
+    const window = buildLineupWindow(state, 'pre_stage', 30_000)!;
+    expect(window.type).toBe('LINEUP_WINDOW');
+    if (window.type !== 'LINEUP_WINDOW') return;
+    expect(window.window.teamIds).toEqual(['th', 'tc']);
+    state = roomReducer(state, window);
+    state = roomReducer(state, { type: 'SET_LINEUPS', lineups: Object.fromEntries(state.teams.map(team => [team.id, team.lineup!])) });
+    const starts = buildRoundStart(state, 5000);
+    expect(starts).toHaveLength(2);
+    for (const action of starts) {
+      if (action.type !== 'MATCH_START') continue;
+      state = roomReducer(state, action);
+      const match = findCompetitionMatch(state.tournament!, action.matchId)!;
+      const result = simulateCompetitionMatch(state.tournament!, state.teams, match.id, {});
+      expect(result.shootout).toBeNull();
+      expect(result.formations.home).toBeTruthy();
+      expect(result.formations.away).toBeTruthy();
+    }
+  });
+
   it('MATCH_START crea la live solo per partite ready e non live', () => {
     const s = tournamentRoom();
     const id = QF0();

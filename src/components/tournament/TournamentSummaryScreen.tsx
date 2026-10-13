@@ -7,6 +7,7 @@ import { Footer } from '../Footer';
 import { Icon, IconName } from '../Icon';
 import { StreamerReserve } from '../layout/GameShell';
 import { TournamentBracket } from './TournamentBracket';
+import { FinalFourBracket } from './FinalFourBracket';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { useSummaryCard } from './useSummaryCard';
 import { useCountUp } from '../../hooks/useCountUp';
@@ -16,6 +17,9 @@ const PLACEMENT_TONE: Record<TournamentSummary['placement'], string> = {
   finalista: 'bg-tier-silver-bg text-ink',
   semifinalista: 'bg-tier-bronze-bg text-ink',
   quarti: 'bg-ink text-canvas',
+  terzo: 'bg-tier-bronze-bg text-ink',
+  quarto: 'bg-surface text-ink',
+  fuori_ai_gironi: 'bg-ink text-canvas',
 };
 
 /**
@@ -127,6 +131,11 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
               {summary.tournamentName} · Serie A {summary.seasonId}
               {summary.championName && !champion && <> · coppa a {summary.championName}</>}
             </p>
+            {summary.groupRecord && (
+              <p className="mt-3 inline-block border-2 border-ink bg-surface px-3 py-2 font-semibold text-ink">
+                Girone: {summary.groupRecord.position}° · {summary.groupRecord.points} punti · {summary.groupRecord.wins}V {summary.groupRecord.draws}N {summary.groupRecord.losses}P
+              </p>
+            )}
 
             <StatBlocks stats={summary.stats} />
             {summary.mvp && (
@@ -151,9 +160,24 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
           </div>
         </div>
 
-        <section className="mt-20">
-          <h2 className="section-heading mb-8">Il tuo torneo</h2>
-          <TournamentBracket tournament={tournament} />
+        {summary.groupRecord && (
+          <section className="mt-16" aria-label="Risultati della squadra nei gironi">
+            <h2 className="section-heading mb-4">Le tue partite</h2>
+            <ol className="divide-y-2 divide-line border-y-2 border-ink">
+              {summary.matches.map(match => (
+                <li key={match.matchId} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-2">
+                  <span className="font-display text-lg font-black text-ink-muted">{match.roundShort}</span>
+                  <span className="truncate text-sm font-semibold text-ink">vs {match.opponentName}</span>
+                  <span className="font-display text-xl font-black tabular-nums text-ink">{match.goalsFor}-{match.goalsAgainst}</span>
+                  <span className={`w-6 text-center font-black ${match.draw ? 'text-ink-muted' : match.won ? 'text-pitch' : 'text-danger'}`}>{match.draw ? 'N' : match.won ? 'V' : 'P'}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+        <section className="mt-16" aria-label="Tabellone finale">
+          <h2 className="section-heading mb-8">{summary.groupRecord ? 'Fase finale' : 'Il tuo torneo'}</h2>
+          {summary.groupRecord ? <FinalFourBracket tournament={tournament} /> : <TournamentBracket tournament={tournament} />}
         </section>
         </main>
         <Footer linkGroups={[]} />
@@ -164,19 +188,21 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
 
 const STAT_STYLE = [
   { label: 'Vittorie', cls: 'bg-pitch text-on-pitch', tilt: '-rotate-1' },
-  { label: 'Gol fatti', cls: 'bg-highlight text-on-highlight', tilt: 'rotate-1' },
-  { label: 'Gol subiti', cls: 'bg-whistle text-on-whistle', tilt: '-rotate-1' },
-  { label: 'Porte inviolate', cls: 'bg-ink text-canvas', tilt: 'rotate-1' },
+  { label: 'Pareggi', cls: 'bg-surface text-ink', tilt: 'rotate-1' },
+  { label: 'Gol fatti', cls: 'bg-highlight text-on-highlight', tilt: '-rotate-1' },
+  { label: 'Gol subiti', cls: 'bg-whistle text-on-whistle', tilt: 'rotate-1' },
+  { label: 'Porte inviolate', cls: 'bg-ink text-canvas', tilt: '-rotate-1' },
 ];
 
 function StatBlocks({ stats }: { stats: TournamentSummary['stats'] }) {
   const wins = useCountUp(stats.wins);
+  const draws = useCountUp(stats.draws);
   const gf = useCountUp(stats.goalsFor);
   const ga = useCountUp(stats.goalsAgainst);
   const cs = useCountUp(stats.cleanSheets);
-  const values = [`${wins}/${stats.played}`, gf, ga, cs];
+  const values = [`${wins}/${stats.played}`, draws, gf, ga, cs];
   return (
-    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-10">
+    <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mt-10">
       {STAT_STYLE.map((s, i) => (
         <div key={s.label} className={s.tilt}>
           <div

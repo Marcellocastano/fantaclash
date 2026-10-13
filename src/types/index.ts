@@ -1,4 +1,5 @@
-import type { TournamentState } from '../domain/tournament/tournamentTypes';
+import type { Lineup, FormationId } from '../domain/teams/formations.js';
+import type { TournamentState } from '../domain/tournament/tournamentTypes.js';
 
 /**
  * Ruoli dei calciatori nel Fantacalcio
@@ -13,7 +14,9 @@ export type DifficultyLevel = 'normale' | 'difficile';
 /**
  * Stati possibili del gioco
  */
-export type GamePhase = 'SETUP' | 'ASTA' | 'TORNEO' | 'FINALE';
+export type GamePhase = 'SETUP' | 'ASTA' | 'FORMAZIONE' | 'TORNEO' | 'FINALE';
+
+export type CompetitionFormat = 'knockout' | 'groups';
 
 /**
  * Rappresenta un calciatore nel database
@@ -75,10 +78,6 @@ export interface OwnedPlayer {
   player: Player;
   /** Prezzo di acquisto all'asta */
   purchasePrice: number;
-  /** Se il giocatore è titolare nella formazione */
-  isStarter: boolean;
-  /** Posizione nella formazione (1-8, modulo 1-2-3-2, niente panchina) */
-  formationPosition: number;
 }
 
 /**
@@ -103,6 +102,8 @@ export interface BotConfig {
   rolePreferences: Record<PlayerRole, number>;
   /** ID dei "pupilli" del bot (solo archetipo cacciatore) */
   pupilli: string[];
+  /** Modulo tattico preferito dal bot */
+  preferredFormation: FormationId;
 }
 
 /**
@@ -130,16 +131,18 @@ export interface Team {
   controller?: 'human' | 'bot' | 'autopilot';
   /** ID del giocatore remoto proprietario della squadra (multiplayer) */
   ownerId?: string;
+  /** Formazione predefinita salvata per la squadra */
+  lineup?: Lineup;
 }
 
 /**
  * Slot richiesti per completare la rosa
  */
 export interface RosterRequirements {
-  P: { min: number; max: number; current: number };
-  D: { min: number; max: number; current: number };
-  C: { min: number; max: number; current: number };
-  A: { min: number; max: number; current: number };
+  P: { total: number };
+  D: { total: number };
+  C: { total: number };
+  A: { total: number };
 }
 
 /**
@@ -221,6 +224,8 @@ export interface GameConfig {
   difficulty: DifficultyLevel;
   /** Stagione storica da cui caricare i giocatori */
   season: string;
+  /** Formato della competizione */
+  format: CompetitionFormat;
 }
 
 /**
@@ -240,19 +245,20 @@ export interface GameState {
 }
 
 /**
- * Requisiti rosa per il formato 1-2-3-2 senza panchina
+ * Requisiti della rosa: 1 portiere, 4 difensori, 4 centrocampisti, 3 attaccanti
  */
-export const ROSTER_REQUIREMENTS: Record<PlayerRole, { starter: number; bench: number; total: number }> = {
-  P: { starter: 1, bench: 0, total: 1 },
-  D: { starter: 2, bench: 0, total: 2 },
-  C: { starter: 3, bench: 0, total: 3 },
-  A: { starter: 2, bench: 0, total: 2 },
+export const ROSTER_REQUIREMENTS: Record<PlayerRole, { total: number }> = {
+  P: { total: 1 },
+  D: { total: 4 },
+  C: { total: 4 },
+  A: { total: 3 },
 };
 
-/**
- * Numero totale di giocatori per rosa
- */
-export const TOTAL_ROSTER_SIZE = 8;
+/** Numero totale di giocatori per rosa */
+export const TOTAL_ROSTER_SIZE = 12;
+
+/** Numero di titolari in campo, portiere incluso */
+export const STARTERS_COUNT = 8;
 
 /**
  * Bonus/Malus per il calcolo del Fanta-voto

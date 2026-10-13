@@ -21,7 +21,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'Con quali stagioni si gioca?',
     answer:
-      "Con 23 annate della Serie A, dalla 2003-04 alla 2025-26. Ogni stagione ha il suo listone di 96 giocatori reali, con le statistiche di quell'anno.",
+      "Con 23 annate della Serie A, dalla 2003-04 alla 2025-26. Ogni stagione ha il suo listone di 144 giocatori reali, con le statistiche di quell'anno.",
   },
   {
     question: "Cos'è l'overall?",
@@ -31,22 +31,22 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Come funziona l'asta?",
     answer:
-      "Otto squadre con 100 crediti ciascuna si contendono i giocatori, reparto per reparto: portieri, difensori, centrocampisti e attaccanti. Chi chiama il giocatore parte da un credito, gli altri rilanciano; il cronometro torna a 5 secondi a ogni rilancio. Vince chi offre di più.",
+      "Otto squadre con 250 crediti ciascuna si contendono i giocatori, reparto per reparto: portieri, difensori, centrocampisti e attaccanti. Chi chiama il giocatore parte da un credito, gli altri rilanciano; il cronometro torna a 5 secondi a ogni rilancio. Vince chi offre di più.",
   },
   {
     question: 'Quanti giocatori compra ogni squadra?',
     answer:
-      'Otto, con modulo fisso 1-2-3-2: un portiere, due difensori, tre centrocampisti e due attaccanti. Niente panchina.',
+      'Dodici: un portiere, quattro difensori, quattro centrocampisti e tre attaccanti. Ne schieri otto scegliendo uno dei sei moduli; quattro sono riserve senza cambi automatici.',
   },
   {
     question: 'Cosa succede dopo l\u2019asta?',
     answer:
-      "Le otto squadre giocano una coppa a eliminazione diretta: quarti, semifinali e finale, con sorteggio e rigori in caso di pareggio. La tua partita la guardi e la guidi scegliendo lo stile di gioco; se si va ai rigori scegli anche l'ordine dei rigoristi.",
+      "Puoi scegliere la coppa a eliminazione diretta (quarti, semifinale, finale) oppure due gironi da quattro con andata e ritorno, semifinali, finale e finale per il terzo posto. Nei gironi il pareggio vale un punto; in eliminazione diretta si va ai rigori. Prima di ogni partita scegli modulo e titolari.",
   },
   {
     question: 'Posso giocare contro i miei amici?',
     answer:
-      "Non ancora: gli avversari sono bot con personalità diverse. Il multiplayer è tra le idee per il futuro, insieme alle partite personalizzate.",
+      "Sì, quando il multiplayer è attivo nella versione del sito: crea una stanza, invita da 1 a 7 amici con il codice e giocate insieme all'asta e alle partite. I bot completano i posti liberi.",
   },
   {
     question: 'La partita si salva se chiudo la pagina?',

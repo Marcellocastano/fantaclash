@@ -17,6 +17,7 @@ import {
   simulateBracketMatch,
 } from '../domain/tournament';
 import { createTestPlayer } from '../test/testUtils';
+import { postAuctionLineupActions } from './testHelpers';
 import { Player, PlayerRole } from '../types';
 
 const T0 = 1_000_000;
@@ -24,9 +25,9 @@ const rng = createRng(1234);
 let now = T0;
 const tick = (ms = 100) => (now += ms);
 
-/** Pool minimo per 8 squadre: 96 giocatori (1.5x8 per slot di ruolo) */
+/** Pool ridotto per otto squadre con rosa da dodici */
 function makePool(): Player[] {
-  const counts: Record<PlayerRole, number> = { P: 12, D: 24, C: 36, A: 24 };
+  const counts: Record<PlayerRole, number> = { P: 12, D: 48, C: 48, A: 36 };
   const pool: Player[] = [];
   for (const role of ROLE_ORDER) {
     for (let i = 0; i < counts[role]; i++) {
@@ -79,7 +80,7 @@ describe('simulazione stanza completa (host autorevole)', () => {
     let host = createRoom({
       code: 'ABCDE', hostId: 'h1',
       host: { nickname: 'Host', teamName: 'Host FC' },
-      settings: { season: '2024-25', difficulty: 'normale' },
+      settings: { season: '2024-25', difficulty: 'normale', format: 'knockout' },
       now: T0,
     });
     for (const id of ['p2', 'p3']) {
@@ -115,13 +116,16 @@ describe('simulazione stanza completa (host autorevole)', () => {
     // Invarianti di fine asta
     for (const t of host.teams) {
       expect(t.credits).toBeGreaterThanOrEqual(0);
-      expect(t.roster).toHaveLength(8);
+      expect(t.roster).toHaveLength(12);
     }
     const assignedIds = host.teams.flatMap(t => t.roster.map(o => o.player.id));
     expect(new Set(assignedIds).size).toBe(assignedIds.length);
-    expect(assignedIds).toHaveLength(64);
+    expect(assignedIds).toHaveLength(96);
 
-    // Torneo: sorteggio + tutte le partite via MATCH_RECORD verificato
+    // Formazioni sincronizzate, quindi torneo + sorteggio
+    for (const action of postAuctionLineupActions(host)) {
+      ({ host, client } = applyBoth(host, client, ++rev, action));
+    }
     ({ host, client } = applyBoth(host, client, ++rev, { type: 'START_TOURNAMENT', seed: 777 }));
     const order = drawOrder(host.tournament!, rng);
     ({ host, client } = applyBoth(host, client, ++rev, { type: 'TOURNAMENT', action: { type: 'DRAW', order } }));

@@ -98,7 +98,7 @@ export function EntryScreen({
       await onCreate({
         nickname: nickname.trim(),
         teamName: teamName.trim(),
-        settings: { season, difficulty: 'normale', cupName: cupName.trim() || undefined },
+        settings: { season, difficulty: 'normale', format: 'knockout', cupName: cupName.trim() || undefined },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore nella creazione della stanza');

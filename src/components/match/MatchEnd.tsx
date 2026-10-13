@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { formatMinute, LineupPlayer, MatchPlayerPerformance, MatchResult, shortName } from '../../domain/match';
 import { TournamentRound } from '../../domain/tournament';
+
+type MatchStage = TournamentRound | 'groups';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
 import { OvrBadge } from '../player/OvrBadge';
@@ -8,17 +10,19 @@ import { OvrBadge } from '../player/OvrBadge';
 interface MatchEndProps {
   result: MatchResult;
   userTeamId: string;
-  round: TournamentRound;
+  round: MatchStage;
   onContinue: () => void;
   onConclude: () => void;
   /** Stanza: sostituisce i due pulsanti con un'unica uscita locale */
   exitLabel?: string;
 }
 
-const NEXT_LABEL: Record<TournamentRound, string> = {
+const NEXT_LABEL: Record<MatchStage, string> = {
   quarterfinals: 'Avanti: semifinale',
   semifinals: 'Avanti: finale',
   final: 'Alla premiazione',
+  third_place: 'Alla premiazione',
+  groups: 'Prosegui al turno successivo',
 };
 
 const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
@@ -31,6 +35,8 @@ const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
 export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, exitLabel }: MatchEndProps) {
   const won = result.winnerId === userTeamId;
   const champion = won && round === 'final';
+  const draw = result.winnerId === null;
+  const groupMatch = round === 'groups';
   const userSide = result.homeTeamId === userTeamId ? 'home' : 'away';
   const lineup = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, p]));
   const name = (id: string | undefined) => shortName(lineup.get(id ?? '')?.name ?? '');
@@ -45,9 +51,9 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, ex
   return (
     <div className="motion-safe:animate-reveal">
       {/* Esito */}
-      <div className={`border-2 border-ink shadow-block px-6 py-6 text-center ${won ? 'bg-highlight text-on-highlight' : 'bg-ink text-canvas'}`}>
+      <div className={`border-2 border-ink shadow-block px-6 py-6 text-center ${won ? 'bg-highlight text-on-highlight' : draw ? 'bg-surface text-ink' : 'bg-ink text-canvas'}`}>
         <p className="font-display text-5xl md:text-8xl font-black leading-none motion-safe:animate-stamp break-words">
-          {champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO'}
+          {champion ? 'CAMPIONE!' : draw ? 'PAREGGIO' : groupMatch ? 'PUNTI IN CLASSIFICA' : won ? 'PASSI IL TURNO' : 'ELIMINATO'}
         </p>
         <p className="font-display text-2xl sm:text-3xl font-extrabold mt-3 tabular-nums break-words">
           {result.homeName} {result.homeScore}-{result.awayScore} {result.awayName}
@@ -110,8 +116,8 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, ex
       </div>
 
       <div className="mt-12 text-center">
-        <button onClick={won ? onContinue : onConclude} className="btn-cta">
-          {exitLabel ?? (won ? NEXT_LABEL[round] : 'Concludi torneo')}
+        <button onClick={groupMatch || won ? onContinue : onConclude} className="btn-cta">
+          {exitLabel ?? (groupMatch || won ? NEXT_LABEL[round] : 'Concludi torneo')}
           <Icon name="arrow" className="w-7 h-7" />
         </button>
       </div>

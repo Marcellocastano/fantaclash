@@ -14,18 +14,18 @@ import {
 import { PLAYERS_DATABASE } from '../../mock/players';
 import { buildRoster, createTestPlayer, createTestTeam } from '../../test/testUtils';
 
-const FULL_ROSTER = { P: 1, D: 2, C: 3, A: 2 };
+const FULL_ROSTER = { P: 1, D: 4, C: 4, A: 3 };
 
 describe('rules', () => {
   describe('getRemainingSlots / getTotalRemainingSlots', () => {
-    it('rosa vuota richiede P1 D2 C3 A2', () => {
+    it('rosa vuota richiede P1 D4 C4 A3', () => {
       const team = createTestTeam();
-      expect(getRemainingSlots(team)).toEqual({ P: 1, D: 2, C: 3, A: 2 });
-      expect(getTotalRemainingSlots(team)).toBe(8);
+      expect(getRemainingSlots(team)).toEqual({ P: 1, D: 4, C: 4, A: 3 });
+      expect(getTotalRemainingSlots(team)).toBe(12);
     });
 
     it('conta solo gli slot fino al requisito (extra ignorati)', () => {
-      const team = createTestTeam({ roster: buildRoster({ P: 2, D: 2, C: 3, A: 2 }) });
+      const team = createTestTeam({ roster: buildRoster({ P: 2, D: 4, C: 4, A: 3 }) });
       expect(getRemainingSlots(team)).toEqual({ P: 0, D: 0, C: 0, A: 0 });
       expect(getTotalRemainingSlots(team)).toBe(0);
     });
@@ -35,21 +35,21 @@ describe('rules', () => {
       const first = getRemainingSlots(team);
       first.P = 99;
       first.A = -5;
-      expect(getRemainingSlots(team)).toEqual({ P: 0, D: 2, C: 3, A: 2 });
-      expect(getTotalRemainingSlots(team)).toBe(7);
+      expect(getRemainingSlots(team)).toEqual({ P: 0, D: 4, C: 4, A: 3 });
+      expect(getTotalRemainingSlots(team)).toBe(11);
     });
   });
 
   describe('getMaxBid', () => {
-    it('100 crediti e 8 slot -> 93', () => {
-      const team = createTestTeam({ credits: 100 });
-      expect(getMaxBid(team)).toBe(93);
+    it('250 crediti e 12 slot -> 239', () => {
+      const team = createTestTeam({ credits: 250 });
+      expect(getMaxBid(team)).toBe(239);
     });
 
     it('ultimo slot -> tutti i crediti', () => {
       const team = createTestTeam({
         credits: 23,
-        roster: buildRoster({ P: 1, D: 2, C: 3, A: 1 }),
+        roster: buildRoster({ P: 1, D: 4, C: 4, A: 2 }),
       });
       expect(getMaxBid(team)).toBe(23);
     });
@@ -65,8 +65,8 @@ describe('rules', () => {
 
     it('vero se servono il ruolo e l\'offerta è entro il massimo', () => {
       const team = createTestTeam({ credits: 100 });
-      expect(canBid(team, player, 93)).toBe(true);
-      expect(canBid(team, player, 94)).toBe(false);
+      expect(canBid(team, player, 89)).toBe(true);
+      expect(canBid(team, player, 90)).toBe(false);
     });
 
     it('falso se il ruolo è già completo', () => {
@@ -140,11 +140,11 @@ describe('rules', () => {
     const poolPlayer = (id: string, baseValue: number, avgRating = 6, name = id) =>
       createTestPlayer({ id, role: 'P', baseValue, avgRating, name });
 
-    it('per n=8 prende P12 D24 C36 A24, i migliori per baseValue', () => {
+    it('per n=8 prende P12 D48 C48 A36, i migliori per baseValue', () => {
       const pool = buildAuctionPool(PLAYERS_DATABASE, 8);
       const counts = { P: 0, D: 0, C: 0, A: 0 };
       for (const p of pool) counts[p.role]++;
-      expect(counts).toEqual({ P: 12, D: 24, C: 36, A: 24 });
+      expect(counts).toEqual({ P: 12, D: 48, C: 48, A: 36 });
 
       // Ogni ruolo prende i migliori baseValue del database
       for (const role of ROLE_ORDER) {
@@ -157,11 +157,11 @@ describe('rules', () => {
       }
     });
 
-    it('per n=12 prende P18 D36 C54 A36', () => {
+    it('per n=12 prende P18 D72 C72 A54', () => {
       const pool = buildAuctionPool(PLAYERS_DATABASE, 12);
       const counts = { P: 0, D: 0, C: 0, A: 0 };
       for (const p of pool) counts[p.role]++;
-      expect(counts).toEqual({ P: 18, D: 36, C: 54, A: 36 });
+      expect(counts).toEqual({ P: 18, D: 57, C: 56, A: 43 });
     });
 
     it('ordinamento deterministico: baseValue desc, avgRating desc, nome asc', () => {

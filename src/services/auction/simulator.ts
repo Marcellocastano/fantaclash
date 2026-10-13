@@ -30,6 +30,7 @@ export const AUTOPILOT_BOT_CONFIG: BotConfig = {
   archetype: 'equilibrato',
   rolePreferences: { P: 1, D: 1, C: 1, A: 1 },
   pupilli: [],
+  preferredFormation: '2-3-2',
 };
 
 /**
@@ -150,7 +151,7 @@ export function runAuction(world: AuctionWorld, opts: RunOptions): AuctionWorld 
         const key = `${lot.player.id}:${lot.seed}`;
         if (lotSnapshotKey !== key || !lotCtx) {
           lotSnapshotKey = key;
-          lotCtx = { teams, market: buildMarketSnapshot(teams, auction.remainingPlayers) };
+          lotCtx = { teams, market: buildMarketSnapshot(teams, auction.remainingPlayers), pool: auction.remainingPlayers };
         }
 
         const bidders = teams

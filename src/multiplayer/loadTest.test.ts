@@ -8,15 +8,17 @@ import { RoomState } from './protocol';
 import { createRng, getCurrentCallerId, ROLE_ORDER } from '../services/auction';
 import { createTestPlayer } from '../test/testUtils';
 import { Player, PlayerRole } from '../types';
-import { buildBotRecords, buildDraw, buildRoundStart, buildStartTournament } from './hostTournament';
+import { buildBotRecords, buildDraw, buildLineupWindow, buildRoundStart, buildStartTournament } from './hostTournament';
 import { currentRound, roundMatches } from '../domain/tournament';
-import { MATCH_LEAD_MS } from './constants';
+import { LINEUP_PRE_STAGE_MS, MATCH_LEAD_MS } from './constants';
+import { bestLineup } from '../domain/teams/formations';
+import { postAuctionLineupActions } from './testHelpers';
 
 const T0 = 1_000_000;
 const CODE = 'ABCDE';
 
 function makePool(): Player[] {
-  const counts: Record<PlayerRole, number> = { P: 12, D: 24, C: 36, A: 24 };
+  const counts: Record<PlayerRole, number> = { P: 12, D: 48, C: 48, A: 36 };
   const pool: Player[] = [];
   for (const role of ROLE_ORDER) {
     for (let i = 0; i < counts[role]; i++) {
@@ -119,6 +121,7 @@ describe('prova di carico (rete in memoria)', () => {
       await pump(30);
     }
     expect(host.getState().auction?.phase).toBe('complete');
+    for (const action of postAuctionLineupActions(host.getState())) host.dispatch(action);
 
     // --- Torneo con partite live fino alla finale ---
     host.dispatch(buildStartTournament(rng));
@@ -140,10 +143,21 @@ describe('prova di carico (rete in memoria)', () => {
         ? roundMatches(s.tournament!.bracket, round).filter(m => !s.tournament!.matches[m.id] && !s.live[m.id])
         : [];
       if (ready.length > 0) {
+        const lineupWindow = buildLineupWindow(s, 'pre_stage', Date.now() + LINEUP_PRE_STAGE_MS);
+        if (lineupWindow) {
+          host.dispatch(lineupWindow);
+          const current = host.getState();
+          const lineups = Object.fromEntries(current.teams.map(team => [
+            team.id,
+            team.lineup ?? bestLineup(team.roster, team.botConfig?.preferredFormation ?? '2-3-2'),
+          ]));
+          host.dispatch({ type: 'SET_LINEUPS', lineups });
+        }
+        const current = host.getState();
         const startAt = Date.now() + MATCH_LEAD_MS;
-        for (const a2 of buildRoundStart(s, startAt)) host.dispatch(a2);
+        for (const a2 of buildRoundStart(current, startAt)) host.dispatch(a2);
         // le partite tra soli bot le registra il driver (buildBotRecords)
-        for (const a3 of buildBotRecords(s)) host.dispatch(a3);
+        for (const a3 of buildBotRecords(current)) host.dispatch(a3);
       }
       await pump(300);
     }

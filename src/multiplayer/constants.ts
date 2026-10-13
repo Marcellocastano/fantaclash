@@ -6,7 +6,7 @@ import { MAX_TEAM_NAME_LENGTH } from '../mock/teamNames';
  */
 
 /** Versione del protocollo: client e host devono concordare (v3: esiti del motore partita) */
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 /** Giocatori umani massimi in stanza (uno per squadra) */
 export const MAX_PLAYERS = LEAGUE_SIZE;
@@ -49,6 +49,9 @@ export const DECISION_TIMEOUT_MS = 15000;
 
 /** Timeout della scelta dell'ordine dei rigoristi (ms) */
 export const SHOOTOUT_ORDER_TIMEOUT_MS = 20000;
+
+export const LINEUP_POST_AUCTION_MS = 60000;
+export const LINEUP_PRE_STAGE_MS = 30000;
 
 /** Ogni quanto l'host ritrasmette l'hash di stato (riallinea le code perse) */
 export const HASH_INTERVAL_MS = 4000;

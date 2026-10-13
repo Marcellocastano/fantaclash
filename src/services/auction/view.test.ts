@@ -94,7 +94,7 @@ describe('deriveAuctionView', () => {
 
   it('bidding: rilancio vietato se ho già completato il ruolo', () => {
     const full = createTestTeam({
-      id: 'me', isUserTeam: true, roster: buildRoster({ P: 1, D: 2, C: 3, A: 2 }),
+      id: 'me', isUserTeam: true, roster: buildRoster({ P: 1, D: 4, C: 4, A: 3 }),
     });
     const teams = [full, createTestTeam({ id: 'b1' }), createTestTeam({ id: 'b2' })];
     const w = worldWith(createInitialAuctionState(makePool()), teams);

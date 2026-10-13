@@ -18,7 +18,7 @@ vi.mock('./RoomProvider', () => ({
   useRoom: () => mockRoom,
 }));
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 
 function pool(): Player[] {
   return [createTestPlayer({ id: 'p1', role: 'P', baseValue: 40 })];

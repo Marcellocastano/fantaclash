@@ -2,15 +2,15 @@ import { lazy, Suspense, useCallback } from 'react';
 import { Landing } from './components/Landing';
 import { AppNavbar, NavStat } from './components/layout/AppNavbar';
 import { GameShell } from './components/layout/GameShell';
-import { journeyStep } from './components/layout/journey';
+import { journeyStep, journeySteps } from './components/layout/journey';
 import { NAV_LINKS } from './site/navigation';
-import { randomTournamentSeed } from './domain/tournament';
 import { GameProvider, useGame, useGamePhase } from './context/GameContext';
 import { PlayerRole } from './types';
 import { useScrollToTop } from './hooks/useScrollToTop';
 
 // Asta, torneo e riepilogo si scaricano solo quando servono (provider compresi)
 const AuctionPhase = lazy(() => import('./components/phases/AuctionPhase'));
+const LineupPhase = lazy(() => import('./components/phases/LineupPhase'));
 const TournamentPhase = lazy(() => import('./components/phases/TournamentPhase'));
 const FinalPhase = lazy(() => import('./components/phases/FinalPhase'));
 
@@ -37,7 +37,8 @@ function GameNavbar() {
     ) : state.config ? (
       <NavStat label="Annata" value={state.config.season} />
     ) : null;
-  return <AppNavbar step={journeyStep(state.phase, state.tournament?.status)} context={context} onNewGame={resetGame} />;
+  const format = state.config?.format ?? 'knockout';
+  return <AppNavbar step={journeyStep(state.phase, state.tournament?.status, format)} steps={journeySteps(format)} context={context} onNewGame={resetGame} />;
 }
 
 /**
@@ -52,7 +53,7 @@ function GameContent() {
    * Gestisce il completamento dell'asta e passa al torneo (sorteggio)
    */
   const handleAuctionComplete = useCallback(() => {
-    dispatch({ type: 'START_TOURNAMENT', payload: { seed: randomTournamentSeed() } });
+    dispatch({ type: 'SET_PHASE', payload: 'FORMAZIONE' });
   }, [dispatch]);
 
   switch (phase) {
@@ -65,6 +66,9 @@ function GameContent() {
           <AuctionPhase onComplete={handleAuctionComplete} />
         </GameShell>
       );
+
+    case 'FORMAZIONE':
+      return <LineupPhase />;
 
     case 'TORNEO':
       return (

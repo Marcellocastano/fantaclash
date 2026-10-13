@@ -6,6 +6,7 @@ import { ClientIntent, RoomState } from '../../multiplayer/protocol';
 import { createInitialAuctionState } from '../../services/auction';
 import { buildRoster, createTestBotConfig, createTestPlayer, createTestTeam } from '../../test/testUtils';
 import { roundMatches } from '../../domain/tournament';
+import { postAuctionLineupActions } from '../../multiplayer/testHelpers';
 import { Team } from '../../types';
 import { RoomMatchScreen } from './RoomTournamentScreen';
 
@@ -16,7 +17,7 @@ vi.mock('./RoomProvider', () => ({
   useRoom: () => mockRoom,
 }));
 
-const FULL = { P: 1, D: 2, C: 3, A: 2 } as const;
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 const NOW = 1_000_000;
 
 function teams(): Team[] {
@@ -42,6 +43,7 @@ function liveState(): { state: RoomState; matchId: string } {
     teams: teams(),
     auction: { ...createInitialAuctionState([createTestPlayer({ id: 'p1', role: 'P' })]), phase: 'complete' },
   });
+  for (const action of postAuctionLineupActions(s)) s = roomReducer(s, action);
   s = roomReducer(s, { type: 'START_TOURNAMENT', seed: 7 });
   s = roomReducer(s, {
     type: 'TOURNAMENT',

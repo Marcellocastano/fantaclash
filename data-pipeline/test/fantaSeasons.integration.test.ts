@@ -16,7 +16,7 @@ import type { Player } from '../../src/types/index.ts';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SEASONS_DIR = join(ROOT, 'public', 'data', 'seasons');
 const ROLES: FantaRole[] = ['P', 'D', 'C', 'A'];
-const EXPECTED: Record<FantaRole, number> = { P: 12, D: 24, C: 36, A: 24 };
+const EXPECTED: Record<FantaRole, number> = { P: 12, D: 48, C: 48, A: 36 };
 
 function seasonLabel(season: string): string {
   const y = parseInt(season.slice(0, 4), 10);
@@ -86,7 +86,7 @@ describe('stagioni fantacalcio — struttura', () => {
   });
 
   for (const season of seasons) {
-    it(`${season}: P12 D24 C36 A24, id univoci, overall 50-95, niente chiavi vietate`, () => {
+    it(`${season}: P12 D48 C48 A36, id univoci, overall 50-95, niente chiavi vietate`, () => {
       const doc = loadSeasonDoc(seasonLabel(season));
       const counts = { P: 0, D: 0, C: 0, A: 0 };
       const ids = new Set<string>();

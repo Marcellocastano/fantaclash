@@ -23,7 +23,7 @@ vi.mock('../../multiplayer/identity', async () => {
   };
 });
 
-const SEASONS = [{ season: '2015-16', label: 'Serie A 2015-16', playerCount: 96 }];
+const SEASONS = [{ season: '2015-16', label: 'Serie A 2015-16', playerCount: 144 }];
 
 const net = () => createMemoryNetwork({ rng: createRng(7), latency: { min: 1, max: 10 }, dropRate: 0 });
 

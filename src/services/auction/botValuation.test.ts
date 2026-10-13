@@ -16,7 +16,7 @@ import { buildRoster, createTestBotConfig, createTestPlayer, createTestTeam } fr
 import { Player, Team } from '../../types';
 
 function ctx(teams: Team[], pool: Player[]) {
-  return { teams, market: buildMarketSnapshot(teams, pool) };
+  return { teams, market: buildMarketSnapshot(teams, pool), pool };
 }
 
 describe('botValuation', () => {
@@ -42,7 +42,7 @@ describe('botValuation', () => {
   it('0 se il ruolo è completo o manca botConfig', () => {
     const done = createTestTeam({
       botConfig: createTestBotConfig('normale'),
-      roster: buildRoster({ A: 2 }),
+      roster: buildRoster({ A: 3 }),
     });
     const noConfig = createTestTeam({ botConfig: null });
     const c = ctx([done, noConfig], pool);
@@ -128,7 +128,7 @@ describe('botValuation', () => {
     const t = createTestTeam({ credits: 300 });
     const c = ctx([t], pool);
     expect(estimateRivalLimit(t, pool[0], c)).toBeGreaterThanOrEqual(1);
-    const done = createTestTeam({ roster: buildRoster({ A: 2 }) });
+    const done = createTestTeam({ roster: buildRoster({ A: 3 }) });
     expect(estimateRivalLimit(done, pool[0], ctx([done], pool))).toBe(0);
   });
 
@@ -304,7 +304,7 @@ describe('botValuation', () => {
       const teams = [
         createTestTeam({ id: 'a', credits: 300 }),
         createTestTeam({ id: 'b', credits: 80, roster: buildRoster({ P: 1, D: 2, C: 3 }) }),
-        createTestTeam({ id: 'c', credits: 500, roster: buildRoster({ A: 2 }) }), // A completato
+        createTestTeam({ id: 'c', credits: 500, roster: buildRoster({ A: 3 }) }), // A completato
       ];
       const c = ctx(teams, pool);
       for (const team of teams) {

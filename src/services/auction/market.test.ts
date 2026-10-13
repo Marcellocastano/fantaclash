@@ -9,7 +9,7 @@ import { Player, Team } from '../../types';
 
 /** Fixture piccola calcolabile a mano: 2 squadre a cui mancano 1P e 1A */
 function smallFixture() {
-  const roster = () => buildRoster({ D: 2, C: 3, A: 1 });
+  const roster = () => buildRoster({ D: 4, C: 4, A: 2 });
   const teams = [
     createTestTeam({ id: 't1', credits: 100, roster: roster() }),
     createTestTeam({ id: 't2', credits: 50, roster: roster() }),
@@ -72,7 +72,7 @@ describe('market', () => {
       .toBeGreaterThan(buildMarketSnapshot(teams, pool).inflation);
   });
 
-  it('DB reale 8 squadre x 100 con listone: la somma dei fair price copre il denaro discrezionale', () => {
+  it('DB reale 8 squadre x 250 con listone: la somma dei fair price copre il denaro discrezionale', () => {
     const pool = buildAuctionPool(PLAYERS_DATABASE);
     const teams = generateAllTeams('User', 'normale', pool, createRng(42));
     const market = buildMarketSnapshot(teams, pool);
@@ -90,7 +90,7 @@ describe('market', () => {
     const target = market.discretionaryMoney + totalDemand;
     expect(Math.abs(fairSum - target) / target).toBeLessThanOrEqual(0.05);
     // Sanità: ogni squadra ha 8 slot all\'inizio
-    expect(getTotalRemainingSlots(teams[0])).toBe(8);
+    expect(getTotalRemainingSlots(teams[0])).toBe(12);
   });
 
   describe('getExpectedSpend', () => {

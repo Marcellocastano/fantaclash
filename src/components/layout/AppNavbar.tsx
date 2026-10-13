@@ -10,6 +10,7 @@ import { JOURNEY_STEPS } from './journey';
 export interface AppNavbarProps {
   /** Tappa corrente del percorso (vedi journeyStep); null = nessun percorso */
   step?: number | null;
+  steps?: readonly string[];
   /** Dati del momento a destra (crediti, annata...) */
   context?: ReactNode;
   /** Link alle sezioni del sito al posto del percorso */
@@ -32,7 +33,7 @@ export interface AppNavbarProps {
  * Navbar comune: logo, percorso di gioco, dati del momento, audio e menu
  * (nuova partita con conferma, supporto).
  */
-export function AppNavbar({ step = null, context, links, onNewGame, sessionExit }: AppNavbarProps) {
+export function AppNavbar({ step = null, steps = JOURNEY_STEPS, context, links, onNewGame, sessionExit }: AppNavbarProps) {
   const [muted, setMuted] = useSoundMuted();
   const [streamer, setStreamer] = useStreamerMode();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -81,7 +82,7 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
           </a>
         )}
 
-        {step !== null && <JourneyTrail step={step} />}
+        {step !== null && <JourneyTrail step={step} steps={steps} />}
         {links && (
           <nav aria-label="Sezioni" className="hidden md:flex items-center gap-6 ml-4">
             {links.map(l => (
@@ -184,10 +185,10 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
 }
 
 /** Asta › Sorteggio › Quarti › Semifinale › Finale */
-function JourneyTrail({ step }: { step: number }) {
+function JourneyTrail({ step, steps }: { step: number; steps: readonly string[] }) {
   return (
     <ol aria-label="Percorso di gioco" className="hidden lg:flex items-center gap-1 font-display text-lg font-bold">
-      {JOURNEY_STEPS.map((label, i) => {
+      {steps.map((label, i) => {
         const done = i < step;
         const current = i === step;
         return (

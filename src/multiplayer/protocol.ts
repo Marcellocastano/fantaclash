@@ -1,4 +1,5 @@
-import { AuctionState, DifficultyLevel, Team } from '../types';
+import { AuctionState, CompetitionFormat, DifficultyLevel, Team } from '../types';
+import type { Lineup } from '../domain/teams/formations';
 import { AuctionAction } from '../services/auction';
 import { TournamentAction, TournamentState } from '../domain/tournament';
 import { MatchOptions, MatchSide, Tactic, TacticChange } from '../domain/match';
@@ -12,13 +13,20 @@ import { MatchOptions, MatchSide, Tactic, TacticChange } from '../domain/match';
  * niente segreti dentro — i token stanno nell'HostBook dell'host.
  */
 
-export type RoomPhase = 'lobby' | 'auction' | 'tournament' | 'final';
+export type RoomPhase = 'lobby' | 'auction' | 'lineup' | 'tournament' | 'final';
 
 export interface RoomSettings {
   season: string;
   difficulty: DifficultyLevel;
+  format?: CompetitionFormat;
   /** Nome della coppa del torneo (default: FantaClash Cup) */
   cupName?: string;
+}
+
+export interface LineupWindow {
+  deadline: number;
+  kind: 'post_auction' | 'pre_stage';
+  teamIds: string[];
 }
 
 export interface RoomPlayer {
@@ -46,6 +54,8 @@ export interface RoomState {
   tournament: TournamentState | null;
   /** Scadenza del turno di chiamata di un umano (host clock), null se assente */
   callDeadline: number | null;
+  /** Finestra segreta per invio delle formazioni, null se chiusa */
+  lineupWindow: LineupWindow | null;
   /** Partite live del turno corrente (vuoto fuori dalle partite in corso) */
   live: Record<string, LiveMatch>;
 }
@@ -83,6 +93,8 @@ export type RoomAction =
   | { type: 'START_AUCTION'; teams: Team[]; auction: AuctionState }
   | { type: 'AUCTION'; action: AuctionAction }
   | { type: 'CALL_DEADLINE'; deadline: number | null }
+  | { type: 'LINEUP_WINDOW'; window: LineupWindow }
+  | { type: 'SET_LINEUPS'; lineups: Record<string, Lineup> }
   | { type: 'START_TOURNAMENT'; seed: number }
   | { type: 'TOURNAMENT'; action: Exclude<TournamentAction, { type: 'RECORD_RESULT' }> }
   | { type: 'MATCH_RECORD'; matchId: string; seed: number; options: MatchOptions; resultHash: string }
@@ -106,7 +118,8 @@ export type ClientIntent =
   | { type: 'PING'; t: number }
   | { type: 'RESYNC'; fromRev: number }
   | { type: 'TACTIC'; matchId: string; stopTick: number; tactic: Tactic }
-  | { type: 'SHOOTOUT_ORDER'; matchId: string; order: string[] };
+  | { type: 'SHOOTOUT_ORDER'; matchId: string; order: string[] }
+  | { type: 'LINEUP'; lineup: Lineup };
 
 export type RejectReason = 'protocol' | 'full' | 'started' | 'kicked' | 'bad_token' | 'invalid' | 'name_taken';
 
@@ -127,7 +140,7 @@ export interface Envelope<M> {
 }
 
 const CLIENT_INTENT_TYPES: readonly ClientIntent['type'][] = [
-  'HELLO', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER',
+  'HELLO', 'CALL', 'BID', 'PING', 'RESYNC', 'TACTIC', 'SHOOTOUT_ORDER', 'LINEUP',
 ];
 
 const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
@@ -136,7 +149,7 @@ const HOST_MESSAGE_TYPES: readonly HostMessage['type'][] = [
 
 const ROOM_ACTION_TYPES: readonly RoomAction['type'][] = [
   'PLAYER_JOINED', 'PLAYER_LEFT', 'PLAYER_CONNECTION',
-  'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE',
+  'PLAYER_KICKED', 'SETTINGS', 'START_AUCTION', 'AUCTION', 'CALL_DEADLINE', 'LINEUP_WINDOW', 'SET_LINEUPS',
   'START_TOURNAMENT', 'TOURNAMENT', 'MATCH_RECORD', 'MATCH_START', 'MATCH_RESUME', 'FINISH',
   'TIME_SHIFT', 'REMATCH',
 ];

@@ -1,114 +1,86 @@
 import { MatchSide } from '../domain/match';
 import {
-  currentRound,
+  currentStageMatches,
   drawOrder,
-  findMatch,
-  getMatchStatus,
+  findCompetitionMatch,
   randomTournamentSeed,
-  roundMatches,
-  simulateBracketMatch,
+  simulateCompetitionMatch,
 } from '../domain/tournament';
 import { resultHash } from './hash';
 import { RoomAction, RoomState } from './protocol';
 
-/**
- * Comandi torneo dell'host: funzioni pure che producono le RoomAction da
- * dispatchare. Il risultato delle partite è certificato con resultHash,
- * così ogni client lo ricalcola e verifica (vedi roomReducer).
- */
-
-/** Avvia il torneo dall'asta completata (seme casuale) */
 export function buildStartTournament(rng: () => number = Math.random): RoomAction {
-  void rng; // il seme usa già Date.now+Math.random; rng resta per uniformità
+  void rng;
   return { type: 'START_TOURNAMENT', seed: randomTournamentSeed() };
 }
 
-/** Sorteggio dei quarti: valido solo appena entrati in fase tournament */
 export function buildDraw(state: RoomState, rng: () => number): RoomAction | null {
   if (state.phase !== 'tournament' || state.tournament?.status !== 'draw') return null;
   return { type: 'TOURNAMENT', action: { type: 'DRAW', order: drawOrder(state.tournament, rng) } };
 }
 
-/**
- * I MATCH_RECORD per tutte le partite pronte del turno corrente
- * (simulazione IA vs IA: options vuote).
- */
-export function buildRoundRecords(state: RoomState): RoomAction[] {
-  if (state.phase !== 'tournament' || !state.tournament) return [];
-  const round = currentRound(state.tournament.status);
-  if (!round) return [];
-  const actions: RoomAction[] = [];
-  for (const m of roundMatches(state.tournament.bracket, round)) {
-    if (getMatchStatus(state.tournament, m) !== 'ready') continue;
-    const result = simulateBracketMatch(state.tournament, state.teams, m.id, {});
-    actions.push({
-      type: 'MATCH_RECORD',
-      matchId: m.id,
-      seed: m.seed,
-      options: {},
-      resultHash: resultHash(result),
-    });
-  }
-  return actions;
+export function buildLineupWindow(
+  state: RoomState,
+  kind: 'post_auction' | 'pre_stage',
+  deadline: number
+): RoomAction | null {
+  if (kind === 'post_auction' && (state.phase !== 'auction' || state.auction?.phase !== 'complete')) return null;
+  if (kind === 'pre_stage' && (state.phase !== 'tournament' || !state.tournament || Object.keys(state.live).length > 0)) return null;
+  const playing = kind === 'pre_stage' && state.tournament
+    ? new Set(currentStageMatches(state.tournament).flatMap(match => [match.homeId, match.awayId]))
+    : null;
+  const teamIds = state.teams
+    .filter(team => team.controller === 'human' && (!playing || playing.has(team.id)))
+    .map(team => team.id);
+  if (teamIds.length === 0) return null;
+  return { type: 'LINEUP_WINDOW', window: { deadline, kind, teamIds } };
 }
 
-// ---------------------------------------------------------------------------
-// Partite live del turno (F5)
-// ---------------------------------------------------------------------------
+export function buildRoundRecords(state: RoomState): RoomAction[] {
+  if (state.phase !== 'tournament' || !state.tournament) return [];
+  return currentStageMatches(state.tournament).map(match => {
+    const result = simulateCompetitionMatch(state.tournament!, state.teams, match.id, {});
+    return {
+      type: 'MATCH_RECORD' as const,
+      matchId: match.id,
+      seed: match.seed,
+      options: {},
+      resultHash: resultHash(result),
+    };
+  });
+}
 
-/** Lati della partita controllati da un umano (controller diverso da 'bot') */
 export function liveHumanSides(state: RoomState, matchId: string): MatchSide[] {
-  const match = state.tournament ? findMatch(state.tournament.bracket, matchId) : undefined;
+  const match = state.tournament ? findCompetitionMatch(state.tournament, matchId) : null;
   if (!match) return [];
   const sides: MatchSide[] = [];
   for (const [side, teamId] of [['home', match.homeId], ['away', match.awayId]] as const) {
-    const team = state.teams.find(t => t.id === teamId);
-    if (team && team.controller !== 'bot') sides.push(side);
+    const team = state.teams.find(candidate => candidate.id === teamId);
+    if (team?.controller === 'human') sides.push(side);
   }
   return sides;
 }
 
-/**
- * MATCH_START per ogni partita pronta del turno corrente con almeno un
- * lato umano. Tutte partono allo stesso `startAt` (orologio host).
- */
 export function buildRoundStart(state: RoomState, startAt: number): RoomAction[] {
-  if (state.phase !== 'tournament' || !state.tournament) return [];
-  const round = currentRound(state.tournament.status);
-  if (!round) return [];
-  const actions: RoomAction[] = [];
-  for (const m of roundMatches(state.tournament.bracket, round)) {
-    if (getMatchStatus(state.tournament, m) !== 'ready') continue;
-    if (state.live[m.id]) continue;
-    const humanSides = liveHumanSides(state, m.id);
-    if (humanSides.length === 0) continue;
-    actions.push({ type: 'MATCH_START', matchId: m.id, startAt, humanSides });
-  }
-  return actions;
+  if (state.phase !== 'tournament' || !state.tournament || state.lineupWindow) return [];
+  return currentStageMatches(state.tournament).flatMap(match => {
+    if (state.live[match.id]) return [];
+    const humanSides = liveHumanSides(state, match.id);
+    return humanSides.length ? [{ type: 'MATCH_START' as const, matchId: match.id, startAt, humanSides }] : [];
+  });
 }
 
-/**
- * MATCH_RECORD per le partite pronte del turno tra soli bot e non live:
- * le registra l'host quando tutte le partite live del turno sono finite
- * (così la rivelazione nell'hub arriva dopo, come nel gioco singolo).
- */
 export function buildBotRecords(state: RoomState): RoomAction[] {
   if (state.phase !== 'tournament' || !state.tournament) return [];
-  const round = currentRound(state.tournament.status);
-  if (!round) return [];
-  const actions: RoomAction[] = [];
-  for (const m of roundMatches(state.tournament.bracket, round)) {
-    if (getMatchStatus(state.tournament, m) !== 'ready') continue;
-    if (state.live[m.id]) continue;
-    if (liveHumanSides(state, m.id).length > 0) continue;
-    const result = simulateBracketMatch(state.tournament, state.teams, m.id, {});
-    actions.push({
-      type: 'MATCH_RECORD',
-      matchId: m.id,
-      seed: m.seed,
+  return currentStageMatches(state.tournament).flatMap(match => {
+    if (state.live[match.id] || liveHumanSides(state, match.id).length > 0) return [];
+    const result = simulateCompetitionMatch(state.tournament!, state.teams, match.id, {});
+    return [{
+      type: 'MATCH_RECORD' as const,
+      matchId: match.id,
+      seed: match.seed,
       options: {},
       resultHash: resultHash(result),
-    });
-  }
-  return actions;
+    }];
+  });
 }

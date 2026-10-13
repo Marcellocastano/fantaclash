@@ -38,7 +38,7 @@ describe('UI torneo (smoke)', () => {
     render(<TournamentHub tournament={t} onPlay={onPlay} onCompleteRound={noop} onSummary={noop} />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: /Gioca i quarti di finale/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Scegli la formazione · Quarti/ }));
     expect(onPlay).toHaveBeenCalledWith(findUserMatch(t)!.id);
   });
 

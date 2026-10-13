@@ -8,9 +8,11 @@ import { StreamerReserve } from '../layout/GameShell';
 import { PlayerRole, Team } from '../../types';
 import { RoomState } from '../../multiplayer/protocol';
 import { AuctionAction, getCurrentCallerId } from '../../services/auction';
-import { playerOverall, teamStrength } from '../../services/auction/teamStrength';
+import { playerOverall } from '../../services/auction/teamStrength';
+import { teamRating } from '../../domain/teams/teamStrength';
 import { shortName } from '../../utils/playerName';
-import { buildStartTournament } from '../../multiplayer/hostTournament';
+import { buildLineupWindow } from '../../multiplayer/hostTournament';
+import { LINEUP_POST_AUCTION_MS } from '../../multiplayer/constants';
 import { auctionHighlights } from './auctionHighlights';
 import { useRoom } from './RoomProvider';
 import { useRoomAuction } from './useRoomAuction';
@@ -18,9 +20,9 @@ import { useRoomHostDriver } from './useRoomHostDriver';
 
 /** Righe della mini formazione: attacco in alto, portiere in basso */
 const FORMATION_ROWS: { role: PlayerRole; count: number }[] = [
-  { role: 'A', count: 2 },
-  { role: 'C', count: 3 },
-  { role: 'D', count: 2 },
+  { role: 'A', count: 3 },
+  { role: 'C', count: 4 },
+  { role: 'D', count: 4 },
   { role: 'P', count: 1 },
 ];
 /** ~20 azioni al secondo per restare nel budget di messaggi Realtime */
@@ -135,7 +137,7 @@ function PowerCard({
             )}
           </span>
         </span>
-        <OvrBadge overall={Math.round(teamStrength(team))} size="sm" />
+        <OvrBadge overall={Math.round(teamRating(team))} size="sm" />
       </div>
       <div className="p-2">
         <MiniFormation team={team} />
@@ -167,7 +169,7 @@ function HighlightTile({
 function AuctionDoneScreen({ state }: { state: RoomState }) {
   const room = useRoom();
   const { top, bargain, strongest } = auctionHighlights(state.teams);
-  const ranked = [...state.teams].sort((a, b) => teamStrength(b) - teamStrength(a));
+  const ranked = [...state.teams].sort((a, b) => teamRating(b) - teamRating(a));
 
   return (
     <StreamerReserve>
@@ -246,15 +248,19 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
             {room.isHost ? (
               <button
                 type="button"
-                onClick={() => room.dispatchRoomAction(buildStartTournament())}
+                onClick={() => {
+                  if (!room.state) return;
+                  const window = buildLineupWindow(room.state, 'post_auction', room.hostNow() + LINEUP_POST_AUCTION_MS);
+                  if (window) room.dispatchRoomAction(window);
+                }}
                 className="btn-cta px-6 py-3 text-xl"
               >
-                Avvia il torneo
+                Scegli le formazioni
               </button>
             ) : (
               <p className="inline-flex items-center gap-2 font-semibold text-canvas/80">
                 <span className="w-2 h-2 rounded-full bg-highlight motion-safe:animate-pulse" aria-hidden="true" />
-                In attesa che l'host avvii il torneo…
+                In attesa che l'host apra la scelta delle formazioni…
               </p>
             )}
           </div>

@@ -1,9 +1,9 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { TournamentControllerProvider } from '../../hooks/tournamentController';
 import { MatchSide } from '../../domain/match';
-import { findMatch, roundMatches, toMatchTeam } from '../../domain/tournament';
-import { MATCH_LEAD_MS } from '../../multiplayer/constants';
-import { buildBotRecords, buildDraw, buildRoundStart } from '../../multiplayer/hostTournament';
+import { findCompetitionMatch, findMatch, ROUND_LABELS, roundMatches, toMatchTeam } from '../../domain/tournament';
+import { LINEUP_PRE_STAGE_MS, MATCH_LEAD_MS } from '../../multiplayer/constants';
+import { buildBotRecords, buildDraw, buildLineupWindow, buildRoundStart } from '../../multiplayer/hostTournament';
 import { MatchPlaybackView } from '../match/MatchScreen';
 import { useRoomMatchPlayback } from './useRoomMatchPlayback';
 import { Icon } from '../Icon';
@@ -13,6 +13,8 @@ import { useRoomTournament } from './useRoomTournament';
 import { TournamentDraw } from '../tournament/TournamentDraw';
 import { TournamentHub } from '../tournament/TournamentHub';
 import { TournamentBracket } from '../tournament/TournamentBracket';
+import { GroupStageHub } from '../tournament/GroupStageHub';
+import { RoomLineupScreen } from './RoomLineupScreen';
 import { TournamentSummaryScreen } from '../tournament/TournamentSummaryScreen';
 import { RoomExitLink } from './RoomExitLink';
 
@@ -52,22 +54,28 @@ function RoomControls() {
     );
   }
 
-  // Partite con umani -> MATCH_START (stesso startAt per tutte); solo
-  // bot -> MATCH_RECORD subito. Le partite tra bot dei turni misti le
-  // registra il driver dell'host a fine turno live.
+  if (state?.lineupWindow) {
+    return <p className="text-ink-soft font-semibold">In attesa delle formazioni…</p>;
+  }
+
   return (
     <button
       type="button"
       onClick={() => {
         if (!room.state) return;
+        const window = buildLineupWindow(room.state, 'pre_stage', room.hostNow() + LINEUP_PRE_STAGE_MS);
+        if (window) {
+          room.dispatchRoomAction(window);
+          return;
+        }
         const starts = buildRoundStart(room.state, room.hostNow() + MATCH_LEAD_MS);
         const actions = starts.length ? starts : buildBotRecords(room.state);
-        actions.forEach(a => room.dispatchRoomAction(a));
+        actions.forEach(action => room.dispatchRoomAction(action));
       }}
       className="btn-cta"
     >
       <Icon name="play" className="w-7 h-7" />
-      Gioca il turno
+      Prepara le formazioni e gioca
     </button>
   );
 }
@@ -81,7 +89,10 @@ export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: 
   const controller = useRoomTournament();
   const room = useRoom();
   const t = controller.tournament;
-  const match = t ? findMatch(t.bracket, matchId) : undefined;
+  const match = t ? findCompetitionMatch(t, matchId) : null;
+  const bracketMatch = t ? findMatch(t.bracket, matchId) : undefined;
+  const round = bracketMatch?.round ?? 'groups';
+  const roundLabel = bracketMatch ? ROUND_LABELS[bracketMatch.round] : match?.label ?? 'Fase a gironi';
   const myTeamId = controller.myTeamId;
   const userSide: MatchSide | null = match
     ? match.homeId === myTeamId ? 'home' : match.awayId === myTeamId ? 'away' : null
@@ -103,7 +114,8 @@ export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: 
       tournament={t}
       home={toMatchTeam(home)}
       away={toMatchTeam(away)}
-      round={match.round}
+      round={round}
+      roundLabel={roundLabel}
       pb={pb}
       userSide={userSide ?? 'home'}
       onFinish={() => {}}
@@ -160,7 +172,9 @@ export function RoomTournamentScreen() {
   const order = useMemo(
     () =>
       t && t.status !== 'draw'
-        ? roundMatches(t.bracket, 'quarterfinals').flatMap(m => [m.homeId!, m.awayId!])
+        ? t.format === 'groups'
+          ? [...(t.groups?.groups.A ?? []), ...(t.groups?.groups.B ?? [])]
+          : roundMatches(t.bracket, 'quarterfinals').flatMap(m => [m.homeId!, m.awayId!])
         : null,
     [t]
   );
@@ -175,8 +189,8 @@ export function RoomTournamentScreen() {
     setBackToHub(false);
   }, [liveKey]);
   const myLive = liveIds.find(id => {
-    const m = t ? findMatch(t.bracket, id) : undefined;
-    return m && (m.homeId === controller.myTeamId || m.awayId === controller.myTeamId);
+    const match = t ? findCompetitionMatch(t, id) : null;
+    return match && (match.homeId === controller.myTeamId || match.awayId === controller.myTeamId);
   });
   const activeLive = backToHub ? null : (watchId && liveIds.includes(watchId) ? watchId : myLive ?? liveIds[0] ?? null);
   useScrollToTop(activeLive ?? (sawDraw && !animDone ? 'draw' : 'hub'));
@@ -184,13 +198,15 @@ export function RoomTournamentScreen() {
   if (!t) return null;
 
   let body: ReactNode;
-  if (activeLive) {
+  if (room.state?.lineupWindow) {
+    body = <RoomLineupScreen />;
+  } else if (activeLive) {
     body = (
       <div className="flex-1 flex flex-col">
         {liveIds.length > 1 && (
           <div className="flex flex-wrap gap-2 justify-center pt-2">
             {liveIds.map(id => {
-              const m = findMatch(t.bracket, id);
+              const m = findCompetitionMatch(t, id);
               const name = (tid: string | null) => t.teams.find(x => x.id === tid)?.name ?? '?';
               return (
                 <button
@@ -216,6 +232,8 @@ export function RoomTournamentScreen() {
         Sorteggio in corso…
       </p>
     );
+  } else if (t.format === 'groups') {
+    body = <GroupStageHub tournament={t} onPlay={noop} onSummary={noop} controls={<RoomControls />} />;
   } else {
     body = (
       <TournamentHub

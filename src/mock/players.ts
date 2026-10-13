@@ -254,7 +254,7 @@ const forwards: Player[] = [
 /**
  * Dataset completo di tutti i giocatori
  * Totale: 192 giocatori (24 P + 60 D + 60 C + 48 A)
- * Sufficiente per 12 squadre da 8 giocatori ciascuna (anche con il listone ridotto)
+ * Sufficiente per 8 squadre da 12 giocatori ciascuna (anche con il listone ridotto)
  */
 export const PLAYERS_DATABASE: Player[] = [
   ...goalkeepers,

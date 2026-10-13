@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GameConfig, DifficultyLevel } from '../types';
+import { GameConfig, DifficultyLevel, CompetitionFormat } from '../types';
 import { loadSeasonIndex, SeasonInfo } from '../services/seasons';
 import { LEAGUE_SIZE, INITIAL_CREDITS } from '../services/auction';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/teamNames';
 import { Icon } from './Icon';
 import { SeasonPicker } from './SeasonPicker';
 import { DifficultyPicker } from './DifficultyPicker';
+import { CompetitionPicker } from './CompetitionPicker';
 
 interface SetupFormProps {
   /** Callback chiamata quando il form viene inviato con successo (può essere asincrona) */
@@ -16,13 +17,14 @@ interface SetupFormProps {
 
 /**
  * Form di inizio partita, integrato nella landing.
- * Lega fissa a 8 squadre e 100 crediti: l'utente sceglie nome squadra
- * (con generatore), annata del listone (carosello + dado) e difficoltà.
+ * Lega fissa a 8 squadre e 250 crediti: l'utente sceglie nome squadra
+ * (con generatore), annata, modalità torneo e difficoltà.
  */
 export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
   // Valori casuali solo dopo il montaggio: il primo disegno coincide con l'HTML pre-renderizzato
   const [teamName, setTeamName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
+  const [format, setFormat] = useState<CompetitionFormat>('knockout');
   const [season, setSeason] = useState<string>('');
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
   const [seasonsError, setSeasonsError] = useState<string | null>(null);
@@ -97,6 +99,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       userTeamName: teamName.trim(),
       difficulty,
       season,
+      format,
     };
     setSubmitting(true);
     try {
@@ -109,7 +112,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [teamName, difficulty, season, submitting, validateForm, onSubmit]);
+  }, [teamName, difficulty, format, season, submitting, validateForm, onSubmit]);
 
   const seasonsReady = seasons !== null && seasons.length > 0 && !seasonsError;
   return (
@@ -164,6 +167,11 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       </div>
 
       <div>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Competizione</p>
+        <CompetitionPicker value={format} onChange={setFormat} disabled={submitting} />
+      </div>
+
+      <div>
         <button
           type="submit"
           disabled={submitting || !seasonsReady}
@@ -178,7 +186,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
         </button>
         {errors.submit && <p className="mt-2 text-sm text-danger">{errors.submit}</p>}
         <p className="mt-3 text-xs sm:text-sm text-ink-muted leading-relaxed">
-          {LEAGUE_SIZE} squadre (tu + {LEAGUE_SIZE - 1} bot) · {INITIAL_CREDITS} crediti · rosa da 8, modulo 1-2-3-2
+          {LEAGUE_SIZE} squadre · {INITIAL_CREDITS} crediti · rosa da 12 (1 P, 4 D, 4 C, 3 A) · 6 moduli
         </p>
       </div>
     </form>

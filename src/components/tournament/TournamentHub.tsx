@@ -30,15 +30,17 @@ interface TournamentHubProps {
 }
 
 const PLAY_LABEL: Record<TournamentRound, string> = {
-  quarterfinals: 'Gioca i quarti di finale',
-  semifinals: 'Gioca la semifinale',
-  final: 'Gioca la finale',
+  quarterfinals: 'Scegli la formazione · Quarti',
+  semifinals: 'Scegli la formazione · Semifinale',
+  final: 'Scegli la formazione · Finale',
+  third_place: 'Gioca la finale per il terzo posto',
 };
 
 const ROUND_TITLE: Record<TournamentRound, string> = {
   quarterfinals: 'Quarti di finale',
   semifinals: 'Semifinale',
   final: 'Finale',
+  third_place: 'Finale per il terzo posto',
 };
 
 /**

@@ -181,8 +181,6 @@ export function auctionReducer(world: AuctionWorld, action: AuctionAction): Auct
       const owned: OwnedPlayer = {
         player: lot.player,
         purchasePrice: lot.currentBid,
-        isStarter: false,
-        formationPosition: winner.roster.length + 1,
       };
       const updatedWinner: Team = {
         ...winner,

@@ -8,7 +8,7 @@ import {
   INJURY_FACTOR,
   penaltySaveSkill,
   playerQuality,
-  rosterRating,
+  lineupRating,
   weightedRating,
 } from '../teams/teamStrength';
 import { shortName, text } from './matchEvents';
@@ -30,6 +30,7 @@ import {
   TeamMatchStats,
   TeamProfile,
 } from './matchTypes';
+import { FORMATIONS } from '../teams/formations';
 
 /**
  * ============================================================================
@@ -148,6 +149,7 @@ interface SideState {
   side: MatchSide;
   id: string;
   name: string;
+  formation: MatchTeamInput['formation'];
   players: LivePlayer[];
   synergy: number;
   chemistryClub: string | null;
@@ -174,11 +176,12 @@ function depts(s: SideState): Depts {
     active: p.active,
     injured: p.injured,
   }));
+  const counts = FORMATIONS[s.formation].counts;
   return {
-    gk: departmentStrength(sp, 'P') * s.synergy,
-    def: departmentStrength(sp, 'D') * s.synergy,
-    mid: departmentStrength(sp, 'C') * s.synergy,
-    att: departmentStrength(sp, 'A') * s.synergy,
+    gk: departmentStrength(sp, 'P', 1) * s.synergy,
+    def: departmentStrength(sp, 'D', counts.D) * s.synergy,
+    mid: departmentStrength(sp, 'C', counts.C) * s.synergy,
+    att: departmentStrength(sp, 'A', counts.A) * s.synergy,
   };
 }
 
@@ -187,6 +190,17 @@ function clamp(x: number, lo: number, hi: number): number {
 }
 
 function buildSide(team: MatchTeamInput, side: MatchSide, seed: number, plan: TacticChange[] | null): SideState {
+  const required = FORMATIONS[team.formation].layout.reduce<Record<PlayerRole, number>>(
+    (counts, slot) => ({ ...counts, [slot.role]: counts[slot.role] + 1 }),
+    { P: 0, D: 0, C: 0, A: 0 }
+  );
+  const actual = team.players.reduce<Record<PlayerRole, number>>(
+    (counts, player) => ({ ...counts, [player.role]: counts[player.role] + 1 }),
+    { P: 0, D: 0, C: 0, A: 0 }
+  );
+  if (team.players.length !== 8 || (['P', 'D', 'C', 'A'] as PlayerRole[]).some(role => required[role] !== actual[role])) {
+    throw new Error(`Formazione ${team.formation} non valida per ${team.name}`);
+  }
   const players = [...team.players]
     .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
     .map(player => {
@@ -207,6 +221,7 @@ function buildSide(team: MatchTeamInput, side: MatchSide, seed: number, plan: Ta
     side,
     id: team.id,
     name: team.name,
+    formation: team.formation,
     players,
     synergy: syn.synergy,
     chemistryClub: syn.chemistryClub,
@@ -224,7 +239,8 @@ function profileOf(s: SideState): TeamProfile {
   const d = depts(s);
   const r2 = (x: number) => Math.round(x * 100) / 100;
   return {
-    rating: weightedRating(d),
+    formation: s.formation,
+    rating: weightedRating(d, s.formation),
     gk: r2(d.gk),
     def: r2(d.def),
     mid: r2(d.mid),
@@ -275,7 +291,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   const profiles = { home: profileOf(sides.home), away: profileOf(sides.away) };
   // L'IA decide sulla forza "da tabellone" (forma neutra): la forma del
   // giorno è un'informazione nascosta che il bot non deve vedere
-  const aiRatings = { home: rosterRating(home.players), away: rosterRating(away.players) };
+  const aiRatings = { home: lineupRating(home.players, home.formation), away: lineupRating(away.players, away.formation) };
   const homeAdvantage = options.homeAdvantage ?? HOME_ADVANTAGE;
   const events: MatchEvent[] = [];
   const ticks: MatchTick[] = [];
@@ -327,7 +343,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     const pool = cands.length ? cands : active(s);
     return pickWeighted(
       pool,
-      pool.map(p => SHOOTER_ROLE_WEIGHT[p.player.role] * (0.15 + p.player.goalProbability) * (0.5 + p.quality) + 0.001),
+      pool.map(p => SHOOTER_ROLE_WEIGHT[p.player.role] * (p.player.role === 'C' ? FORMATIONS[s.formation].profile.insertion : 1) * (0.15 + p.player.goalProbability) * (0.5 + p.quality) + 0.001),
       rng
     );
   };
@@ -412,8 +428,15 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     }
 
     const kindRoll = rng();
-    const counterRate = 0.12 * (def.tactic === 'attacca' ? 1.6 : 1);
-    const kind: ChanceKind = kindRoll < 0.18 ? 'grande' : kindRoll < 0.18 + counterRate ? 'contropiede' : 'normale';
+    const attackingProfile = FORMATIONS[att.formation].profile;
+    const defendingProfile = FORMATIONS[def.formation].profile;
+    const counterRate = clamp(
+      0.12 * (def.tactic === 'attacca' ? 1.6 : 1) * attackingProfile.counterThreat * defendingProfile.counterExposure,
+      0,
+      0.3
+    );
+    const bigChanceRate = 0.18 * attackingProfile.bigChance;
+    const kind: ChanceKind = kindRoll < bigChanceRate ? 'grande' : kindRoll < bigChanceRate + counterRate ? 'contropiede' : 'normale';
     const shooter = pickShooter(att, rng);
     const energyFactor = 0.85 + 0.15 * (att.energy / 100);
     const shooterQ = shooter.quality * (shooter.injured ? INJURY_FACTOR : 1);
@@ -525,7 +548,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     applyTactics(t);
 
     for (const s of [sides.home, sides.away]) {
-      s.energy = Math.max(0, s.energy - TACTIC_EFFECTS[s.tactic].energyDrain);
+      s.energy = Math.max(0, s.energy - TACTIC_EFFECTS[s.tactic].energyDrain * FORMATIONS[s.formation].profile.energyDrain);
     }
     const d = { home: depts(sides.home), away: depts(sides.away) };
     const homeControl = clamp(
@@ -534,8 +557,10 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
         0.05 * (d.home.att + d.home.def - d.away.att - d.away.def) +
         homeAdvantage +
         0.12 * momentum +
-        TACTIC_EFFECTS[sides.home.tactic].control -
+        TACTIC_EFFECTS[sides.home.tactic].control +
+        FORMATIONS[sides.home.formation].profile.control -
         TACTIC_EFFECTS[sides.away.tactic].control -
+        FORMATIONS[sides.away.formation].profile.control -
         RED_CARD_CONTROL * (sides.home.reds - sides.away.reds),
       0.2,
       0.8
@@ -545,13 +570,17 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     const attSide: MatchSide = rng() < homeControl ? 'home' : 'away';
     const att = sides[attSide];
     const def = sides[opp(attSide)];
-    const creation = 0.6 * d[attSide].att + 0.4 * d[attSide].mid;
+    const attackingProfile = FORMATIONS[att.formation].profile;
+    const defendingProfile = FORMATIONS[def.formation].profile;
+    const creation = attackingProfile.creationAttack * d[attSide].att + attackingProfile.creationMidfield * d[attSide].mid;
     const energyFactor = 0.85 + 0.15 * (att.energy / 100);
     const pChance =
       BASE_CHANCE_RATE *
       clamp(1 + 0.55 * (creation - d[def.side].def), 0.6, 1.45) *
       TACTIC_EFFECTS[att.tactic].chance *
       TACTIC_EFFECTS[def.tactic].concede *
+      attackingProfile.chance *
+      defendingProfile.concede *
       energyFactor;
     if (rng() < pChance) resolveChance(att, def, d, rng, textRng);
 
@@ -569,7 +598,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   let shootout: ShootoutResult | null = null;
   let shootoutOrder: Record<MatchSide, string[]> | null = null;
   const fullTime = score();
-  if (fullTime.home === fullTime.away) {
+  if (fullTime.home === fullTime.away && !options.allowDraw) {
     emit('shootout_start', 'home', `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}. Si va ai rigori!`, 2);
     shootout = runShootout();
   }
@@ -577,12 +606,15 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     ? shootout.home > shootout.away ? 'home' : 'away'
     : fullTime.home > fullTime.away ? 'home' : 'away';
   const winnerName = sides[winnerSide].name;
+  const endedDraw = fullTime.home === fullTime.away && !shootout;
   emit(
     'full_time',
     winnerSide,
     shootout
       ? `Fischio finale. ${winnerName} vince ai rigori ${Math.max(shootout.home, shootout.away)} - ${Math.min(shootout.home, shootout.away)}.`
-      : `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`,
+      : endedDraw
+        ? `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}. È pareggio.`
+        : `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`,
     3
   );
 
@@ -695,7 +727,8 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     awayScore: fullTime.away,
     shootout,
     shootoutOrder,
-    winnerId: sides[winnerSide].id,
+    winnerId: endedDraw ? null : sides[winnerSide].id,
+    formations: { home: home.formation, away: away.formation },
     events,
     ticks,
     decisionTicks: schedule.decisionTicks,

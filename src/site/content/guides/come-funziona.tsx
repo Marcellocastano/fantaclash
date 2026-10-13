@@ -3,7 +3,7 @@ import { H2, Li, Prose, Table, Ul } from '../../blocks';
 
 /**
  * Guida: come funziona l'asta del fantacalcio.
- * I numeri citati (100 crediti, 5 secondi, modulo 1-2-3-2) sono quelli di
+ * I numeri citati (250 crediti, 5 secondi, rosa da 12) sono quelli di
  * FantaClash; le meccaniche generali valgono per ogni asta fantacalcistica.
  */
 export const body: GuideBody = () => (
@@ -46,8 +46,9 @@ export const body: GuideBody = () => (
 
     <H2>Il budget e la regola più importante</H2>
     <p>
-      Ogni squadra ha un budget fisso, in FantaClash 100 crediti, e deve comprare un numero fisso di giocatori, in
-      FantaClash 8 con il modulo 1-2-3-2 (un portiere, due difensori, tre centrocampisti, due attaccanti).
+      Ogni squadra ha un budget fisso, in FantaClash 250 crediti, e compra 12 giocatori: un portiere, quattro
+      difensori, quattro centrocampisti e tre attaccanti. Prima della partita ne schiera otto in uno dei sei moduli; le
+      altre quattro sono riserve senza sostituzioni automatiche.
     </p>
     <p>
       Da qui nasce la regola più importante di ogni asta:

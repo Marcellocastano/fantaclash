@@ -12,11 +12,13 @@ import {
   GamePhase, 
   Team, 
   AuctionState,
-  Player 
+  Player,
 } from '../types';
+import type { Lineup } from '../domain/teams/formations';
 import { generateAllTeams } from '../services/teamGenerator';
 import { saveGameState, loadGameState, clearGameState } from '../services/storage';
 import { loadSeasonPlayers } from '../services/seasons';
+import { autoLineup, bestLineup, isValidLineup } from '../domain/teams/formations';
 import {
   AuctionAction,
   AuctionWorld,
@@ -27,6 +29,7 @@ import {
 import {
   TournamentAction,
   createTournament,
+  toTournamentTeam,
   tournamentReducer,
 } from '../domain/tournament';
 
@@ -53,6 +56,7 @@ type GameAction =
   | { type: 'SET_AUCTION_STATE'; payload: AuctionState }
   | { type: 'AUCTION_ACTION'; payload: AuctionAction }
   | { type: 'SET_AUCTION_WORLD'; payload: AuctionWorld }
+  | { type: 'SET_TEAM_LINEUP'; payload: { teamId: string; lineup: Lineup } }
   | { type: 'START_TOURNAMENT'; payload: { seed: number } }
   | { type: 'TOURNAMENT_ACTION'; payload: TournamentAction }
   | { type: 'SET_TOURNAMENT'; payload: GameState['tournament'] }
@@ -111,19 +115,44 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'SET_AUCTION_WORLD':
       return { ...state, teams: action.payload.teams, auction: action.payload.auction };
 
-    case 'START_TOURNAMENT':
-      // Il torneo nasce una volta sola: chiamate ripetute riprendono quello esistente
+    case 'SET_TEAM_LINEUP': {
+      const team = state.teams.find(candidate => candidate.id === action.payload.teamId);
+      if (!team || !isValidLineup(team.roster, action.payload.lineup)) return state;
+      const updatedTeam = { ...team, lineup: action.payload.lineup };
+      return {
+        ...state,
+        teams: state.teams.map(candidate => candidate.id === team.id ? updatedTeam : candidate),
+        tournament: state.tournament
+          ? { ...state.tournament, teams: state.tournament.teams.map(candidate => candidate.id === team.id ? toTournamentTeam(updatedTeam) : candidate) }
+          : state.tournament,
+      };
+    }
+
+    case 'START_TOURNAMENT': {
+      const teams = state.teams.map(team => {
+        const roster = team.roster.map(owned => owned.player);
+        const preferred = team.botConfig?.preferredFormation ?? '2-3-2';
+        const lineup = team.isUserTeam && team.lineup && isValidLineup(team.roster, team.lineup)
+          ? team.lineup
+          : team.isUserTeam
+            ? autoLineup(roster, '2-3-2')
+            : bestLineup(roster, preferred);
+        return { ...team, lineup };
+      });
       return {
         ...state,
         phase: 'TORNEO',
+        teams,
         tournament:
           state.tournament ??
           createTournament({
-            teams: state.teams,
+            teams,
             seasonId: state.config?.season ?? '',
             seed: action.payload.seed,
+            format: state.config?.format ?? 'knockout',
           }),
       };
+    }
 
     case 'TOURNAMENT_ACTION': {
       if (!state.tournament) return state;

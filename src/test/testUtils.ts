@@ -51,6 +51,7 @@ export function createTestBotConfig(
     archetype,
     rolePreferences: { P: 1, D: 1, C: 1, A: 1 },
     pupilli,
+    preferredFormation: '2-3-2',
   };
 }
 
@@ -62,6 +63,7 @@ export function createTestGameConfig(overrides: Partial<GameConfig> = {}): GameC
     userTeamName: 'User Team',
     difficulty: 'normale',
     season: '2015-16',
+    format: 'knockout',
     ...overrides,
   };
 }
@@ -72,15 +74,12 @@ export function createTestGameConfig(overrides: Partial<GameConfig> = {}): GameC
  */
 export function buildRoster(roleCounts: Partial<Record<PlayerRole, number>>): OwnedPlayer[] {
   const roster: OwnedPlayer[] = [];
-  let position = 1;
   for (const role of ['P', 'D', 'C', 'A'] as PlayerRole[]) {
     const count = roleCounts[role] ?? 0;
     for (let i = 0; i < count; i++) {
       roster.push({
         player: createTestPlayer({ id: `roster-${role}-${i}`, role }),
         purchasePrice: 10,
-        isStarter: false,
-        formationPosition: position++,
       });
     }
   }

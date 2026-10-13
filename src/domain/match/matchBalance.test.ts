@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PlayerRole, ROSTER_REQUIREMENTS } from '../../types';
+import { PlayerRole } from '../../types';
 import { createRng, shuffle } from '../../services/auction/rng';
 import { spearman } from '../../services/auction/balanceHarness';
 import { SEASON_PLAYERS } from '../../test/matchFixtures';
@@ -17,10 +17,11 @@ const ROLES: PlayerRole[] = ['P', 'D', 'C', 'A'];
 
 function pair(seed: number): [MatchTeamInput, MatchTeamInput] {
   const rng = createRng(seed);
-  const a: MatchTeamInput = { id: 'a', name: 'A', players: [] };
-  const b: MatchTeamInput = { id: 'b', name: 'B', players: [] };
+  const a: MatchTeamInput = { id: 'a', name: 'A', players: [], formation: '2-3-2' };
+  const b: MatchTeamInput = { id: 'b', name: 'B', players: [], formation: '2-3-2' };
+  const starters = { P: 1, D: 2, C: 3, A: 2 };
   for (const role of ROLES) {
-    const n = ROSTER_REQUIREMENTS[role].total;
+    const n = starters[role];
     const list = shuffle(SEASON_PLAYERS.filter(p => p.role === role), rng);
     a.players.push(...list.slice(0, n));
     b.players.push(...list.slice(n, 2 * n));

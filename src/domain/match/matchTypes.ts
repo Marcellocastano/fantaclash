@@ -1,4 +1,5 @@
-import { Player, PlayerRole } from '../../types';
+import { Player, PlayerRole } from '../../types/index.js';
+import type { FormationId } from '../teams/formations.js';
 
 /**
  * Tipi del motore partita. Tutto è serializzabile (JSON) così un
@@ -11,11 +12,12 @@ export type MatchSide = 'home' | 'away';
 /** Atteggiamento tattico scelto (dall'utente o dall'IA dei bot) */
 export type Tactic = 'attacca' | 'equilibrata' | 'difendi';
 
-/** Squadra in ingresso al motore: 8 titolari, modulo 1-2-3-2 */
+/** Squadra in ingresso al motore: gli 8 titolari, riserve escluse */
 export interface MatchTeamInput {
   id: string;
   name: string;
   players: Player[];
+  formation: FormationId;
 }
 
 /** Cambio di atteggiamento a partire da un tick (incluso) */
@@ -33,6 +35,8 @@ export interface MatchOptions {
   tactics?: Partial<Record<MatchSide, TacticChange[]>>;
   /** Vantaggio casalingo (default HOME_ADVANTAGE) */
   homeAdvantage?: number;
+  /** Consente il pareggio al termine dei regolamentari, senza rigori */
+  allowDraw?: boolean;
   /**
    * Ordine dei rigoristi per lato (id giocatore). Un lato senza ordine usa
    * quello automatico: movimento per qualità decrescente, portiere ultimo.
@@ -164,6 +168,7 @@ export interface MatchPlayerPerformance {
 
 /** Componenti leggibili della forza di squadra */
 export interface TeamProfile {
+  formation: FormationId;
   /** Forza complessiva pesata per ruolo, in scala overall (50-100) */
   rating: number;
   /** Reparti normalizzati 0-1.4 (dopo forma e sinergia) */
@@ -199,7 +204,8 @@ export interface MatchResult {
    * andati ai rigori. Opzionale: i risultati salvati prima non lo hanno.
    */
   shootoutOrder?: Record<MatchSide, string[]> | null;
-  winnerId: string;
+  winnerId: string | null;
+  formations: Record<MatchSide, FormationId>;
   events: MatchEvent[];
   ticks: MatchTick[];
   /** Tick in cui l'utente/IA può cambiare atteggiamento */

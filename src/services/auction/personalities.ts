@@ -1,4 +1,5 @@
 import { BotArchetype, Player, PlayerRole } from '../../types';
+import type { FormationId } from '../../domain/teams/formations';
 import { Rng, shuffle } from './rng';
 
 /**
@@ -67,7 +68,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
   },
   parsimonioso: {
     label: 'Parsimonioso',
-    valueMultiplier: 0.85,
+    valueMultiplier: 0.6,
     pupilloMultiplier: 1,
     maxShareOfBudget: 0.40,
     pupilloMaxShare: 0.40,
@@ -96,7 +97,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
   cacciatore: {
     label: 'Cacciatore di pupilli',
     valueMultiplier: 0.97,
-    pupilloMultiplier: 1.5,
+    pupilloMultiplier: 2,
     maxShareOfBudget: 0.60,
     pupilloMaxShare: 0.75,
     starAffinity: 0,
@@ -177,39 +178,31 @@ export function pickPupilli(pool: Player[], rng: Rng): string[] {
   return pupilli;
 }
 
-/** Moltiplicatore del reparto "focus" nel piano di spesa del bot */
-export const FOCUS_ROLE_WEIGHT = 1.6;
+export const FORMATION_PREFERENCES: Record<BotArchetype, Partial<Record<FormationId, number>>> = {
+  aggressivo: { '2-2-3': 0.4, '3-1-3': 0.35, '2-3-2': 0.25 },
+  parsimonioso: { '3-2-2': 0.4, '3-3-1': 0.3, '2-3-2': 0.3 },
+  stratega: { '2-4-1': 0.35, '3-3-1': 0.35, '2-3-2': 0.3 },
+  cacciatore: { '2-3-2': 1 / 6, '3-2-2': 1 / 6, '2-2-3': 1 / 6, '3-3-1': 1 / 6, '2-4-1': 1 / 6, '3-1-3': 1 / 6 },
+  equilibrato: { '2-3-2': 0.5, '3-2-2': 0.1, '2-2-3': 0.1, '3-3-1': 0.1, '2-4-1': 0.1, '3-1-3': 0.1 },
+};
 
-/** Probabilità di ciascun reparto di essere il focus del piano di spesa */
-const FOCUS_ROLE_ODDS: [PlayerRole, number][] = [
-  ['A', 0.4],
-  ['C', 0.35],
-  ['D', 0.15],
-  ['P', 0.1],
-];
+export function preferredFormationFor(archetype: BotArchetype, rng: Rng): FormationId {
+  const preferences = Object.entries(FORMATION_PREFERENCES[archetype]) as [FormationId, number][];
+  let roll = rng();
+  for (const [formation, weight] of preferences) {
+    roll -= weight;
+    if (roll < 0) return formation;
+  }
+  return preferences[preferences.length - 1][0];
+}
 
-/**
- * Preferenze di ruolo casuali (0.88-1.12) con un reparto "focus" moltiplicato
- * per FOCUS_ROLE_WEIGHT. Nella valutazione la preferenza è limitata a
- * 0.88-1.12; il valore pieno guida il piano di spesa (riserva di budget e
- * soft cap), così alcuni bot risparmiano per un top player di quel reparto.
- */
 export function randomRolePreferences(rng: Rng): Record<PlayerRole, number> {
-  const prefs: Record<PlayerRole, number> = {
+  return {
     P: 0.88 + rng() * 0.24,
     D: 0.88 + rng() * 0.24,
     C: 0.88 + rng() * 0.24,
     A: 0.88 + rng() * 0.24,
   };
-  let roll = rng();
-  for (const [role, odds] of FOCUS_ROLE_ODDS) {
-    roll -= odds;
-    if (roll < 0) {
-      prefs[role] *= FOCUS_ROLE_WEIGHT;
-      break;
-    }
-  }
-  return prefs;
 }
 
 /** Quota massima di budget concessa al soft cap anche per il reparto focus */

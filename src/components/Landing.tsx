@@ -32,10 +32,10 @@ const SAMPLE_PLAYER: Player = {
 /** Il regolamento in cifre, come su un tabellone */
 const NUMBERS: { value: string; label: string }[] = [
   { value: '8', label: 'squadre' },
-  { value: '100', label: 'crediti a testa' },
-  { value: '8', label: 'giocatori in rosa' },
+  { value: '250', label: 'crediti a testa' },
+  { value: '12', label: 'giocatori in rosa' },
   { value: '5"', label: 'per rilanciare' },
-  { value: '1-2-3-2', label: 'il modulo' },
+  { value: '6', label: 'moduli tattici' },
 ];
 
 /** Regole come figurine: il numero grande sta al posto dell'overall, il colore è quello di una fascia */
@@ -43,9 +43,9 @@ const TILTS = ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2'];
 
 const RULES: { value: string; unit: string; term: string; text: string; tier: Tier; tilt: string }[] = [
   { value: '5"', unit: 'per rilancio', term: 'Asta', text: 'Per reparti, dai portieri agli attaccanti. Si parte da 1 credito e ogni rilancio riporta il timer a 5 secondi. Tieni almeno 1 credito per ogni posto libero.', tier: 'bronze', tilt: '-rotate-1' },
-  { value: '96', unit: 'giocatori', term: 'Listone', text: "I giocatori veri dell'annata, con overall calcolato su statistiche e quotazioni storiche.", tier: 'silver', tilt: 'rotate-1' },
+  { value: '144', unit: 'giocatori', term: 'Listone', text: "I giocatori veri dell'annata, con overall calcolato su statistiche e quotazioni storiche.", tier: 'silver', tilt: 'rotate-1' },
   { value: '7', unit: 'avversari', term: 'Bot', text: "Ognuno ha una personalità d'asta: c'è chi punta ai big e chi aspetta l'affare.", tier: 'gold', tilt: '-rotate-1' },
-  { value: "90'", unit: 'più i rigori', term: 'Partita', text: "Contano qualità, forma del giorno, reparti e stile scelto. Pareggio? Rigori, e l'ordine dei rigoristi lo decidi tu.", tier: 'elite', tilt: 'rotate-1' },
+  { value: "90'", unit: 'più i rigori', term: 'Partita', text: "Il modulo modifica possesso, occasioni e transizioni. Nei gironi il pareggio assegna un punto; in eliminazione diretta si va ai rigori.", tier: 'elite', tilt: 'rotate-1' },
 ];
 
 /**
@@ -78,7 +78,7 @@ export function Landing({ onSubmit }: LandingProps) {
                   </span>
                 </h1>
                 <p className="text-lg text-ink-soft mt-5">
-                  Sfida 7 bot per i campioni della stagione che scegli, costruisci il tuo 1-2-3-2 e portalo fino alla finale.
+                  Sfida 7 bot per i campioni della stagione che scegli, costruisci una rosa da 12 e portala fino alla finale.
                 </p>
 
                 {/* Etichetta dell'album: il form */}
@@ -122,7 +122,7 @@ export function Landing({ onSubmit }: LandingProps) {
               <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="2" title="Sorteggio" text="Le 8 rose finiscono nella boccia: quarti, semifinali e finale secca.">
                 <DrawPreview />
               </Preview>
-              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title="Partita" text="Scegli lo stile, guarda la partita e, se serve, vinci ai rigori.">
+              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title="Partita" text="Scegli modulo e stile: nei gironi il pareggio vale un punto, in coppa si va ai rigori.">
                 <MatchPreview />
               </Preview>
             </div>

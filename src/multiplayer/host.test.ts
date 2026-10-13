@@ -6,18 +6,20 @@ import {
   handleIntent,
   HostBook,
 } from './host';
-import { applyHostAction, createRoom } from './roomReducer';
+import { applyHostAction, createRoom, roomReducer } from './roomReducer';
 import { RoomState, RoomAction } from './protocol';
 import { createInitialAuctionState } from '../services/auction';
 import { createRng } from '../services/auction';
 import { LOT_DURATION_MS } from '../services/auction';
 import { BID_GRACE_MS, PROTOCOL_VERSION } from './constants';
+import { buildLineupWindow } from './hostTournament';
+import { autoLineup, bestLineup } from '../domain/teams/formations';
 import { buildRoster, createTestPlayer, createTestTeam } from '../test/testUtils';
 import { Player, Team } from '../types';
 
 const T0 = 1_000_000;
 const rng = createRng(7);
-
+const FULL = { P: 1, D: 4, C: 4, A: 3 } as const;
 const SETTINGS = { season: '2024-25', difficulty: 'normale' as const };
 
 function lobby(): RoomState {
@@ -189,7 +191,6 @@ describe('handleIntent CALL/BID', () => {
 
   it('BID rifiutato se il giocatore non ha bisogno del ruolo', () => {
     const s = biddingRoom();
-    // tb con rosa completa nel ruolo P: canBid fallisce
     const full = s.teams.map(t =>
       t.id === 'tb' ? { ...t, roster: buildRoster({ P: 1 }) } : t
     );
@@ -199,7 +200,34 @@ describe('handleIntent CALL/BID', () => {
   });
 });
 
-describe('comandi host', () => {
+describe('comandi host e formazioni multiplayer', () => {
+  it('una lineup valida resta segreta nell’HostBook fino alla chiusura della finestra', () => {
+    const roster = buildRoster(FULL);
+    const teams = [
+      createTestTeam({ id: 'human', controller: 'human', ownerId: 'h1', roster }),
+      createTestTeam({ id: 'bot', controller: 'bot', roster: buildRoster(FULL) }),
+    ];
+    const base = lobby();
+    const started = roomReducer(base, {
+      type: 'START_AUCTION',
+      teams,
+      auction: { ...createInitialAuctionState(makePool()), phase: 'complete' },
+    });
+    const windowAction = buildLineupWindow(started, 'post_auction', T0 + 30_000)!;
+    const state = roomReducer(started, windowAction);
+    expect(state.phase).toBe('lineup');
+    const lineup = autoLineup(roster, '3-1-3');
+    const book = createHostBook();
+    const chosen = handleIntent(state, book, 'h1', { type: 'LINEUP', lineup }, T0 + 1, rng);
+    expect(chosen.actions).toEqual([]);
+    expect(chosen.book.lineupChoices.human).toEqual(lineup);
+    expect(state.teams[0].lineup).toBeUndefined();
+    expect(handleIntent(state, book, 'h1', { type: 'LINEUP', lineup: { ...lineup, starters: lineup.starters.slice(1) } }, T0 + 1, rng).book.lineupChoices.human).toBeUndefined();
+    const committed = roomReducer(state, { type: 'SET_LINEUPS', lineups: { human: lineup, bot: bestLineup(teams[1].roster, '2-3-2') } });
+    expect(committed.lineupWindow).toBeNull();
+    expect(committed.teams.find(team => team.id === 'human')?.lineup).toEqual(lineup);
+  });
+
   it('buildStartAuction con 2 umani -> 8 squadre, 6 bot, nomi unici', () => {
     let s = lobby();
     let book = createHostBook();
@@ -214,10 +242,9 @@ describe('comandi host', () => {
     expect(bots).toHaveLength(6);
     const names = new Set(teams.map(t => t.name));
     expect(names.size).toBe(8);
-    // squadre umane: isUserTeam false, botConfig equilibrato per l'autopilota
-    for (const h of humans) {
-      expect(h.isUserTeam).toBe(false);
-      expect(h.botConfig?.archetype).toBe('equilibrato');
+    for (const human of humans) {
+      expect(human.isUserTeam).toBe(false);
+      expect(human.botConfig?.archetype).toBe('equilibrato');
     }
   });
 
@@ -243,7 +270,7 @@ describe('comandi host', () => {
     const s = auctionRoom();
     const a = buildStartCalling(s, rng);
     expect(a).toMatchObject({ type: 'AUCTION' });
-    const inner = (a as Extract<RoomAction, { type: 'AUCTION' }>).action;
+    const inner = (a as Extract<typeof a, { type: 'AUCTION' }>).action;
     expect(inner.type).toBe('START');
     if (inner.type === 'START') expect(inner.callingOrder.sort()).toEqual(['ta', 'tb', 'tc']);
   });

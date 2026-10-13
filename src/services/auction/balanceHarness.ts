@@ -1,11 +1,14 @@
-import { BotArchetype, DifficultyLevel, Player, Team } from '../../types';
+import { BotArchetype, DifficultyLevel, Player, Team, ROSTER_REQUIREMENTS, TOTAL_ROSTER_SIZE } from '../../types';
 import { createRng, hashSeed, Rng } from './rng';
 import { auctionReducer, AuctionWorld, createInitialAuctionState } from './session';
 import { buildAuctionPool, getMaxBid, LEAGUE_SIZE } from './rules';
 import { buildMarketSnapshot, getFairPrice } from './market';
 import { CallStrategy } from './botCalling';
 import { runAuction, UserPolicy } from './simulator';
-import { playerOverall, teamStrength } from './teamStrength';
+import { playerOverall } from './teamStrength';
+import { teamRating } from '../../domain/teams/teamStrength';
+import { bestLineup, FORMATIONS } from '../../domain/teams/formations';
+import type { FormationId } from '../../domain/teams/formations';
 import { generateAllTeams } from '../teamGenerator';
 
 /**
@@ -21,7 +24,7 @@ export type UserStyle = 'passivo' | 'equilibrato' | 'stelle' | 'cecchino' | 'fur
 const BALANCED_MAX_SHARE = 0.55;
 
 /** Margine sul prezzo equo del cecchino */
-const SNIPER_MARKUP = 1.1;
+const SNIPER_MARKUP = 1;
 
 /** Lo stile furbo paga fino a questo multiplo del prezzo equo per i migliori 3 rimasti del ruolo */
 const SHREWD_STAR_MARKUP = 1.3;
@@ -44,7 +47,7 @@ function cheapest(pool: Player[], role: Player['role']): Player | null {
  * la quota spendibile su un giocatore cresce man mano che la rosa si riempie
  */
 function fairLimit(user: Team, fair: number, markup: number): number {
-  const slots = user.roster.length < 8 ? 8 - user.roster.length : 0;
+  const slots = Math.max(0, TOTAL_ROSTER_SIZE - user.roster.length);
   const share = BALANCED_MAX_SHARE + (1 - BALANCED_MAX_SHARE) * (1 - (slots - 1) / 7);
   const softCap = slots > 1 ? 1 + share * (user.credits - slots) : Infinity;
   return Math.floor(Math.min(fair * markup, softCap, getMaxBid(user)));
@@ -103,6 +106,13 @@ export interface RunMetrics {
   difficulty: DifficultyLevel;
   style: UserStyle;
   seed: number;
+  completed: boolean;
+  incompleteRosters: number;
+  botResidual: number;
+  overspendRole: number;
+  starterSpendShare: number[];
+  averageBenchPrice: number;
+  formationCoherence: number;
   /** Forza (overall medio) di ogni bot */
   botStrengths: number[];
   userStrength: number;
@@ -139,6 +149,9 @@ export interface RunMetrics {
     drainShare: number;
     /** Il bot ha vinto almeno un suo pupillo (solo cacciatore) */
     wonPupillo: boolean;
+    formation: FormationId;
+    starterSpendShare: number;
+    roleSpendShare: Record<Player['role'], number>;
   }[];
   /** true se tutte le invarianti d'integrità sono rispettate */
   integrityOk: boolean;
@@ -197,18 +210,25 @@ export function simulateBalanceRun(
     },
   });
 
+  const completedTeams = end.teams.map(team => {
+    const players = team.roster.map(owned => owned.player);
+    const preferred = team.isUserTeam ? '2-3-2' : team.botConfig?.preferredFormation ?? '2-3-2';
+    return { ...team, lineup: bestLineup(players, preferred) };
+  });
+
   // Integrità
   const assigned = end.auction.assignedPlayers.map(a => a.playerId);
   let integrityOk =
     end.auction.phase === 'complete' &&
-    assigned.length === LEAGUE_SIZE * 8 &&
+    assigned.length === LEAGUE_SIZE * TOTAL_ROSTER_SIZE &&
     new Set(assigned).size === assigned.length;
   for (const team of end.teams) {
     const counts = { P: 0, D: 0, C: 0, A: 0 };
     for (const o of team.roster) counts[o.player.role]++;
     const spent = team.roster.reduce((s, o) => s + o.purchasePrice, 0);
     if (
-      counts.P !== 1 || counts.D !== 2 || counts.C !== 3 || counts.A !== 2 ||
+      (['P', 'D', 'C', 'A'] as const).some(role => counts[role] !== ROSTER_REQUIREMENTS[role].total) ||
+      team.roster.length !== TOTAL_ROSTER_SIZE ||
       team.credits < 0 || team.credits + spent !== team.initialCredits
     ) {
       integrityOk = false;
@@ -262,20 +282,49 @@ export function simulateBalanceRun(
   );
 
   const spendOf = (t: Team) => t.roster.reduce((s, o) => s + o.purchasePrice, 0);
+  const roleSpendOf = (team: Team) => {
+    const spent: Record<Player['role'], number> = { P: 0, D: 0, C: 0, A: 0 };
+    for (const owned of team.roster) spent[owned.player.role] += owned.purchasePrice;
+    return spent;
+  };
+  const starterSpendShare = (team: Team) => {
+    const starters = new Set(team.lineup?.starters ?? []);
+    return team.roster.filter(owned => starters.has(owned.player.id)).reduce((sum, owned) => sum + owned.purchasePrice, 0) / Math.max(1, spendOf(team));
+  };
   const half = lotIndex / 2;
-  const bots = end.teams.filter(t => !t.isUserTeam);
-  const user = end.teams.find(t => t.isUserTeam) as Team;
+  const bots = completedTeams.filter(t => !t.isUserTeam);
+  const user = completedTeams.find(t => t.isUserTeam) as Team;
+  const overspendRole = bots.filter(team => {
+    const shares = roleSpendOf(team);
+    const total = Math.max(1, spendOf(team));
+    return (['P', 'D', 'C', 'A'] as const).some(role => {
+      const slotCount = FORMATIONS[team.lineup!.formation].layout.filter(slot => slot.role === role).length;
+      return slotCount <= 2 && shares[role] / total > 0.6;
+    });
+  }).length / Math.max(1, bots.length);
+  const formationCoherence = bots.filter(team => team.lineup?.formation === team.botConfig?.preferredFormation).length / Math.max(1, bots.length);
+  const benchPrices = completedTeams.flatMap(team => {
+    const starters = new Set(team.lineup?.starters ?? []);
+    return team.roster.filter(owned => !starters.has(owned.player.id)).map(owned => owned.purchasePrice);
+  });
 
   return {
     season,
     difficulty,
     style,
     seed,
-    botStrengths: bots.map(teamStrength),
-    userStrength: teamStrength(user),
+    completed: end.auction.phase === 'complete',
+    incompleteRosters: completedTeams.filter(team => team.roster.length !== TOTAL_ROSTER_SIZE).length,
+    botResidual: mean(bots.map(team => team.credits / team.initialCredits)),
+    overspendRole,
+    starterSpendShare: bots.map(starterSpendShare),
+    averageBenchPrice: mean(benchPrices),
+    formationCoherence,
+    botStrengths: bots.map(teamRating),
+    userStrength: teamRating(user),
     botSpend: bots.map(t => spendOf(t) / t.initialCredits),
     userSpend: spendOf(user) / user.initialCredits,
-    top10PerTeam: end.teams.map(t => t.roster.filter(o => top10.has(o.player.id)).length),
+    top10PerTeam: completedTeams.map(t => t.roster.filter(o => top10.has(o.player.id)).length),
     topPrice,
     maxPrice,
     priceQuality,
@@ -294,12 +343,15 @@ export function simulateBalanceRun(
       const config = t.botConfig!;
       return {
         archetype: config.archetype,
-        strength: teamStrength(t),
+        strength: teamRating(t),
         spend: spent / t.initialCredits,
         earlySpendShare: spent > 0 ? early / spent : 0,
-        overallPerCredit: t.roster.reduce((s, o) => s + playerOverall(o.player), 0) / Math.max(1, spent),
+        overallPerCredit: teamRating(t) * 8 / Math.max(1, spent),
         drainShare: myCalls.length > 0 ? myCalls.filter(c => c === 'drain').length / myCalls.length : 0,
         wonPupillo: t.roster.some(o => config.pupilli.includes(o.player.id)),
+        formation: t.lineup!.formation,
+        starterSpendShare: starterSpendShare(t),
+        roleSpendShare: Object.fromEntries(Object.entries(roleSpendOf(t)).map(([role, amount]) => [role, amount / Math.max(1, spent)])) as Record<Player['role'], number>,
       };
     }),
   };

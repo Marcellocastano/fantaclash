@@ -30,7 +30,8 @@ describe.skipIf(!RUN)('report di equilibrio', () => {
       const rd = runs.filter(r => r.difficulty === d);
       const spends = rd.flatMap(r => r.botSpend);
       const spreads = rd.map(r => Math.max(...r.botStrengths) - Math.min(...r.botStrengths));
-      lines.push(`\n[${d}] bot spend mean=${mean(spends).toFixed(3)} min=${Math.min(...spends).toFixed(3)} | bot spread mean=${mean(spreads).toFixed(2)} p95=${[...spreads].sort((a, b) => a - b)[Math.floor(spreads.length * 0.95)].toFixed(2)}`);
+      lines.push(`\n[${d}] bot spend mean=${mean(spends).toFixed(3)} residual=${mean(rd.map(r => r.botResidual)).toFixed(3)} min=${Math.min(...spends).toFixed(3)} | bot spread mean=${mean(spreads).toFixed(2)} p95=${[...spreads].sort((a, b) => a - b)[Math.floor(spreads.length * 0.95)].toFixed(2)}`);
+      lines.push(`  incomplete rosters=${rd.reduce((sum, run) => sum + run.incompleteRosters, 0)} | starter spend share=${mean(rd.flatMap(run => run.starterSpendShare)).toFixed(3)} | average bench price=${mean(rd.map(run => run.averageBenchPrice)).toFixed(2)} | overfocused role=${mean(rd.map(run => run.overspendRole)).toFixed(3)} | preferred formation kept=${mean(rd.map(run => run.formationCoherence)).toFixed(3)}`);
       lines.push(`  topPrice median P=${median(rd.map(r => r.topPrice.P))} D=${median(rd.map(r => r.topPrice.D))} C=${median(rd.map(r => r.topPrice.C))} A=${median(rd.map(r => r.topPrice.A))} | maxPrice max=${Math.max(...rd.map(r => r.maxPrice))} | bids/lot mean=${mean(rd.flatMap(r => r.bidsPerLot)).toFixed(1)} max=${Math.max(...rd.flatMap(r => r.bidsPerLot))}`);
       lines.push(`  role spend share P=${mean(rd.map(r => r.roleSpendShare.P)).toFixed(2)} D=${mean(rd.map(r => r.roleSpendShare.D)).toFixed(2)} C=${mean(rd.map(r => r.roleSpendShare.C)).toFixed(2)} A=${mean(rd.map(r => r.roleSpendShare.A)).toFixed(2)}`);
       const ratios = rd.flatMap(r => r.topFairRatios).sort((a, b) => a - b);

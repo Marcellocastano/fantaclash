@@ -25,7 +25,7 @@ import type { Player } from '../../../src/types/index.ts';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT_DIR = join(ROOT, '..', 'public', 'data', 'seasons');
 
-const LISTONE_COUNT: Record<FantaRole, number> = { P: 12, D: 24, C: 36, A: 24 };
+const LISTONE_COUNT: Record<FantaRole, number> = { P: 12, D: 48, C: 48, A: 36 };
 const ROLES: FantaRole[] = ['P', 'D', 'C', 'A'];
 
 function seasonLabel(season: string): string {

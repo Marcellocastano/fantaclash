@@ -37,6 +37,8 @@ export {
 } from './personalities';
 
 export type { DifficultyProfile, ValuationContext } from './botValuation';
+export type { SquadPlan } from './squadPlan';
+export { BENCH_VALUE, BENCH_EXPECTED_PRICE, BENCH_CAP_SHARE, getSquadPlan, isStarterTarget } from './squadPlan';
 export {
   DIFFICULTY_PROFILES,
   getStarFactor,

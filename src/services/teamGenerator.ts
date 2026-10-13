@@ -4,6 +4,7 @@ import { getRemainingSlots, getTotalRemainingSlots, LEAGUE_SIZE, INITIAL_CREDITS
 import {
   assignArchetypes,
   pickPupilli,
+  preferredFormationFor,
   randomRolePreferences,
 } from './auction/personalities';
 import type { Rng } from './auction/rng';
@@ -24,6 +25,7 @@ export function generateBotConfig(
     archetype,
     rolePreferences: randomRolePreferences(rng),
     pupilli: archetype === 'cacciatore' ? pickPupilli(pool, rng) : [],
+    preferredFormation: preferredFormationFor(archetype, rng),
   };
 }
 
