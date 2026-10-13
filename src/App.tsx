@@ -5,6 +5,7 @@ import { GameShell } from './components/layout/GameShell';
 import { journeyStep } from './components/layout/journey';
 import { NAV_LINKS } from './site/navigation';
 import { randomTournamentSeed } from './domain/tournament';
+import { isLegends, listoneShort } from './services/seasons';
 import { GameProvider, useGame, useGamePhase } from './context/GameContext';
 import { PlayerRole } from './types';
 import { useScrollToTop } from './hooks/useScrollToTop';
@@ -35,7 +36,7 @@ function GameNavbar() {
         <NavStat label="I tuoi crediti" value={user?.credits ?? 0} accent />
       </>
     ) : state.config ? (
-      <NavStat label="Annata" value={state.config.season} />
+      <NavStat label={isLegends(state.config.season) ? 'Listone' : 'Annata'} value={listoneShort(state.config.season)} />
     ) : null;
   return <AppNavbar step={journeyStep(state.phase, state.tournament?.status)} context={context} onNewGame={resetGame} />;
 }

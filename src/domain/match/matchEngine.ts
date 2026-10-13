@@ -268,6 +268,8 @@ export interface SimulateMatchInput {
 
 export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchInput): MatchResult {
   const schedule = buildSchedule(seed);
+  const leg = options.twoLegged?.leg;
+  const firstLeg = options.twoLegged?.leg === 2 ? options.twoLegged.firstLeg : null;
   const sides: Record<MatchSide, SideState> = {
     home: buildSide(home, 'home', seed, options.tactics?.home ?? null),
     away: buildSide(away, 'away', seed, options.tactics?.away ?? null),
@@ -504,7 +506,10 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       let next = s.tactic;
       if (s.plan) next = planTactic(s.plan, t);
       else if (decisionIndex >= 0) {
-        next = aiTactic(decisionIndex, s.goals - o.goals, aiRatings[side] - aiRatings[opp(side)]);
+        // Al ritorno l'IA ragiona sull'aggregato, non sul punteggio parziale
+        const goalDiff =
+          s.goals - o.goals + (firstLeg ? firstLeg[side] - firstLeg[o.side] : 0);
+        next = aiTactic(decisionIndex, goalDiff, aiRatings[side] - aiRatings[opp(side)]);
       }
       if (next !== s.tactic) {
         s.tactic = next;
@@ -565,26 +570,44 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     snapshot(homeControl);
   }
 
-  // Lotteria dei rigori in caso di parità
+  // Esito del confronto: con twoLegged decidono i gol totali (aggregato).
+  // L'andata finita pari è un risultato valido e non ha un vincitore.
+  const fullTime = score();
+  const aggregate: Record<MatchSide, number> | null = firstLeg
+    ? { home: fullTime.home + firstLeg.home, away: fullTime.away + firstLeg.away }
+    : null;
+  const tied = aggregate ? aggregate.home === aggregate.away : fullTime.home === fullTime.away;
+
+  // Lotteria dei rigori in caso di parità (mai all'andata)
   let shootout: ShootoutResult | null = null;
   let shootoutOrder: Record<MatchSide, string[]> | null = null;
-  const fullTime = score();
-  if (fullTime.home === fullTime.away) {
-    emit('shootout_start', 'home', `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}. Si va ai rigori!`, 2);
+  if (leg !== 1 && tied) {
+    emit(
+      'shootout_start',
+      'home',
+      aggregate
+        ? `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}, aggregato ${aggregate.home} - ${aggregate.away}. Si va ai rigori!`
+        : `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}. Si va ai rigori!`,
+      2
+    );
     shootout = runShootout();
   }
-  const winnerSide: MatchSide = shootout
+  const winnerSide: MatchSide | null = shootout
     ? shootout.home > shootout.away ? 'home' : 'away'
-    : fullTime.home > fullTime.away ? 'home' : 'away';
-  const winnerName = sides[winnerSide].name;
-  emit(
-    'full_time',
-    winnerSide,
-    shootout
-      ? `Fischio finale. ${winnerName} vince ai rigori ${Math.max(shootout.home, shootout.away)} - ${Math.min(shootout.home, shootout.away)}.`
-      : `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`,
-    3
-  );
+    : (aggregate ?? fullTime).home === (aggregate ?? fullTime).away
+      ? null
+      : (aggregate ?? fullTime).home > (aggregate ?? fullTime).away
+        ? 'home'
+        : 'away';
+  const winnerName = winnerSide ? sides[winnerSide].name : home.name;
+  const fullTimeText = shootout
+    ? `Fischio finale. ${winnerName} vince ai rigori ${Math.max(shootout.home, shootout.away)} - ${Math.min(shootout.home, shootout.away)}.`
+    : leg === 1
+      ? `Fine dell'andata: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`
+      : aggregate
+        ? `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}. Passa ${winnerName} (${aggregate.home} - ${aggregate.away} nell'insieme delle due gare).`
+        : `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`;
+  emit('full_time', winnerSide ?? 'home', fullTimeText, 3);
 
   function runShootout(): ShootoutResult {
     const rng = createRng(hashSeed(seed, 'shootout'));
@@ -695,7 +718,9 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     awayScore: fullTime.away,
     shootout,
     shootoutOrder,
-    winnerId: sides[winnerSide].id,
+    leg,
+    aggregate: aggregate ?? undefined,
+    winnerId: winnerSide ? sides[winnerSide].id : null,
     events,
     ticks,
     decisionTicks: schedule.decisionTicks,

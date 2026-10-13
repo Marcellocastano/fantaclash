@@ -9,6 +9,10 @@ interface MatchEndProps {
   result: MatchResult;
   userTeamId: string;
   round: TournamentRound;
+  /** Gara del confronto a due: 1 = andata (il pari vale), 2 = ritorno */
+  leg?: 1 | 2;
+  /** Risultato dell'andata dai lati del tie (solo al ritorno) */
+  firstLeg?: MatchResult;
   onContinue: () => void;
   onConclude: () => void;
   /** Stanza: sostituisce i due pulsanti con un'unica uscita locale */
@@ -28,9 +32,28 @@ const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
  * dell'utente. Un solo pulsante: avanti se hai vinto, chiudi il torneo se
  * hai perso.
  */
-export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, exitLabel }: MatchEndProps) {
+export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue, onConclude, exitLabel }: MatchEndProps) {
+  // All'andata non c'è un vincitore del confronto: conta solo chi è avanti
+  const firstLegDone = leg === 1;
   const won = result.winnerId === userTeamId;
-  const champion = won && round === 'final';
+  const champion = !firstLegDone && won && round === 'final';
+  const ahead = firstLegDone && result.winnerId === userTeamId;
+  const behind = firstLegDone && result.winnerId !== null && result.winnerId !== userTeamId;
+  const headline = firstLegDone ? 'FINE ANDATA' : champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO';
+  const subtitle = firstLegDone
+    ? ahead
+      ? 'Vantaggio tuo: il ritorno decide'
+      : behind
+        ? 'Sei sotto: serve rimonta al ritorno'
+        : 'Tutto aperto: si riparte alla pari'
+    : null;
+  // Al ritorno: le due gare e l'aggregato sotto il punteggio
+  const tieLine =
+    leg === 2 && firstLeg
+      ? `Andata ${firstLeg.homeScore}-${firstLeg.awayScore} · Ritorno ${result.homeScore}-${result.awayScore} · Agg. ${
+          firstLeg.homeScore + result.awayScore
+        }-${firstLeg.awayScore + result.homeScore}`
+      : null;
   const userSide = result.homeTeamId === userTeamId ? 'home' : 'away';
   const lineup = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, p]));
   const name = (id: string | undefined) => shortName(lineup.get(id ?? '')?.name ?? '');
@@ -47,12 +70,14 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, ex
       {/* Esito */}
       <div className={`border-2 border-ink shadow-block px-6 py-6 text-center ${won ? 'bg-highlight text-on-highlight' : 'bg-ink text-canvas'}`}>
         <p className="font-display text-5xl md:text-8xl font-black leading-none motion-safe:animate-stamp break-words">
-          {champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO'}
+          {headline}
         </p>
+        {subtitle && <p className="mt-2 font-bold text-lg opacity-80">{subtitle}</p>}
         <p className="font-display text-2xl sm:text-3xl font-extrabold mt-3 tabular-nums break-words">
           {result.homeName} {result.homeScore}-{result.awayScore} {result.awayName}
           {result.shootout && <span className="block text-xl">rigori {result.shootout.home}-{result.shootout.away}</span>}
         </p>
+        {tieLine && <p className="mt-1 text-sm font-semibold tabular-nums opacity-80">{tieLine}</p>}
       </div>
 
       <div className="grid md:grid-cols-12 gap-10 mt-10">
@@ -110,8 +135,8 @@ export function MatchEnd({ result, userTeamId, round, onContinue, onConclude, ex
       </div>
 
       <div className="mt-12 text-center">
-        <button onClick={won ? onContinue : onConclude} className="btn-cta">
-          {exitLabel ?? (won ? NEXT_LABEL[round] : 'Concludi torneo')}
+        <button onClick={firstLegDone || won ? onContinue : onConclude} className="btn-cta">
+          {exitLabel ?? (firstLegDone ? 'Avanti: ritorno' : won ? NEXT_LABEL[round] : 'Concludi torneo')}
           <Icon name="arrow" className="w-7 h-7" />
         </button>
       </div>

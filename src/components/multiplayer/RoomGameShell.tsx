@@ -6,6 +6,7 @@ import { GameShell } from '../layout/GameShell';
 import { RoomTopBar } from './RoomTopBar';
 import { useRoom } from './RoomProvider';
 import { useRoomExit } from './useRoomExit';
+import { isLegends, listoneShort } from '../../services/seasons';
 
 const ROOM_PHASE: Record<string, GamePhase> = {
   auction: 'ASTA',
@@ -32,7 +33,7 @@ export function RoomGameShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <AppNavbar
         step={step}
-        context={state ? <NavStat label="Annata" value={state.settings.season} /> : null}
+        context={state ? <NavStat label={isLegends(state.settings.season) ? 'Listone' : 'Annata'} value={listoneShort(state.settings.season)} /> : null}
         sessionExit={sessionExit}
       />
       <div className="w-full max-w-[1600px] mx-auto px-4">

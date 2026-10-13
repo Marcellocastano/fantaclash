@@ -1,5 +1,6 @@
 import { Player } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { seasonShort } from '../../services/seasons';
 import { splitName } from '../../utils/playerName';
 import { OvrBadge } from './OvrBadge';
 
@@ -37,7 +38,8 @@ export function PlayerRow({ player, soldTo, selectable, scanning = false, locked
             </>
           ) : (
             <>
-              {player.team} · MV {player.avgRating.toFixed(1)} · {goalLabel} {Math.round(goalValue * 100)}%
+              {player.team}
+              {player.legend && ` ${seasonShort(player.season)}`} · MV {player.avgRating.toFixed(1)} · {goalLabel} {Math.round(goalValue * 100)}%
             </>
           )}
         </span>

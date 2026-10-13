@@ -1,6 +1,8 @@
 import { Player } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { seasonShort } from '../../services/seasons';
 import { splitName } from '../../utils/playerName';
+import { Icon } from '../Icon';
 import { ROLE_NAME, ROLE_TAG, TIER_CLASSES, TIER_LABEL, tierOf } from './tier';
 
 type CardSize = 'sm' | 'lg';
@@ -50,8 +52,16 @@ export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = 
           <span className={`${ROLE_TAG[player.role]} mt-1 ${lg ? '' : '!w-5 !h-5 !text-xs'}`}>{player.role}</span>
         </div>
         <div className="text-right min-w-0">
-          <p className={`font-display font-extrabold leading-none truncate ${lg ? 'text-2xl' : 'text-sm'}`}>{player.team}</p>
-          <p className={`${t.muted} ${lg ? 'text-sm mt-1' : 'text-[11px]'}`}>{lg ? `${ROLE_NAME[player.role]} · ${TIER_LABEL[tier]}` : TIER_LABEL[tier]}</p>
+          {/* Leggenda: stellina e annata d'origine al posto della fascia */}
+          <p className={`font-display font-extrabold leading-none truncate ${lg ? 'text-2xl' : 'text-sm'}`}>
+            {player.legend && <Icon name="star" className={`inline-block align-baseline ${lg ? 'w-4 h-4' : 'w-3 h-3'} text-highlight mr-1`} aria-hidden="true" />}
+            {player.team}
+          </p>
+          <p className={`${t.muted} ${lg ? 'text-sm mt-1' : 'text-[11px]'}`}>
+            {player.legend
+              ? lg ? `${ROLE_NAME[player.role]} · ${player.season}` : seasonShort(player.season)
+              : lg ? `${ROLE_NAME[player.role]} · ${TIER_LABEL[tier]}` : TIER_LABEL[tier]}
+          </p>
         </div>
       </div>
 

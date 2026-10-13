@@ -1,4 +1,14 @@
-import { fillQuarterfinals, findMatch, getMatchStatus, roundMatches, TOURNAMENT_SIZE } from './bracket';
+import {
+  fillQuarterfinals,
+  findMatch,
+  getMatchStatus,
+  legSides,
+  matchLegs,
+  parseLegKey,
+  roundMatches,
+  tieWinner,
+  TOURNAMENT_SIZE,
+} from './bracket';
 import { TournamentAction, TournamentState, TournamentStatus } from './tournamentTypes';
 
 /**
@@ -38,15 +48,42 @@ export function tournamentReducer(state: TournamentState, action: TournamentActi
       return state.currentMatchId ? { ...state, currentMatchId: null } : state;
 
     case 'RECORD_RESULT': {
-      const match = findMatch(state.bracket, action.matchId);
-      if (!match) return state;
+      // action.matchId è la chiave della gara: id del tie per andata e gara
+      // secca, `${id}-R` per il ritorno
+      const { matchId: tieId, leg } = parseLegKey(action.matchId);
+      const match = findMatch(state.bracket, tieId);
+      if (!match || leg > matchLegs(match)) return state;
       const status = getMatchStatus(state, match);
       if (status !== 'ready' && status !== 'in_progress') return state;
       const { result } = action;
-      if (result.homeTeamId !== match.homeId || result.awayTeamId !== match.awayId) return state;
-      if (result.winnerId !== match.homeId && result.winnerId !== match.awayId) return state;
+      const sides = legSides(match, leg);
+      if (result.homeTeamId !== sides.homeId || result.awayTeamId !== sides.awayId) return state;
+      if (state.matches[action.matchId]) return state;
 
-      const winnerId = result.winnerId;
+      // Nei confronti a due gare il risultato deve essere quello di un
+      // motore "twoLegged": all'andata niente rigori, al ritorno il
+      // vincitore deve essere coerente con l'aggregato
+      const twoLegged = matchLegs(match) === 2;
+      if (twoLegged) {
+        if (result.leg !== leg) return state;
+        if (leg === 1 && result.shootout) return state;
+      }
+      let winnerId = result.winnerId;
+      if (leg === 2) {
+        const first = state.matches[tieId];
+        if (!first) return state;
+        winnerId = tieWinner(match, first, result);
+        if (!winnerId || result.winnerId !== winnerId) return state;
+      }
+      if (leg === 1 && twoLegged) {
+        // L'andata non decide il confronto: si registra solo il risultato
+        return {
+          ...state,
+          matches: { ...state.matches, [action.matchId]: result },
+          currentMatchId: state.currentMatchId === match.id ? null : state.currentMatchId,
+        };
+      }
+      if (!winnerId) return state;
       let bracket = state.bracket.map(m => (m.id === match.id ? { ...m, winnerId } : m));
       if (match.next) {
         const { matchId, slot } = match.next;
@@ -59,7 +96,7 @@ export function tournamentReducer(state: TournamentState, action: TournamentActi
       return {
         ...state,
         bracket,
-        matches: { ...state.matches, [match.id]: result },
+        matches: { ...state.matches, [action.matchId]: result },
         currentMatchId: state.currentMatchId === match.id ? null : state.currentMatchId,
         status: nextStatus,
         winnerId: nextStatus === 'completed' ? winnerId : state.winnerId,

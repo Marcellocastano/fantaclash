@@ -2,7 +2,7 @@ import { PlayerRole, Team } from '../../types';
 import { SITE_URL } from '../../config';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { shortName } from '../match/matchEvents';
-import { ROUND_SHORT, userPath } from './bracket';
+import { legResult, matchLegs, ROUND_SHORT, userPath } from './bracket';
 import { TournamentRound, TournamentState } from './tournamentTypes';
 
 /**
@@ -24,8 +24,11 @@ export interface SummaryMatch {
   round: TournamentRound;
   roundShort: string;
   opponentName: string;
+  /** Confronto a due gare: aggregato; gara secca: risultato */
   goalsFor: number;
   goalsAgainst: number;
+  /** Punteggio di ogni gara dal punto di vista dell'utente (due gare) */
+  legs?: { for: number; against: number }[];
   shootout: { for: number; against: number } | null;
   won: boolean;
 }
@@ -56,25 +59,34 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
   const goals = new Map<string, number>();
   const fantasy = new Map<string, number[]>();
   for (const m of userPath(state)) {
-    const r = state.matches[m.id];
-    if (!r) continue;
-    const home = r.homeTeamId === userId;
+    const r1 = legResult(state, m, 1);
+    if (!r1) continue;
+    const r2 = matchLegs(m) === 2 ? legResult(state, m, 2) : undefined;
+    const results = [r1, ...(r2 ? [r2] : [])];
+    // Ogni gara ha la sua prospettiva (al ritorno casa/ospiti sono invertiti)
+    const userFor = (r: typeof r1) => (r.homeTeamId === userId ? r.homeScore : r.awayScore);
+    const userAgainst = (r: typeof r1) => (r.homeTeamId === userId ? r.awayScore : r.homeScore);
+    const last = results[results.length - 1];
+    const lastHome = last.homeTeamId === userId;
     matches.push({
       matchId: m.id,
       round: m.round,
       roundShort: ROUND_SHORT[m.round],
-      opponentName: home ? r.awayName : r.homeName,
-      goalsFor: home ? r.homeScore : r.awayScore,
-      goalsAgainst: home ? r.awayScore : r.homeScore,
-      shootout: r.shootout
-        ? { for: home ? r.shootout.home : r.shootout.away, against: home ? r.shootout.away : r.shootout.home }
+      opponentName: lastHome ? last.awayName : last.homeName,
+      goalsFor: results.reduce((s, r) => s + userFor(r), 0),
+      goalsAgainst: results.reduce((s, r) => s + userAgainst(r), 0),
+      legs: r2 ? results.map(r => ({ for: userFor(r), against: userAgainst(r) })) : undefined,
+      shootout: last.shootout
+        ? { for: lastHome ? last.shootout.home : last.shootout.away, against: lastHome ? last.shootout.away : last.shootout.home }
         : null,
-      won: r.winnerId === userId,
+      won: m.winnerId === userId,
     });
-    for (const p of r.playerPerformances) {
-      if (p.teamId !== userId) continue;
-      if (p.goals) goals.set(p.playerId, (goals.get(p.playerId) ?? 0) + p.goals);
-      fantasy.set(p.playerId, [...(fantasy.get(p.playerId) ?? []), p.fantasyScore]);
+    for (const r of results) {
+      for (const p of r.playerPerformances) {
+        if (p.teamId !== userId) continue;
+        if (p.goals) goals.set(p.playerId, (goals.get(p.playerId) ?? 0) + p.goals);
+        fantasy.set(p.playerId, [...(fantasy.get(p.playerId) ?? []), p.fantasyScore]);
+      }
     }
   }
 
@@ -115,11 +127,18 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
     mvp,
     lineup: roster.map(p => ({ playerId: p.id, name: shortName(p.name), role: p.role, overall: playerOverall(p) })),
     stats: {
-      played: matches.length,
-      wins: matches.filter(m => m.won).length,
+      // Le statistiche contano le singole gare, non i confronti
+      played: matches.reduce((s, m) => s + (m.legs?.length ?? 1), 0),
+      wins: matches.reduce(
+        (s, m) => s + (m.legs ?? [{ for: m.goalsFor, against: m.goalsAgainst }]).filter(l => l.for > l.against).length,
+        0
+      ),
       goalsFor: matches.reduce((s, m) => s + m.goalsFor, 0),
       goalsAgainst: matches.reduce((s, m) => s + m.goalsAgainst, 0),
-      cleanSheets: matches.filter(m => m.goalsAgainst === 0).length,
+      cleanSheets: matches.reduce(
+        (s, m) => s + (m.legs ?? [{ for: m.goalsFor, against: m.goalsAgainst }]).filter(l => l.against === 0).length,
+        0
+      ),
     },
     championName: state.winnerId ? nameOf(state.winnerId) : null,
     opponents: matches.map(m => m.opponentName),
@@ -131,8 +150,10 @@ export function shareText(summary: TournamentSummary): string {
   const results = summary.matches
     .map(m => {
       const so = m.shootout ? ` (${m.shootout.for}-${m.shootout.against} rig.)` : '';
-      return `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst}${so} vs ${m.opponentName}`;
+      const legs = m.legs ? ` (${m.legs.map(l => `${l.for}-${l.against}`).join(', ')})` : '';
+      return `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst}${legs}${so} vs ${m.opponentName}`;
     })
     .join(', ');
-  return `${summary.teamName}: ${summary.placementLabel.toLowerCase()} della ${summary.tournamentName} (Serie A ${summary.seasonId}). ${results}. #FantaClash ${SITE_URL}/`;
+  const cup = summary.seasonId === 'legends' ? 'Serie A Legends' : `Serie A ${summary.seasonId}`;
+  return `${summary.teamName}: ${summary.placementLabel.toLowerCase()} della ${summary.tournamentName} (${cup}). ${results}. #FantaClash ${SITE_URL}/`;
 }

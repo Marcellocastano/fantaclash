@@ -5,6 +5,7 @@ import { SEASON_PLAYERS, strongTeam, teamFromRank, weakTeam } from '../../test/m
 import { assertInvariants, possessionMismatches, scoreBefore, SIDES, TACTICS } from '../../test/matchAudit';
 import { departmentStrength, penaltySaveSkill, rosterRating } from '../teams/teamStrength';
 import {
+  aiTactic,
   computePerformances,
   getPlaybackState,
   lastTick,
@@ -523,10 +524,98 @@ describe('rigori oltre il cap: decide la monetina (D5)', () => {
       expect(r.shootout).not.toBeNull();
       const kicks = r.events.filter(e => e.type === 'shootout_kick');
       expect(kicks.length).toBeGreaterThanOrEqual(2 * SHOOTOUT_MAX_ROUNDS + 1);
-      winners.add(r.winnerId);
+      winners.add(r.winnerId!);
     }
     expect(winners).toContain('piatti');
     expect(winners).toContain('specchio');
+  });
+});
+
+describe('andata e ritorno (twoLegged)', () => {
+  it('senza l\'opzione il risultato è identico a prima', () => {
+    for (const seed of [1, 7, 42, 123]) {
+      const a = simulateMatch({ home: MID, away: OPP, seed });
+      expect(a.leg).toBeUndefined();
+      expect(a.aggregate).toBeUndefined();
+      expect(a.shootout !== null).toBe(a.homeScore === a.awayScore);
+    }
+  });
+
+  it('l\'andata ha i 90\' identici alla gara secca, il pari vale e non c\'è rigori', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const single = simulateMatch({ home: MID, away: OPP, seed });
+      const leg1 = simulateMatch({ home: MID, away: OPP, seed, options: { twoLegged: { leg: 1 } } });
+      assertInvariants(leg1);
+      expect(leg1.leg).toBe(1);
+      // I regolamentari sono identici (il pallone è solo presentazione e
+      // dipende anche dagli eventi dei rigori: si confronta il resto)
+      expect(leg1.ticks.map(t => ({ ...t, ball: 0 }))).toEqual(
+        single.ticks.slice(0, leg1.ticks.length).map(t => ({ ...t, ball: 0 }))
+      );
+      expect(leg1.events.filter(e => e.type !== 'full_time')).toEqual(
+        single.events.filter(e => e.type === 'shootout_kick' || e.type === 'shootout_start' ? false : e.type !== 'full_time')
+      );
+      if (single.homeScore === single.awayScore) {
+        expect(leg1.shootout).toBeNull();
+        expect(leg1.winnerId).toBeNull();
+      } else {
+        expect(leg1.winnerId).toBe(single.winnerId);
+      }
+    }
+  });
+
+  it('al ritorno si va ai rigori solo con l\'aggregato pari', () => {
+    let foundShootout = 0;
+    let foundCleanWin = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const leg1 = simulateMatch({ home: MID, away: OPP, seed, options: { twoLegged: { leg: 1 } } });
+      // Ritorno: casa e ospiti invertiti, firstLeg dal punto di vista dei lati del ritorno
+      const leg2 = simulateMatch({
+        home: OPP,
+        away: MID,
+        seed: seed + 5000,
+        options: { twoLegged: { leg: 2, firstLeg: { home: leg1.awayScore, away: leg1.homeScore } } },
+      });
+      assertInvariants(leg2);
+      const aggHome = leg2.homeScore + leg1.awayScore;
+      const aggAway = leg2.awayScore + leg1.homeScore;
+      expect(leg2.aggregate).toEqual({ home: aggHome, away: aggAway });
+      if (aggHome === aggAway) {
+        foundShootout++;
+        expect(leg2.shootout).not.toBeNull();
+      } else {
+        foundCleanWin++;
+        expect(leg2.shootout).toBeNull();
+        expect(leg2.winnerId).toBe(aggHome > aggAway ? OPP.id : MID.id);
+      }
+    }
+    expect(foundShootout).toBeGreaterThan(0);
+    expect(foundCleanWin).toBeGreaterThan(300);
+  });
+
+  it('l\'IA del ritorno ragiona sull\'aggregato, non sul parziale', () => {
+    // Casa sotto 0-3 nell'andata: al ritorno l'IA decide guardando il
+    // totale delle due gare, anche se nella singola partita è in vantaggio.
+    const ratingDiff = rosterRating(MID.players) - rosterRating(OPP.players);
+    let sawLegAheadButAttacking = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const r = simulateMatch({
+        home: MID,
+        away: OPP,
+        seed,
+        options: { twoLegged: { leg: 2, firstLeg: { home: 0, away: 3 } } },
+      });
+      assertInvariants(r);
+      for (let i = 1; i < 3; i++) {
+        const k = r.decisionTicks[i];
+        const aggDiff = scoreBefore(r, k, 'home') - 3;
+        const legDiff = scoreBefore(r, k, 'home');
+        expect(r.ticks[k].tactic.home).toBe(aiTactic(i, aggDiff, ratingDiff));
+        if (legDiff >= 0 && aggDiff < 0) sawLegAheadButAttacking++;
+      }
+    }
+    // Il caso interessante esiste: in vantaggio di misura ma sotto nel tie
+    expect(sawLegAheadButAttacking).toBeGreaterThan(0);
   });
 });
 

@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { GameConfig, DifficultyLevel } from '../types';
-import { loadSeasonIndex, SeasonInfo } from '../services/seasons';
+import { LEGENDS_ID, loadSeasonIndex, SeasonInfo } from '../services/seasons';
 import { LEAGUE_SIZE, INITIAL_CREDITS } from '../services/auction';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/teamNames';
+import { TournamentFormat } from '../domain/tournament';
 import { Icon } from './Icon';
 import { SeasonPicker } from './SeasonPicker';
 import { DifficultyPicker } from './DifficultyPicker';
+import { CupFormatPicker } from './CupFormatPicker';
+import { ListoneMode, ListoneModePicker } from './ListoneModePicker';
 
 interface SetupFormProps {
   /** Callback chiamata quando il form viene inviato con successo (può essere asincrona) */
@@ -17,12 +20,16 @@ interface SetupFormProps {
 /**
  * Form di inizio partita, integrato nella landing.
  * Lega fissa a 8 squadre e 100 crediti: l'utente sceglie nome squadra
- * (con generatore), annata del listone (carosello + dado) e difficoltà.
+ * (con generatore), il listone (Classica = un'annata a scelta, Legends =
+ * i migliori di sempre), il formato della coppa e la difficoltà.
+ * `?modalita=legends` preseleziona Legends, `?annata=` l'annata.
  */
 export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
   // Valori casuali solo dopo il montaggio: il primo disegno coincide con l'HTML pre-renderizzato
   const [teamName, setTeamName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
+  const [mode, setMode] = useState<ListoneMode>('classic');
+  const [format, setFormat] = useState<TournamentFormat>('double');
   const [season, setSeason] = useState<string>('');
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
   const [seasonsError, setSeasonsError] = useState<string | null>(null);
@@ -39,7 +46,9 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
    */
   useEffect(() => {
     let cancelled = false;
-    const requested = new URLSearchParams(window.location.search).get('annata');
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('annata');
+    if (params.get('modalita') === LEGENDS_ID) setMode('legends');
     loadSeasonIndex()
       .then(list => {
         if (cancelled) return;
@@ -60,9 +69,11 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     };
   }, []);
 
+  // L'album di destra segue il listone scelto (Legends ha il suo documento)
+  const listoneId = mode === 'legends' ? LEGENDS_ID : season;
   useEffect(() => {
-    if (season) onSeasonChange?.(season);
-  }, [season, onSeasonChange]);
+    if (listoneId) onSeasonChange?.(listoneId);
+  }, [listoneId, onSeasonChange]);
 
   /**
    * Valida il form e restituisce true se valido
@@ -78,13 +89,13 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       newErrors.teamName = `Il nome non può superare i ${MAX_TEAM_NAME_LENGTH} caratteri`;
     }
 
-    if (!season) {
+    if (mode === 'classic' && !season) {
       newErrors.season = 'Seleziona una stagione';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [teamName, season]);
+  }, [teamName, season, mode]);
 
   /**
    * Gestisce l'invio del form
@@ -96,7 +107,8 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     const config: GameConfig = {
       userTeamName: teamName.trim(),
       difficulty,
-      season,
+      season: listoneId,
+      format,
     };
     setSubmitting(true);
     try {
@@ -109,9 +121,9 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [teamName, difficulty, season, submitting, validateForm, onSubmit]);
+  }, [teamName, difficulty, listoneId, format, submitting, validateForm, onSubmit]);
 
-  const seasonsReady = seasons !== null && seasons.length > 0 && !seasonsError;
+  const seasonsReady = mode === 'legends' || (seasons !== null && seasons.length > 0 && !seasonsError);
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" aria-label="Inizia a giocare">
       {/* Nome squadra con generatore */}
@@ -143,18 +155,47 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
         {errors.teamName && <p className="mt-2 text-sm text-danger">{errors.teamName}</p>}
       </div>
 
-      {/* Annata */}
+      {/* Listone: Classica o Legends */}
       <div>
-        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Annata del listone</p>
-        {seasonsReady ? (
-          <SeasonPicker seasons={seasons} value={season} onChange={setSeason} disabled={submitting} />
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Listone</p>
+        <ListoneModePicker value={mode} onChange={setMode} disabled={submitting} />
+      </div>
+
+      {/* Annata (solo Classica) o Hall of Fame */}
+      <div>
+        {mode === 'classic' ? (
+          <>
+            <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Annata del listone</p>
+            {seasons !== null && seasons.length > 0 && !seasonsError ? (
+              <SeasonPicker seasons={seasons} value={season} onChange={setSeason} disabled={submitting} />
+            ) : (
+              <p className="border-2 border-ink px-4 py-5 text-ink-muted">
+                {seasonsError ?? 'Caricamento stagioni…'}
+              </p>
+            )}
+            {seasonsError && <p className="mt-2 text-sm text-danger">{seasonsError}</p>}
+            {errors.season && <p className="mt-2 text-sm text-danger">{errors.season}</p>}
+          </>
         ) : (
-          <p className="border-2 border-ink px-4 py-5 text-ink-muted">
-            {seasonsError ?? 'Caricamento stagioni…'}
-          </p>
+          <div className="relative border-2 border-ink bg-tier-elite-bg text-canvas px-4 sm:px-5 py-4 sm:py-5">
+            <span className="absolute inset-1 border border-highlight/50 pointer-events-none" aria-hidden="true" />
+            <div className="relative flex items-center gap-3">
+              <Icon name="trophy" className="w-9 h-9 sm:w-11 sm:h-11 text-highlight shrink-0" />
+              <div className="min-w-0">
+                <p className="font-display text-2xl sm:text-3xl font-black text-highlight leading-none">HALL OF FAME</p>
+                <p className="mt-1 text-xs sm:text-sm text-canvas/75 leading-snug">
+                  96 leggende delle 23 annate · una card per giocatore, nella sua stagione migliore · overall fino a 99
+                </p>
+              </div>
+            </div>
+          </div>
         )}
-        {seasonsError && <p className="mt-2 text-sm text-danger">{seasonsError}</p>}
-        {errors.season && <p className="mt-2 text-sm text-danger">{errors.season}</p>}
+      </div>
+
+      {/* Formato della coppa */}
+      <div>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Coppa</p>
+        <CupFormatPicker value={format} onChange={setFormat} disabled={submitting} />
       </div>
 
       {/* Difficoltà */}

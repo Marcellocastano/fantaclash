@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TournamentSummary } from '../../domain/tournament';
 import { renderSummaryCard } from '../../services/shareCard';
+import { listoneLabel } from '../../services/seasons';
 
 /** PNG della card generato una volta sola: lo stesso file si mostra e si condivide */
 export function useSummaryCard(summary: TournamentSummary) {
@@ -29,5 +30,5 @@ export function useSummaryCard(summary: TournamentSummary) {
 /** Descrizione testuale della card (alt dell'immagine e ripiego senza canvas) */
 export function summaryAlt(summary: TournamentSummary): string {
   const results = summary.matches.map(m => `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst} contro ${m.opponentName}`).join(', ');
-  return `${summary.placementLabel}: ${summary.teamName}, ${summary.tournamentName} Serie A ${summary.seasonId}. ${results}.`;
+  return `${summary.placementLabel}: ${summary.teamName}, ${summary.tournamentName} ${listoneLabel(summary.seasonId)}. ${results}.`;
 }

@@ -1,6 +1,7 @@
 import { TournamentSummary, shareText } from '../domain/tournament';
 import type { Placement, SummaryMatch } from '../domain/tournament';
 import { PlayerRole } from '../types';
+import { isLegends } from './seasons';
 import { TIER_COLORS, tierOf } from './playerTier';
 
 /**
@@ -172,7 +173,7 @@ function drawSeasonStamp(ctx: Ctx, cx: number, cy: number, season: string) {
   ctx.textBaseline = 'middle';
   ctx.font = `700 22px ${SANS}`;
   ctx.fillText('SERIE A', 0, -24);
-  ctx.fillText(fitFont(ctx, season, 120, 900, DISPLAY, 46, 28), 0, 16);
+  ctx.fillText(fitFont(ctx, isLegends(season) ? 'LEGENDS' : season, 120, 900, DISPLAY, 46, 28), 0, 16);
   ctx.restore();
 }
 
@@ -199,6 +200,14 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.fillText(ROUND_NAME[round], x + 22, y + 44);
   ctx.fillStyle = INK;
   ctx.fillText(fitFont(ctx, `vs ${m.opponentName}`, w - 44, 600, SANS, 24, 16), x + 22, y + 80);
+  if (m.legs) {
+    // Confronto a due gare: il punteggio in grande è l'aggregato
+    ctx.fillStyle = MUTED;
+    ctx.font = `600 20px ${SANS}`;
+    const [a, r] = m.legs;
+    ctx.fillText(`And. ${a.for}-${a.against} · Rit. ${r ? `${r.for}-${r.against}` : '—'}`, x + 22, y + 112);
+    ctx.fillStyle = INK;
+  }
   ctx.font = `900 92px ${DISPLAY}`;
   ctx.fillText(`${m.goalsFor}-${m.goalsAgainst}`, x + 22, y + h - 28);
   if (m.shootout) {

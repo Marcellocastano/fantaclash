@@ -13,12 +13,23 @@ export {
   findMatch,
   currentRound,
   getMatchStatus,
+  matchLegs,
+  legKey,
+  parseLegKey,
+  nextLeg,
+  legSides,
+  legSeed,
+  legResult,
+  roundLeg,
+  tieScore,
+  tieWinner,
   getTeamOutcome,
   involves,
   findUserMatch,
   isUserEliminated,
   userPath,
 } from './bracket';
+export type { TieScore } from './bracket';
 export { tournamentReducer } from './tournamentReducer';
 export {
   TOURNAMENT_NAME,

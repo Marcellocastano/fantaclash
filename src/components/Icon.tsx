@@ -40,7 +40,8 @@ export type IconName =
   | 'brand-instagram'
   | 'dice'
   | 'arrow'
-  | 'heart';
+  | 'heart'
+  | 'star';
 
 const paths: Record<IconName, ReactElement> = {
   check: <path d="M4 11l4 4 8-9" />,
@@ -201,6 +202,7 @@ const paths: Record<IconName, ReactElement> = {
   ),
   arrow: <path d="M4 10h11M11 5l5 5-5 5" />,
   heart: <path d="M10 16.5L3.8 10.3a3.6 3.6 0 0 1 5.1-5.1l1.1 1.1 1.1-1.1a3.6 3.6 0 0 1 5.1 5.1z" />,
+  star: <path d="M10 2.5l2.2 4.8 5.1.6-3.8 3.6 1 5.1-4.5-2.6-4.5 2.6 1-5.1L2.7 7.9l5.1-.6z" />,
 };
 
 interface IconProps extends SVGProps<SVGSVGElement> {

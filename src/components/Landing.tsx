@@ -43,9 +43,9 @@ const TILTS = ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2'];
 
 const RULES: { value: string; unit: string; term: string; text: string; tier: Tier; tilt: string }[] = [
   { value: '5"', unit: 'per rilancio', term: 'Asta', text: 'Per reparti, dai portieri agli attaccanti. Si parte da 1 credito e ogni rilancio riporta il timer a 5 secondi. Tieni almeno 1 credito per ogni posto libero.', tier: 'bronze', tilt: '-rotate-1' },
-  { value: '96', unit: 'giocatori', term: 'Listone', text: "I giocatori veri dell'annata, con overall calcolato su statistiche e quotazioni storiche.", tier: 'silver', tilt: 'rotate-1' },
+  { value: '96', unit: 'giocatori', term: 'Listone', text: "I giocatori veri dell'annata scelta — oppure i 96 più forti di sempre in modalità Legends.", tier: 'silver', tilt: 'rotate-1' },
   { value: '7', unit: 'avversari', term: 'Bot', text: "Ognuno ha una personalità d'asta: c'è chi punta ai big e chi aspetta l'affare.", tier: 'gold', tilt: '-rotate-1' },
-  { value: "90'", unit: 'più i rigori', term: 'Partita', text: "Contano qualità, forma del giorno, reparti e stile scelto. Pareggio? Rigori, e l'ordine dei rigoristi lo decidi tu.", tier: 'elite', tilt: 'rotate-1' },
+  { value: "90'", unit: 'più i rigori', term: 'Partita', text: "Contano qualità, forma del giorno, reparti e stile scelto. A gara secca il pari va ai rigori; su andata e ritorno conta l'aggregato.", tier: 'elite', tilt: 'rotate-1' },
 ];
 
 /**
@@ -119,7 +119,7 @@ export function Landing({ onSubmit }: LandingProps) {
               <Preview className="col-span-12 lg:col-span-7 lg:row-span-2" n="1" title="Asta" text="A turno si chiama un giocatore. Rilancia, resisti allo scadere e prenditi i migliori.">
                 <AuctionPreview />
               </Preview>
-              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="2" title="Sorteggio" text="Le 8 rose finiscono nella boccia: quarti, semifinali e finale secca.">
+              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="2" title="Sorteggio" text="Le 8 rose finiscono nella boccia: quarti, semifinali e finale. Secca, o andata e ritorno come in Champions.">
                 <DrawPreview />
               </Preview>
               <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title="Partita" text="Scegli lo stile, guarda la partita e, se serve, vinci ai rigori.">

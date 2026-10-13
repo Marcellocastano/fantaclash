@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRng } from '../../services/auction/rng';
 import { tournamentTeams } from '../../test/matchFixtures';
+import { MatchResult } from '../match/matchTypes';
 import {
   buildTournamentSummary,
   createTournament,
@@ -10,11 +11,16 @@ import {
   getMatchStatus,
   getTeamOutcome,
   isUserEliminated,
+  legKey,
+  matchLegs,
   monogram,
+  nextLeg,
+  roundLeg,
   roundMatches,
   simulateBracketMatch,
   simulateRemaining,
   simulateRound,
+  tieScore,
   tournamentReducer,
   TournamentState,
 } from './index';
@@ -189,6 +195,193 @@ describe('torneo — riepilogo', () => {
       const scorerGoals = s.scorers.reduce((n, x) => n + x.goals, 0);
       expect(scorerGoals).toBeLessThanOrEqual(s.stats.goalsFor);
       expect(s.championName).not.toBeNull();
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Formato andata/ritorno
+// ----------------------------------------------------------------------------
+
+function drawnDouble(seed = 1): TournamentState {
+  const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed, format: 'double' });
+  return tournamentReducer(t, { type: 'DRAW', order: drawOrder(t, createRng(seed)) });
+}
+
+/** Risultato finto per testare le transizioni senza dipendere dal motore */
+function fakeLeg(
+  homeId: string,
+  awayId: string,
+  homeScore: number,
+  awayScore: number,
+  leg: 1 | 2,
+  opts: { shootout?: { home: number; away: number } | null } = {}
+): MatchResult {
+  const shootout = opts.shootout ?? null;
+  const winnerId =
+    shootout !== null
+      ? shootout.home > shootout.away ? homeId : awayId
+      : homeScore === awayScore ? null : homeScore > awayScore ? homeId : awayId;
+  return {
+    homeTeamId: homeId,
+    awayTeamId: awayId,
+    homeName: homeId,
+    awayName: awayId,
+    homeScore,
+    awayScore,
+    shootout,
+    leg,
+    winnerId,
+    events: [],
+    ticks: [],
+    fullTimeTick: 0,
+    halfTimeTick: 0,
+    decisionTicks: [],
+    lineups: { home: [], away: [] },
+    stats: {},
+    playerPerformances: [],
+  } as unknown as MatchResult;
+}
+
+describe('torneo — formato andata e ritorno', () => {
+  it('tabellone: quarti e semifinali a due gare, finale secca', () => {
+    const t = drawnDouble();
+    expect(t.format).toBe('double');
+    for (const m of t.bracket) {
+      if (m.round === 'final') {
+        expect(matchLegs(m)).toBe(1);
+        expect(m.returnSeed).toBeUndefined();
+      } else {
+        expect(matchLegs(m)).toBe(2);
+        expect(m.returnSeed).not.toBe(m.seed);
+      }
+    }
+  });
+
+  it("l'andata pari vale e non decide il confronto", () => {
+    let t = drawnDouble();
+    const qf1 = findMatch(t.bracket, 'QF1')!;
+    const r = fakeLeg(qf1.homeId!, qf1.awayId!, 1, 1, 1);
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1', result: r });
+    expect(t.matches.QF1.homeScore).toBe(1);
+    expect(findMatch(t.bracket, 'QF1')!.winnerId).toBeNull();
+    expect(t.status).toBe('quarterfinals');
+    expect(nextLeg(t, findMatch(t.bracket, 'QF1')!)).toBe(2);
+    // Un ritorno prima delle altre andate non è registrabile
+    const r2 = fakeLeg(qf1.awayId!, qf1.homeId!, 0, 0, 2, { shootout: { home: 4, away: 2 } });
+    expect(tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1-R', result: r2 })).toBe(t);
+    expect(getMatchStatus(t, findMatch(t.bracket, 'QF1')!)).toBe('upcoming');
+  });
+
+  it('i ritorni sono pronti solo dopo tutte le andate e invertono la casa', () => {
+    let t = drawnDouble();
+    t = simulateRound(t, TEAMS);
+    expect(Object.keys(t.matches)).toHaveLength(4);
+    expect(t.bracket.every(m => m.round === 'quarterfinals' ? !m.winnerId : true)).toBe(true);
+    for (const m of roundMatches(t.bracket, 'quarterfinals')) {
+      expect(getMatchStatus(t, m)).toBe('ready');
+      const r2 = simulateBracketMatch(t, TEAMS, m.id);
+      // al ritorno in casa gioca chi era ospite all'andata
+      expect(r2.homeTeamId).toBe(m.awayId);
+      expect(r2.leg).toBe(2);
+      expect(r2.aggregate).toEqual({
+        home: r2.homeScore + t.matches[m.id].awayScore,
+        away: r2.awayScore + t.matches[m.id].homeScore,
+      });
+    }
+  });
+
+  it('il ritorno con aggregato pari ma senza rigori è incoerente e viene rifiutato', () => {
+    let t = drawnDouble();
+    const qf1 = findMatch(t.bracket, 'QF1')!;
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1', result: fakeLeg(qf1.homeId!, qf1.awayId!, 2, 1, 1) });
+    t = simulateRound(t, TEAMS); // le altre andate
+    // 2-1 all'andata, 1-0 al ritorno per l'ospite: aggregato 2-2 senza rigori
+    const bad = fakeLeg(qf1.awayId!, qf1.homeId!, 1, 0, 2);
+    expect(tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1-R', result: bad })).toBe(t);
+    // Aggregato pari con rigori: il vincitore è quello dei rigori.
+    // shootout.home = lato di casa del ritorno = awayId del tie; vince 4-3
+    // chi era in casa all'andata
+    const rig = fakeLeg(qf1.awayId!, qf1.homeId!, 1, 0, 2, { shootout: { home: 3, away: 4 } });
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1-R', result: rig });
+    expect(findMatch(t.bracket, 'QF1')!.winnerId).toBe(qf1.homeId);
+    const score = tieScore(t, findMatch(t.bracket, 'QF1')!);
+    expect(score).toMatchObject({ played: 2, home: 2, away: 2, shootout: { home: 4, away: 3 } });
+  });
+
+  it('un risultato incoerente con l\'aggregato viene rifiutato', () => {
+    let t = drawnDouble();
+    const qf1 = findMatch(t.bracket, 'QF1')!;
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1', result: fakeLeg(qf1.homeId!, qf1.awayId!, 3, 0, 1) });
+    t = simulateRound(t, TEAMS);
+    // awayId del ritorno vince 1-0 ma l'aggregato resta 3-1 per homeId:
+    // il winnerId dichiarato (awayId del tie) è incoerente
+    const bad = fakeLeg(qf1.awayId!, qf1.homeId!, 1, 0, 2);
+    expect(tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1-R', result: bad })).toBe(t);
+    // Stesso punteggio ma winnerId corretto (homeId del tie, cioè l'ospite del ritorno)
+    const good = { ...bad, winnerId: qf1.homeId };
+    const after = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: 'QF1-R', result: good });
+    expect(after).not.toBe(t);
+    expect(findMatch(after.bracket, 'QF1')!.winnerId).toBe(qf1.homeId);
+  });
+
+  it('torneo completo a due gare: 13 risultati, finale secca, un vincitore', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+      const t = simulateRemaining(drawnDouble(seed), TEAMS);
+      expect(t.status).toBe('completed');
+      const keys = Object.keys(t.matches);
+      // 4 andate + 4 ritorni ai quarti, 2+2 in semifinale, finale secca
+      expect(keys).toHaveLength(13);
+      expect(keys.filter(k => k.endsWith('-R'))).toHaveLength(6);
+      const final = findMatch(t.bracket, 'F')!;
+      expect(final.legs).toBe(1);
+      expect(t.winnerId).toBe(final.winnerId);
+      // Chi avanza ha il record coerente con l'aggregato
+      for (const m of t.bracket.filter(x => x.legs === 2)) {
+        const score = tieScore(t, m);
+        const winnerTotal = m.winnerId === m.homeId ? score.home : score.away;
+        const loserTotal = m.winnerId === m.homeId ? score.away : score.home;
+        expect(winnerTotal >= loserTotal).toBe(true);
+      }
+      expect(JSON.parse(JSON.stringify(t))).toEqual(t);
+    }
+  });
+
+  it("flusso utente: stessa partita tiene occupata l'andata e il ritorno", () => {
+    let t = drawnDouble(3);
+    const userMatch = findUserMatch(t)!;
+    expect(roundLeg(t, 'quarterfinals')).toBe(1);
+    t = simulateRound(t, TEAMS, [userMatch.id]);
+    t = tournamentReducer(t, { type: 'START_MATCH', matchId: userMatch.id });
+    const r1 = simulateBracketMatch(t, TEAMS, userMatch.id);
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: userMatch.id, result: r1 });
+    expect(t.currentMatchId).toBeNull();
+    // L'utente non è eliminato e può rigiocare lo stesso tie per il ritorno
+    expect(isUserEliminated(t)).toBe(false);
+    expect(findUserMatch(t)!.id).toBe(userMatch.id);
+    // I ritorni degli altri si completano; poi tocca a quello dell'utente
+    t = simulateRound(t, TEAMS, [userMatch.id]);
+    expect(getMatchStatus(t, findMatch(t.bracket, userMatch.id)!)).toBe('ready');
+    t = tournamentReducer(t, { type: 'START_MATCH', matchId: userMatch.id });
+    const r2 = simulateBracketMatch(t, TEAMS, userMatch.id);
+    t = tournamentReducer(t, { type: 'RECORD_RESULT', matchId: legKey(userMatch.id, 2), result: r2 });
+    expect(findMatch(t.bracket, userMatch.id)!.winnerId).not.toBeNull();
+    expect(t.status).toBe('semifinals');
+  });
+
+  it('il riepilogo contiene entrambe le gare e l\'aggregato', () => {
+    for (let seed = 1; seed <= 8; seed++) {
+      const t = simulateRemaining(drawnDouble(seed), TEAMS);
+      const s = buildTournamentSummary(t, TEAMS);
+      for (const m of s.matches) {
+        if (m.round === 'final') {
+          expect(m.legs).toBeUndefined();
+        } else {
+          expect(m.legs).toHaveLength(2);
+          expect(m.legs!.reduce((n, l) => n + l.for, 0)).toBe(m.goalsFor);
+        }
+      }
+      expect(s.stats.played).toBe(s.matches.reduce((n, m) => n + (m.legs?.length ?? 1), 0));
     }
   });
 });

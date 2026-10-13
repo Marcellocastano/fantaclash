@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Player, PlayerRole } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { listoneLabel } from '../../services/seasons';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import { Icon } from '../Icon';
 import { PlayerCard } from '../player/PlayerCard';
@@ -63,7 +64,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
       <div className="flex items-end justify-between gap-3 pb-3">
         <h2 className="font-display text-3xl font-extrabold text-ink leading-none">
           Listone
-          {season && <span className="text-ink-muted"> · Serie A {season}</span>}
+          {season && <span className="text-ink-muted"> · {listoneLabel(season)}</span>}
         </h2>
         <div className="flex border-2 border-ink" role="group" aria-label="Vista">
           {(['righe', 'card'] as View[]).map(v => (

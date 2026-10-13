@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTournamentController } from '../../hooks/tournamentController';
 import { buildTournamentSummary, TournamentState, TournamentSummary } from '../../domain/tournament';
+import { listoneLabel } from '../../services/seasons';
 import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, xShareUrl } from '../../services/shareCard';
 import { playSound } from '../../services/sound';
 import { Footer } from '../Footer';
@@ -124,7 +125,7 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
             </p>
             <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
             <p className="text-lg text-ink-soft mt-3">
-              {summary.tournamentName} · Serie A {summary.seasonId}
+              {summary.tournamentName} · {listoneLabel(summary.seasonId)}
               {summary.championName && !champion && <> · coppa a {summary.championName}</>}
             </p>
 

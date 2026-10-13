@@ -9,6 +9,35 @@ export interface SeasonInfo {
   playerCount: number;
 }
 
+/**
+ * Id del listone Legends (`/data/seasons/legends.json`): i migliori
+ * calciatori di tutte le annate, una card per giocatore. Non sta in
+ * index.json: non è un'annata, lo propone il selettore del setup.
+ */
+export const LEGENDS_ID = 'legends';
+export const LEGENDS_LABEL = 'Legends';
+
+export function isLegends(season: string | undefined | null): boolean {
+  return season === LEGENDS_ID;
+}
+
+/** Etichetta completa del listone: "Serie A 2015-16" / "Serie A Legends" */
+export function listoneLabel(season: string | undefined | null): string {
+  return isLegends(season) ? `Serie A ${LEGENDS_LABEL}` : `Serie A ${season}`;
+}
+
+/** Etichetta corta del listone: "2015-16" / "Legends" */
+export function listoneShort(season: string | undefined | null): string {
+  return isLegends(season) ? LEGENDS_LABEL : (season ?? '');
+}
+
+/** Annata corta per le card Legends: "2009-10" -> "09-10" */
+export function seasonShort(season: string | undefined): string {
+  if (!season) return '';
+  const [y1, y2] = season.split('-');
+  return y1 && y2 ? `${y1.slice(2)}-${y2}` : season;
+}
+
 const VALID_ROLES = new Set(['P', 'D', 'C', 'A']);
 
 function isPlayerShape(p: unknown): p is Player {

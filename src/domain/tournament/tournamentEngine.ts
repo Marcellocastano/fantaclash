@@ -3,9 +3,21 @@ import { hashSeed, Rng, shuffle } from '../../services/auction/rng';
 import { simulateMatch } from '../match/matchEngine';
 import { MatchOptions, MatchResult, MatchTeamInput } from '../match/matchTypes';
 import { rosterRating } from '../teams/teamStrength';
-import { createBracket, currentRound, findMatch, getMatchStatus, ROUNDS, roundMatches } from './bracket';
+import {
+  createBracket,
+  currentRound,
+  findMatch,
+  getMatchStatus,
+  legKey,
+  legResult,
+  legSeed,
+  legSides,
+  matchLegs,
+  nextLeg,
+  roundMatches,
+} from './bracket';
 import { tournamentReducer } from './tournamentReducer';
-import { TournamentState, TournamentTeam } from './tournamentTypes';
+import { TournamentFormat, TournamentState, TournamentTeam } from './tournamentTypes';
 
 /**
  * Operazioni di alto livello sul torneo: creazione, sorteggio,
@@ -45,18 +57,21 @@ export interface CreateTournamentInput {
   seed: number;
   /** Nome della coppa (stanze multiplayer); default FantaClash Cup */
   name?: string;
+  /** 'double' = quarti e semifinali andata/ritorno, finale secca */
+  format?: TournamentFormat;
 }
 
 /** Torneo in stato 'draw', tabellone vuoto */
-export function createTournament({ teams, seasonId, seed, name }: CreateTournamentInput): TournamentState {
+export function createTournament({ teams, seasonId, seed, name, format }: CreateTournamentInput): TournamentState {
   const user = teams.find(t => t.isUserTeam);
   return {
     id: `cup-${seed.toString(36)}`,
     name: name?.trim() || TOURNAMENT_NAME,
     seasonId,
+    format: format === 'double' ? 'double' : 'single',
     userTeamId: user?.id ?? '',
     teams: teams.map(toTournamentTeam),
-    bracket: createBracket(seed),
+    bracket: createBracket(seed, format),
     currentMatchId: null,
     matches: {},
     status: 'draw',
@@ -72,7 +87,11 @@ export function drawOrder(state: TournamentState, rng: Rng): string[] {
   );
 }
 
-/** Simula una partita del tabellone (stesso seme -> stesso risultato) */
+/**
+ * Simula la prossima gara del confronto (andata, ritorno o gara secca).
+ * Nel formato a due gare passa il contesto `twoLegged` al motore: al
+ * ritorno l'andata va invertita (casa/ospiti si scambiano).
+ */
 export function simulateBracketMatch(
   state: TournamentState,
   teams: Team[],
@@ -80,15 +99,29 @@ export function simulateBracketMatch(
   options?: MatchOptions
 ): MatchResult {
   const match = findMatch(state.bracket, matchId);
-  const home = teams.find(t => t.id === match?.homeId);
-  const away = teams.find(t => t.id === match?.awayId);
-  if (!match || !home || !away) throw new Error(`Partita ${matchId} non giocabile`);
-  return simulateMatch({ home: toMatchTeam(home), away: toMatchTeam(away), seed: match.seed, options });
+  const leg = match ? (nextLeg(state, match) ?? 1) : 1;
+  const sides = match ? legSides(match, leg) : null;
+  const home = teams.find(t => t.id === sides?.homeId);
+  const away = teams.find(t => t.id === sides?.awayId);
+  if (!match || !sides || !home || !away) throw new Error(`Partita ${matchId} non giocabile`);
+  const opts: MatchOptions = { ...options };
+  if (matchLegs(match) === 2) {
+    if (leg === 1) {
+      opts.twoLegged = { leg: 1 };
+    } else {
+      const first = legResult(state, match, 1);
+      if (!first) throw new Error(`Partita ${matchId}: manca l'andata`);
+      // l'andata vista dai lati del ritorno: al ritorno in casa c'era chi ospitava
+      opts.twoLegged = { leg: 2, firstLeg: { home: first.awayScore, away: first.homeScore } };
+    }
+  }
+  return simulateMatch({ home: toMatchTeam(home), away: toMatchTeam(away), seed: legSeed(match, leg), options: opts });
 }
 
 /**
- * Simula tutte le partite pronte del turno corrente escluse quelle in
- * `skip` (tipicamente la partita dell'utente).
+ * Simula tutte le gare pronte del turno corrente escluse quelle in
+ * `skip` (tipicamente il confronto dell'utente). Prima tutte le andate,
+ * poi i ritorni.
  */
 export function simulateRound(state: TournamentState, teams: Team[], skip: string[] = []): TournamentState {
   const round = currentRound(state.status);
@@ -96,20 +129,28 @@ export function simulateRound(state: TournamentState, teams: Team[], skip: strin
   let next = state;
   for (const m of roundMatches(state.bracket, round)) {
     if (skip.includes(m.id) || getMatchStatus(next, m) !== 'ready') continue;
+    const leg = nextLeg(next, m);
+    if (!leg) continue;
     next = tournamentReducer(next, {
       type: 'RECORD_RESULT',
-      matchId: m.id,
+      matchId: legKey(m.id, leg),
       result: simulateBracketMatch(next, teams, m.id),
     });
   }
   return next;
 }
 
-/** Simula il torneo fino alla fine (anche le partite dell'utente, con IA) */
+/**
+ * Simula il torneo fino alla fine (anche le partite dell'utente, con IA).
+ * Ogni giro simula le gare pronte del turno: andate, poi ritorni, poi
+ * il turno successivo.
+ */
 export function simulateRemaining(state: TournamentState, teams: Team[]): TournamentState {
   let next = state.currentMatchId ? tournamentReducer(state, { type: 'LEAVE_MATCH' }) : state;
-  for (let i = 0; i < ROUNDS.length && next.status !== 'completed' && next.status !== 'draw'; i++) {
+  for (let i = 0; i < 16 && next.status !== 'completed' && next.status !== 'draw'; i++) {
+    const before = next;
     next = simulateRound(next, teams);
+    if (next === before) break; // nessuna gara pronta: stato incoerente
   }
   return next;
 }

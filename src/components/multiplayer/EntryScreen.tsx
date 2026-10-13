@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeRoomCode } from '../../multiplayer/roomCode';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../../mock/teamNames';
-import { loadSeasonIndex } from '../../services/seasons';
+import { LEGENDS_ID, loadSeasonIndex } from '../../services/seasons';
+import { ListoneMode, ListoneModePicker } from '../ListoneModePicker';
 import { CUP_NAME_MAX, MAX_PLAYERS, NICKNAME_MAX } from '../../multiplayer/constants';
 import { isOffensiveName } from '../../multiplayer/moderation';
 import { Icon } from '../Icon';
@@ -62,6 +63,7 @@ export function EntryScreen({
   const [teamName, setTeamName] = useState(() => loadSavedTeamName() || randomTeamName());
   const [code, setCode] = useState(initialCode ?? '');
   const [season, setSeason] = useState('');
+  const [mode, setMode] = useState<ListoneMode>('classic');
   const [cupName, setCupName] = useState('');
   const [asSpectator, setAsSpectator] = useState(initialSpectator);
   const [busy, setBusy] = useState(false);
@@ -83,8 +85,9 @@ export function EntryScreen({
   const codeOk = normalizeRoomCode(code) !== null;
 
   const submitCreate = async () => {
-    if (!nickname.trim() || !teamName.trim() || !season) {
-      setError('Servono nickname, nome squadra e annata');
+    const listone = mode === 'legends' ? LEGENDS_ID : season;
+    if (!nickname.trim() || !teamName.trim() || !listone) {
+      setError('Servono nickname, nome squadra e listone');
       return;
     }
     if (cupName.trim() && isOffensiveName(cupName)) {
@@ -98,7 +101,7 @@ export function EntryScreen({
       await onCreate({
         nickname: nickname.trim(),
         teamName: teamName.trim(),
-        settings: { season, difficulty: 'normale', cupName: cupName.trim() || undefined },
+        settings: { season: listone, difficulty: 'normale', cupName: cupName.trim() || undefined },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Errore nella creazione della stanza');
@@ -261,7 +264,12 @@ export function EntryScreen({
                   />
                   <p className="mt-1.5 text-sm text-ink-muted">Il nome del torneo: compare nel sorteggio, nel tabellone e nella card finale.</p>
                 </div>
-                <button type="button" onClick={submitCreate} disabled={busy || !season} className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5">
+                <div>
+                  <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">Listone</p>
+                  <ListoneModePicker value={mode} onChange={setMode} disabled={busy} />
+                  <p className="mt-1.5 text-sm text-ink-muted">L'annata si rifinisce in lobby; le stanze giocano sempre a gara secca.</p>
+                </div>
+                <button type="button" onClick={submitCreate} disabled={busy || (mode === 'classic' && !season)} className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5">
                   {busy ? 'Creazione…' : 'Crea stanza'}
                   <Icon name="arrow" className="w-5 h-5" />
                 </button>
@@ -341,7 +349,7 @@ export function EntryScreen({
       <div className="hidden lg:block p-8 lg:pl-12">
         <h2 className="font-display text-3xl font-black">La tua stanza</h2>
         <p className="text-ink-soft">8 posti: chi non arriva viene sostituito da un bot.</p>
-        <p className="text-ink-soft">L'annata la scegli nella stanza, prima di avviare l'asta.</p>
+        <p className="text-ink-soft">Il listone (annata o Legends) si rifinisce nella stanza, prima di avviare l'asta.</p>
         <div className="grid grid-cols-2 gap-4 mt-6">
           {TILTS.map((tilt, i) => (
             <div key={i} className={tilt}>

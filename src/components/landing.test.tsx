@@ -42,7 +42,21 @@ describe('landing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected });
+    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected, format: 'double' });
+  });
+
+  it('modalità Legends: la tile prende il posto dell\'annata e il submit manda "legends"', async () => {
+    const onSubmit = vi.fn();
+    render(<Landing onSubmit={onSubmit} />);
+    // la modalità Legends è un'alternativa all'annata
+    fireEvent.click(screen.getByRole('radio', { name: /Legends/ }));
+    expect(screen.getByText('HALL OF FAME')).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Annata' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    const config = onSubmit.mock.calls[0][0];
+    expect(config.season).toBe('legends');
+    expect(config.format).toBe('double');
   });
 
   it('mostra regole e footer con il bottone di supporto', () => {

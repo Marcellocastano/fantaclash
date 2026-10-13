@@ -188,7 +188,7 @@ export function breadcrumbJsonLd(items: Breadcrumb[]): object {
 }
 
 const HOME_DESCRIPTION =
-  "Gioco di fantacalcio online gratis: scegli un'annata della Serie A dal 2003-04, vinci l'asta contro 7 bot e porta la tua rosa fino alla finale.";
+  "Gioco di fantacalcio online gratis: scegli un'annata o il listone Legends, vinci l'asta contro 7 bot e porta la tua rosa in finale, anche con andata e ritorno.";
 
 export const HOME_ROUTE: SiteRoute = {
   path: '/',

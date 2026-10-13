@@ -45,6 +45,11 @@ export function RulesPage() {
             reputazione nel fantacalcio di quell'anno. I giocatori sono divisi in fasce: bronzo fino a 79, argento da
             80 a 84, oro da 85 a 89, fuoriclasse da 90 in su.
           </p>
+          <p>
+            In alternativa all'annata c'è la modalità <strong>Legends</strong>: un unico listone con i 96 più forti
+            delle 23 stagioni disponibili, una card per giocatore nella sua annata migliore e overall riscritti da
+            84 a 99. I GOAT della Serie A, tutti nella stessa asta.
+          </p>
 
           <H2>L'asta</H2>
           <Ul>
@@ -76,6 +81,13 @@ export function RulesPage() {
             <Li>
               Coppa a eliminazione diretta a 8 squadre: <strong>quarti di finale, semifinali e finale</strong>, con il
               sorteggio degli accoppiamenti dopo l'asta.
+            </Li>
+            <Li>
+              Due formati a scelta: <strong>gara secca</strong> (una partita per turno) oppure{' '}
+              <strong>andata e ritorno</strong>, con quarti e semifinali su due partite e la finale sempre secca.
+              Nei confronti a due gare si giocano prima tutte le andate del turno e poi i ritorni, con casa invertita.
+              Passa il turno chi ha l'<strong>aggregato</strong> migliore; all'andata il pareggio è un risultato valido
+              e i rigori arrivano solo al ritorno, se l'aggregato è pari.
             </Li>
             <Li>
               Le partite si svolgono minuto per minuto: occasione, tiro, parata o gol, con cartellini, rigori ed

@@ -390,9 +390,11 @@ export function assertInvariants(r: MatchResult): void {
   const fin = r.events[r.events.length - 1];
   if (!fin || fin.type !== 'full_time') fail(r, 'manca il fischio finale');
 
-  // Rigori finali
+  // Rigori finali: mai all'andata; al ritorno contano i gol complessivi
   const kicks = r.events.filter(e => e.type === 'shootout_kick');
-  if ((r.homeScore === r.awayScore) !== !!r.shootout) fail(r, 'rigori incoerenti col pareggio');
+  const tied = r.aggregate ? r.aggregate.home === r.aggregate.away : r.homeScore === r.awayScore;
+  const expectsShootout = r.leg === 1 ? false : tied;
+  if (expectsShootout !== !!r.shootout) fail(r, 'rigori incoerenti col pareggio');
   if (r.shootout) {
     const so = { home: 0, away: 0 };
     const taken = { home: 0, away: 0 };
@@ -411,10 +413,11 @@ export function assertInvariants(r: MatchResult): void {
     });
     if (so.home !== r.shootout.home || so.away !== r.shootout.away || so.home === so.away) fail(r, 'esito dei rigori');
   } else if (kicks.length) fail(r, 'calci di rigore senza lotteria');
-  const winnerSide = r.shootout
+  const dec = r.aggregate ?? { home: r.homeScore, away: r.awayScore };
+  const winnerSide: MatchSide | null = r.shootout
     ? r.shootout.home > r.shootout.away ? 'home' : 'away'
-    : r.homeScore > r.awayScore ? 'home' : 'away';
-  if (r.winnerId !== (winnerSide === 'home' ? r.homeTeamId : r.awayTeamId)) fail(r, 'vincitore');
+    : dec.home === dec.away ? null : dec.home > dec.away ? 'home' : 'away';
+  if (r.winnerId !== (winnerSide === null ? null : winnerSide === 'home' ? r.homeTeamId : r.awayTeamId)) fail(r, 'vincitore');
 
   // Statistiche del motore = statistiche ricostruite dalla riproduzione
   const pb = getPlaybackState(r, last);

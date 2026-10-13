@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { createRng } from '../../services/auction/rng';
 import { tournamentTeams } from '../../test/matchFixtures';
 import {
@@ -7,20 +7,35 @@ import {
   createTournament,
   drawOrder,
   findUserMatch,
+  legKey,
+  simulateBracketMatch,
   simulateRemaining,
+  simulateRound,
   tournamentReducer,
 } from '../../domain/tournament';
+import { simulateMatch } from '../../domain/match';
+import { strongTeam, weakTeam } from '../../test/matchFixtures';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentHub } from './TournamentHub';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { summaryAlt } from './useSummaryCard';
 import { MatchScreen } from '../match/MatchScreen';
+import { MatchEnd } from '../match/MatchEnd';
 
 const TEAMS = tournamentTeams();
 
-function drawn() {
-  const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11 });
+function drawn(format: 'single' | 'double' = 'single') {
+  const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11, format });
   return tournamentReducer(t, { type: 'DRAW', order: drawOrder(t, createRng(11)) });
+}
+
+/** Torneo A/R con l'andata dell'utente già registrata e le altre simulate */
+function drawnDoubleAfterFirstLegs() {
+  const t1 = drawn('double');
+  const tie = findUserMatch(t1)!;
+  const first = simulateBracketMatch(t1, TEAMS, tie.id);
+  const t2 = tournamentReducer(t1, { type: 'RECORD_RESULT', matchId: legKey(tie.id, 1), result: first });
+  return { t: simulateRound(t2, TEAMS), tie: findUserMatch(t2)! };
 }
 
 const noop = () => {};
@@ -66,6 +81,44 @@ describe('UI torneo (smoke)', () => {
     expect(onFinish).toHaveBeenCalledTimes(1);
     expect(onFinish.mock.calls[0][0].decisionTicks).toHaveLength(3);
     vi.useRealTimers();
+  });
+
+  it('hub A/R: "Gioca l\'andata" all\'inizio, poi il tracker con l\'aggregato e "Gioca il ritorno"', () => {
+    const t0 = drawn('double');
+    render(<TournamentHub tournament={t0} onPlay={noop} onCompleteRound={noop} onSummary={noop} />);
+    expect(screen.getByRole('button', { name: "Gioca l'andata dei quarti" })).toBeInTheDocument();
+    cleanup();
+
+    const { t } = drawnDoubleAfterFirstLegs();
+    render(<TournamentHub tournament={t} onPlay={noop} onCompleteRound={noop} onSummary={noop} />);
+    expect(screen.getByRole('button', { name: 'Gioca il ritorno dei quarti' })).toBeInTheDocument();
+    // Tracker del confronto: le due gare e l'aggregato parziale
+    expect(screen.getByText('Andata')).toBeInTheDocument();
+    expect(screen.getByText('Ritorno')).toBeInTheDocument();
+    expect(screen.getByText(/Aggregato \d+-\d+/)).toBeInTheDocument();
+  });
+
+  it('MatchEnd all\'andata: "FINE ANDATA" e un solo "Avanti: ritorno", mai eliminazione', () => {
+    const result = simulateMatch({
+      home: strongTeam(),
+      away: weakTeam(),
+      seed: 3,
+      options: { twoLegged: { leg: 1 } },
+    });
+    render(
+      <MatchEnd
+        result={result}
+        userTeamId={result.homeTeamId}
+        round="quarterfinals"
+        leg={1}
+        onContinue={noop}
+        onConclude={noop}
+      />
+    );
+    expect(screen.getByText('FINE ANDATA')).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveTextContent('Avanti: ritorno');
   });
 
   it('card del torneo: descrizione accessibile con esito, squadra e risultati', () => {

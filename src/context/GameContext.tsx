@@ -16,7 +16,7 @@ import {
 } from '../types';
 import { generateAllTeams } from '../services/teamGenerator';
 import { saveGameState, loadGameState, clearGameState } from '../services/storage';
-import { loadSeasonPlayers } from '../services/seasons';
+import { isLegends, loadSeasonPlayers } from '../services/seasons';
 import {
   AuctionAction,
   AuctionWorld,
@@ -122,6 +122,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             teams: state.teams,
             seasonId: state.config?.season ?? '',
             seed: action.payload.seed,
+            format: state.config?.format,
+            name: isLegends(state.config?.season) ? 'Legends Cup' : undefined,
           }),
       };
 

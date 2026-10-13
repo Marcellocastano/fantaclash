@@ -2,7 +2,12 @@ import {
   BracketMatch,
   getMatchStatus,
   getTeamOutcome,
+  legResult,
+  matchLegs,
+  nextLeg,
+  parseLegKey,
   roundMatches,
+  tieScore,
   TournamentState,
   TournamentTeam,
 } from '../../domain/tournament';
@@ -36,7 +41,7 @@ export function TournamentBracket({ tournament, revealIds = [] }: TournamentBrac
   const lineTone = (matches: BracketMatch[]) => (matches.some(m => m.winnerId === userId) ? 'border-highlight' : 'border-canvas/30');
 
   const box = (m: BracketMatch) => {
-    const order = revealIds.indexOf(m.id);
+    const order = revealIds.findIndex(k => parseLegKey(k).matchId === m.id);
     return <MatchBox key={m.id} match={m} tournament={tournament} revealDelay={order >= 0 ? order * REVEAL_STEP_MS : null} />;
   };
 
@@ -136,7 +141,7 @@ function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
   const final = roundMatches(tournament.bracket, 'final')[0];
   const champion = tournament.teams.find(t => t.id === tournament.winnerId);
   const box = (m: BracketMatch) => {
-    const order = revealIds.indexOf(m.id);
+    const order = revealIds.findIndex(k => parseLegKey(k).matchId === m.id);
     return <MatchBox key={m.id} match={m} tournament={tournament} revealDelay={order >= 0 ? order * REVEAL_STEP_MS : null} />;
   };
   return (
@@ -178,27 +183,52 @@ function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
 
 function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
   const status = getMatchStatus(tournament, match);
-  const result = tournament.matches[match.id];
+  const double = matchLegs(match) === 2;
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
   const isUserMatch = match.homeId === tournament.userTeamId || match.awayId === tournament.userTeamId;
   const empty = status === 'upcoming' && !match.homeId && !match.awayId;
   const tone = empty ? 'border-dashed border-canvas/30 bg-transparent' : isUserMatch ? 'border-highlight bg-canvas' : 'border-ink bg-canvas';
+
+  // Nei confronti a due gare il numero in grande è l'aggregato sul tie
+  const score = double ? tieScore(tournament, match) : null;
+  const single = double ? null : (tournament.matches[match.id] ?? null);
+  const leg = nextLeg(tournament, match);
+
   const row = (id: string | null, side: 'home' | 'away') => (
     <TeamRow
       team={team(id)}
-      score={result ? (side === 'home' ? result.homeScore : result.awayScore) : null}
-      shootout={result?.shootout?.[side] ?? null}
+      score={double ? (score!.played > 0 ? score![side] : null) : single ? (side === 'home' ? single.homeScore : single.awayScore) : null}
+      shootout={double ? (score?.shootout?.[side] ?? null) : (single?.shootout?.[side] ?? null)}
       outcome={getTeamOutcome(match, id)}
       revealDelay={revealDelay}
       onDark={empty}
     />
   );
 
+  // Striscia delle singole gare sotto le squadre (solo confronti a due)
+  const legLine = () => {
+    if (!double || empty) return null;
+    const f = legResult(tournament, match, 1);
+    const s = legResult(tournament, match, 2);
+    if (!f) {
+      return <p className="px-2 py-1 text-[10px] font-bold text-ink-muted uppercase tracking-wide border-t border-ink/15">Andata e ritorno</p>;
+    }
+    return (
+      <p className="px-2 py-1 text-[10px] font-bold text-ink-soft tabular-nums border-t border-ink/15">
+        And. {f.homeScore}-{f.awayScore} · Rit. {s ? `${s.homeScore}-${s.awayScore}` : leg === 2 ? 'da giocare' : '—'}
+      </p>
+    );
+  };
+
   return (
     <div className={`w-full border-2 ${tone} ${isUserMatch ? 'outline outline-2 outline-highlight' : ''}`}>
+      {double && (
+        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-wider text-whistle-deep">A/R</p>
+      )}
       {row(match.homeId, 'home')}
       <div className={`border-t-2 ${empty ? 'border-dashed border-canvas/30' : 'border-line'}`} />
       {row(match.awayId, 'away')}
+      {double && !empty && legLine()}
     </div>
   );
 }

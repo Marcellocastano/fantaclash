@@ -3,6 +3,8 @@ import { useTournamentController } from '../../hooks/tournamentController';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { MatchResult } from '../../domain/match';
 import {
+  legKey,
+  nextLeg,
   simulateRound,
   tournamentReducer,
   TournamentState,
@@ -35,10 +37,10 @@ export function TournamentScreen() {
 
   if (!tournament) return null;
 
-  /** Simula le partite rimaste del turno e ne prepara la rivelazione */
+  /** Simula le gare rimaste del turno e ne prepara la rivelazione (per chiave) */
   const completeRound = (from: TournamentState) => {
     const next = simulateRound(from, teams);
-    const simulated = from.bracket.filter(m => !m.winnerId && next.matches[m.id]).map(m => m.id);
+    const simulated = Object.keys(next.matches).filter(k => !(k in from.matches));
     setRevealIds(simulated);
     return next;
   };
@@ -49,12 +51,16 @@ export function TournamentScreen() {
 
   if (tournament.currentMatchId) {
     const matchId = tournament.currentMatchId;
+    const match = tournament.bracket.find(m => m.id === matchId);
+    const leg = match ? (nextLeg(tournament, match) ?? 1) : 1;
+    const key = legKey(matchId, leg as 1 | 2);
     const onFinish = (result: MatchResult, exit: MatchExit) => {
-      const recorded = tournamentReducer(tournament, { type: 'RECORD_RESULT', matchId, result });
+      const recorded = tournamentReducer(tournament, { type: 'RECORD_RESULT', matchId: key, result });
       if (exit === 'conclude' || recorded.status === 'completed') return finishTournament(recorded);
       save(completeRound(recorded));
     };
-    return <MatchScreen key={matchId} tournament={tournament} teams={teams} matchId={matchId} onFinish={onFinish} />;
+    // key per gara: al ritorno la schermata riparte da capo
+    return <MatchScreen key={key} tournament={tournament} teams={teams} matchId={matchId} onFinish={onFinish} />;
   }
 
   return (

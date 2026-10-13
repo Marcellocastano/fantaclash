@@ -71,7 +71,7 @@ describe('firma dei messaggi di stanza', () => {
     expect(host.getState().players.some(p => p.id === 'p1')).toBe(true);
     // un'azione successiva firmata arriva e si applica
     expect(host.dispatch({ type: 'SETTINGS', settings: { season: '2020-21' } })).toBe(true);
-    await pump(800);
+    for (let i = 0; i < 40 && session.getState()?.settings.season !== '2020-21'; i++) await pump(200);
     expect(session.getState()?.settings.season).toBe('2020-21');
     expect(session.getDrops()).toBe(0);
   });

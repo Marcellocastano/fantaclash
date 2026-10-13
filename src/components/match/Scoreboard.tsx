@@ -24,12 +24,14 @@ interface ScoreboardProps {
   userSide: 'home' | 'away';
   /** Risultato dei rigori da mostrare (null finché la serie è in corso) */
   shootout: { home: number; away: number } | null;
+  /** Ritorno: gol dell'andata dai lati di questa partita (pill "Agg.") */
+  firstLeg?: { home: number; away: number };
   /** Indicatore d'attacco sul fondo della fascia */
   indicator: ReactNode;
 }
 
 /** Fascia tabellone in stile broadcast: squadre, punteggio, minuto, stile e fiato */
-export function Scoreboard({ home, away, state, roundLabel, tactics, userFiato, userSide, shootout, indicator }: ScoreboardProps) {
+export function Scoreboard({ home, away, state, roundLabel, tactics, userFiato, userSide, shootout, firstLeg, indicator }: ScoreboardProps) {
   const lastGoal = [...state.latest].reverse().find(e => e.type === 'goal' || e.type === 'own_goal');
   const digit = (side: 'home' | 'away') => (
     <span
@@ -55,6 +57,14 @@ export function Scoreboard({ home, away, state, roundLabel, tactics, userFiato, 
               <span className="text-canvas/40 px-2 md:px-3">-</span>
               {digit('away')}
             </p>
+            {firstLeg && (
+              <p
+                key={`agg${state.score.home + firstLeg.home}-${state.score.away + firstLeg.away}`}
+                className="inline-block mt-1 bg-highlight text-on-highlight border-2 border-ink px-2 py-0.5 font-display text-sm md:text-base font-extrabold tabular-nums motion-safe:animate-pop"
+              >
+                Agg. {state.score.home + firstLeg.home} - {state.score.away + firstLeg.away}
+              </p>
+            )}
             {shootout && (
               <p className="font-display text-lg md:text-xl font-extrabold text-highlight tabular-nums">
                 Rigori {shootout.home} - {shootout.away}

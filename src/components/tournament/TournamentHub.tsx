@@ -2,11 +2,17 @@ import { ReactNode } from 'react';
 import {
   currentRound,
   findUserMatch,
-  involves,
-  isUserEliminated,
+  getMatchStatus,
+  legResult,
+  matchLegs,
+  nextLeg,
+  parseLegKey,
+  tieScore,
   TournamentRound,
   TournamentState,
   TournamentTeam,
+  involves,
+  isUserEliminated,
 } from '../../domain/tournament';
 import { Icon } from '../Icon';
 import { StreamerReserve } from '../layout/GameShell';
@@ -29,17 +35,24 @@ interface TournamentHubProps {
   controls?: ReactNode;
 }
 
-const PLAY_LABEL: Record<TournamentRound, string> = {
-  quarterfinals: 'Gioca i quarti di finale',
-  semifinals: 'Gioca la semifinale',
-  final: 'Gioca la finale',
-};
-
 const ROUND_TITLE: Record<TournamentRound, string> = {
   quarterfinals: 'Quarti di finale',
   semifinals: 'Semifinale',
   final: 'Finale',
 };
+
+/** Pulsante principale: gara secca, andata o ritorno del confronto */
+function playLabel(round: TournamentRound, leg: 1 | 2 | undefined): string {
+  if (!leg) {
+    return round === 'quarterfinals'
+      ? 'Gioca i quarti di finale'
+      : round === 'semifinals'
+        ? 'Gioca la semifinale'
+        : 'Gioca la finale';
+  }
+  const what = round === 'quarterfinals' ? 'dei quarti' : round === 'semifinals' ? 'della semifinale' : 'della finale';
+  return leg === 1 ? `Gioca l'andata ${what}` : `Gioca il ritorno ${what}`;
+}
 
 /**
  * Hub del torneo: in alto la prossima partita con un'unica azione
@@ -51,8 +64,9 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
   const userMatch = findUserMatch(tournament);
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
   const champion = team(tournament.winnerId);
+  // Confronti degli altri ancora da finire: gare pronte (andata o ritorno)
   const othersPending = tournament.bracket.some(
-    m => m.round === round && !m.winnerId && m.homeId && m.awayId && !involves(m, tournament.userTeamId)
+    m => m.round === round && !involves(m, tournament.userTeamId) && getMatchStatus(tournament, m) === 'ready'
   );
 
   let hero: ReactNode;
@@ -78,20 +92,35 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
       </Hero>
     );
   } else if (userMatch && round) {
+    const legs = matchLegs(userMatch);
+    const leg = nextLeg(tournament, userMatch) ?? 1;
+    const userMatchReady = getMatchStatus(tournament, userMatch) === 'ready';
+    const userLegIsWaiting = !userMatchReady; // ritorno in attesa delle altre andate
     hero = (
       <section className="text-center">
-        <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name} · {ROUND_TITLE[round]}</p>
+        <p className="font-display text-2xl font-extrabold text-ink-muted">
+          {tournament.name} · {ROUND_TITLE[round]}
+          {legs === 2 && ` · ${leg === 1 ? 'Andata' : 'Ritorno'}`}
+        </p>
         <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-8">
           <Side team={team(userMatch.homeId)} align="right" />
           <span className="font-display text-4xl sm:text-5xl md:text-6xl font-black text-whistle leading-none">VS</span>
           <Side team={team(userMatch.awayId)} align="left" />
         </div>
+        {legs === 2 && <TieTracker tournament={tournament} match={userMatch} />}
         <div className="mt-8">
           {controls ?? (
-            <button onClick={() => onPlay(userMatch.id)} className="btn-cta">
-              <Icon name="play" className="w-7 h-7" />
-              {PLAY_LABEL[round]}
-            </button>
+            userLegIsWaiting ? (
+              <button onClick={onCompleteRound} className="btn-cta">
+                <Icon name="play" className="w-7 h-7" />
+                Chiudi le altre andate
+              </button>
+            ) : (
+              <button onClick={() => onPlay(userMatch.id)} className="btn-cta">
+                <Icon name="play" className="w-7 h-7" />
+                {playLabel(round, legs === 2 ? leg : undefined)}
+              </button>
+            )
           )}
         </div>
       </section>
@@ -148,7 +177,43 @@ function Side({ team, align }: { team: TournamentTeam | undefined; align: 'left'
   );
 }
 
-/** Risultati delle partite simulate mentre giocavi, rivelati uno alla volta */
+/** Tracker del confronto a due gare: le due "tacche" e l'aggregato */
+function TieTracker({ tournament, match }: { tournament: TournamentState; match: BracketMatchLike }) {
+  const first = legResult(tournament, match, 1);
+  const score = tieScore(tournament, match);
+  const legBox = (label: string, r: { homeScore: number; awayScore: number } | undefined | null) => (
+    <span
+      className={`inline-flex flex-col items-center border-2 px-3 py-1.5 min-w-[4.5rem] ${
+        r ? 'border-ink bg-canvas shadow-block-sm' : 'border-dashed border-ink-muted/50 text-ink-muted'
+      }`}
+    >
+      <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
+      <span className="font-display text-2xl font-black tabular-nums leading-none mt-0.5">
+        {r ? `${r.homeScore}-${r.awayScore}` : '—'}
+      </span>
+    </span>
+  );
+  return (
+    <div className="mt-5 flex flex-col items-center gap-2">
+      <div className="flex items-center gap-2">
+        {legBox('Andata', first)}
+        <span className="text-ink-muted font-bold" aria-hidden="true">+</span>
+        {legBox('Ritorno', legResult(tournament, match, 2))}
+      </div>
+      {first && (
+        <p className="font-display text-lg font-extrabold text-ink tabular-nums">
+          Aggregato {score.home}-{score.away}
+          {score.inProgress && ' (parziale)'}
+          {score.shootout && ` · rigori ${score.shootout.home}-${score.shootout.away}`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type BracketMatchLike = TournamentState['bracket'][number];
+
+/** Risultati delle gare simulate mentre giocavi, rivelate una alla volta */
 function RoundResults({ tournament, ids }: { tournament: TournamentState; ids: string[] }) {
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
   const nameCls = (teamId: string | null, won: boolean) => {
@@ -162,27 +227,38 @@ function RoundResults({ tournament, ids }: { tournament: TournamentState; ids: s
         <h2 className="font-display text-2xl font-extrabold text-canvas">Intanto sugli altri campi</h2>
       </div>
       <ul className="divide-y-2 divide-canvas/15">
-        {ids.map((id, i) => {
-          const m = tournament.bracket.find(x => x.id === id);
-          const r = tournament.matches[id];
+        {ids.map((key, i) => {
+          const { matchId: tieId, leg } = parseLegKey(key);
+          const m = tournament.bracket.find(x => x.id === tieId);
+          const r = tournament.matches[key];
           if (!m || !r) return null;
           const delay = i * REVEAL_STEP_MS;
+          // Nomi in casa/fuori della gara giocata, non dei lati del tie
+          const score = leg === 2 ? tieScore(tournament, m) : null;
           return (
             <li
-              key={id}
+              key={key}
               className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 motion-safe:animate-reveal"
               style={{ animationDelay: `${delay}ms` }}
             >
               <span className="flex items-center justify-end gap-2 min-w-0">
-                <span className={nameCls(m.homeId, m.winnerId === m.homeId)}>{team(m.homeId)?.name}</span>
-                <TeamBadge team={team(m.homeId)} size="sm" />
+                <span className={nameCls(r.homeTeamId, m.winnerId === r.homeTeamId)}>{team(r.homeTeamId)?.name}</span>
+                <TeamBadge team={team(r.homeTeamId)} size="sm" />
               </span>
               <span className="flex flex-col items-center">
+                {leg === 2 && (
+                  <span className="mb-1 text-[10px] font-black uppercase tracking-wide text-canvas/60">Rit.</span>
+                )}
                 <span className="motion-safe:animate-stamp" style={{ animationDelay: `${delay}ms` }}>
                   <span className="inline-block bg-highlight text-on-highlight border-2 border-ink shadow-block-sm px-3 py-1 font-display text-2xl sm:text-3xl font-black tabular-nums leading-none">
                     {r.homeScore}-{r.awayScore}
                   </span>
                 </span>
+                {score && (
+                  <span className="mt-1 bg-canvas/15 text-canvas border border-canvas/30 px-1.5 text-xs font-bold tabular-nums">
+                    agg. {score.home}-{score.away}
+                  </span>
+                )}
                 {r.shootout && (
                   <span className="mt-1 bg-whistle text-on-whistle border border-ink px-1.5 text-xs font-bold">
                     Rigori {r.shootout.home}-{r.shootout.away}
@@ -190,8 +266,8 @@ function RoundResults({ tournament, ids }: { tournament: TournamentState; ids: s
                 )}
               </span>
               <span className="flex items-center gap-2 min-w-0">
-                <TeamBadge team={team(m.awayId)} size="sm" />
-                <span className={nameCls(m.awayId, m.winnerId === m.awayId)}>{team(m.awayId)?.name}</span>
+                <TeamBadge team={team(r.awayTeamId)} size="sm" />
+                <span className={nameCls(r.awayTeamId, m.winnerId === r.awayTeamId)}>{team(r.awayTeamId)?.name}</span>
               </span>
             </li>
           );

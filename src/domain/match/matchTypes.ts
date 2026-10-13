@@ -39,6 +39,15 @@ export interface MatchOptions {
    * Influisce solo sulla lotteria (Rng separato): i 90' non cambiano.
    */
   shootoutOrder?: Partial<Record<MatchSide, string[]>>;
+  /**
+   * Confronto andata/ritorno (la simulazione dei 90' è identica):
+   * - leg 1 (andata): niente rigori, il pari vale;
+   * - leg 2 (ritorno): `firstLeg` = gol dell'andata dal punto di vista dei
+   *   lati di QUESTA partita (al ritorno casa/ospiti sono invertiti); si va
+   *   ai rigori solo con l'aggregato in parità e l'IA ragiona sull'aggregato.
+   * Assente: gara secca, pari -> rigori come sempre.
+   */
+  twoLegged?: { leg: 1 } | { leg: 2; firstLeg: Record<MatchSide, number> };
 }
 
 /** Giocatore schierato, con la forma del giorno (fotografia per la UI) */
@@ -199,7 +208,12 @@ export interface MatchResult {
    * andati ai rigori. Opzionale: i risultati salvati prima non lo hanno.
    */
   shootoutOrder?: Record<MatchSide, string[]> | null;
-  winnerId: string;
+  /** Gara del confronto (1 = andata, 2 = ritorno); assente = gara secca */
+  leg?: 1 | 2;
+  /** Totale dopo i 90' del ritorno dal punto di vista dei lati di questa partita */
+  aggregate?: Record<MatchSide, number>;
+  /** Vincitore del confronto: null solo per l'andata finita in pari */
+  winnerId: string | null;
   events: MatchEvent[];
   ticks: MatchTick[];
   /** Tick in cui l'utente/IA può cambiare atteggiamento */

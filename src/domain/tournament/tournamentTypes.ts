@@ -7,6 +7,9 @@ import { MatchResult } from '../match/matchTypes';
 
 export type TournamentRound = 'quarterfinals' | 'semifinals' | 'final';
 
+/** Formato della coppa: 'double' = quarti e semifinali andata/ritorno */
+export type TournamentFormat = 'single' | 'double';
+
 export type TournamentStatus = 'draw' | 'quarterfinals' | 'semifinals' | 'final' | 'completed';
 
 /** Stato di una partita del tabellone */
@@ -38,8 +41,12 @@ export interface BracketMatch {
   index: number;
   homeId: string | null;
   awayId: string | null;
-  /** Seme deterministico della partita */
+  /** Seme deterministico della partita (andata se ci sono due gare) */
   seed: number;
+  /** Seme deterministico del ritorno (solo formato 'double') */
+  returnSeed?: number;
+  /** Gare del confronto: 1 = gara secca, 2 = andata e ritorno (default 1) */
+  legs?: 1 | 2;
   next: BracketLink | null;
   winnerId: string | null;
 }
@@ -50,11 +57,17 @@ export interface TournamentState {
   id: string;
   name: string;
   seasonId: string;
+  /** Formato della coppa; assente nei salvataggi precedenti = 'single' */
+  format?: TournamentFormat;
   userTeamId: string;
   teams: TournamentTeam[];
   bracket: TournamentBracket;
   /** Partita che l'utente sta giocando (schermata partita aperta) */
   currentMatchId: string | null;
+  /**
+   * Risultati per gara: la chiave è l'id del tie per l'andata (o la gara
+   * secca) e `${id}-R` per il ritorno del formato 'double'.
+   */
   matches: Record<string, MatchResult>;
   status: TournamentStatus;
   winnerId: string | null;

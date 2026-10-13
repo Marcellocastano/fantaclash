@@ -99,7 +99,11 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
         <div>
           <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
           <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">Il sorteggio</h1>
-          <p className="text-lg text-ink-soft mt-3">8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.</p>
+          <p className="text-lg text-ink-soft mt-3">
+            {tournament.format === 'double'
+              ? '8 squadre, eliminazione diretta: quarti e semifinali andata e ritorno, finale secca. Aggregato pari? Rigori.'
+              : '8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.'}
+          </p>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import {
   lastTick,
   MatchResult,
   PlaybackState,
+  MatchOptions,
   MatchSide,
   MatchTeamInput,
   simulateMatch,
@@ -70,9 +71,11 @@ export interface UseMatchPlaybackInput {
   away: MatchTeamInput;
   seed: number;
   userSide: MatchSide;
+  /** Contesto andata/ritorno: passato tale e quale al motore */
+  twoLegged?: MatchOptions['twoLegged'];
 }
 
-export function useMatchPlayback({ home, away, seed, userSide }: UseMatchPlaybackInput): MatchPlayback {
+export function useMatchPlayback({ home, away, seed, userSide, twoLegged }: UseMatchPlaybackInput): MatchPlayback {
   const [plan, setPlan] = useState<TacticChange[]>([]);
   const [decided, setDecided] = useState<number[]>([]);
   const [tick, setTick] = useState(0);
@@ -91,9 +94,9 @@ export function useMatchPlayback({ home, away, seed, userSide }: UseMatchPlaybac
         home,
         away,
         seed: activeSeed,
-        options: { tactics: { [userSide]: plan }, shootoutOrder: kickOrder ? { [userSide]: kickOrder } : undefined },
+        options: { tactics: { [userSide]: plan }, shootoutOrder: kickOrder ? { [userSide]: kickOrder } : undefined, twoLegged },
       }),
-    [home, away, activeSeed, userSide, plan, kickOrder]
+    [home, away, activeSeed, userSide, plan, kickOrder, twoLegged]
   );
   const state = useMemo(() => getPlaybackState(result, tick), [result, tick]);
   const end = lastTick(result);
@@ -150,7 +153,7 @@ export function useMatchPlayback({ home, away, seed, userSide }: UseMatchPlaybac
    */
   const jumpToShootout = useCallback(() => {
     for (let s = activeSeed + 1; s < activeSeed + 5000; s++) {
-      const r = simulateMatch({ home, away, seed: s, options: { tactics: { [userSide]: plan } } });
+      const r = simulateMatch({ home, away, seed: s, options: { tactics: { [userSide]: plan }, twoLegged } });
       if (!r.shootout) continue;
       setActiveSeed(s);
       setKickOrder(null);
@@ -160,7 +163,7 @@ export function useMatchPlayback({ home, away, seed, userSide }: UseMatchPlaybac
       setPlaying(true);
       return;
     }
-  }, [activeSeed, home, away, userSide, plan]);
+  }, [activeSeed, home, away, userSide, plan, twoLegged]);
 
   const currentTactic: Tactic = result.ticks[Math.max(tick, 1)]?.tactic[userSide] ?? 'equilibrata';
 

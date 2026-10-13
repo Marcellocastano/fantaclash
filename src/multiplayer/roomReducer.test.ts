@@ -92,6 +92,27 @@ describe('nome della coppa (settings.cupName)', () => {
   });
 });
 
+describe('listone Legends in stanza', () => {
+  const auctionDone = (room: RoomState): RoomState => ({
+    ...room,
+    phase: 'auction',
+    auction: { ...createInitialAuctionState([]), phase: 'complete' },
+  });
+
+  it("l'host può scegliere 'legends': arriva al torneo e la stanza resta a gara secca", () => {
+    const room = makeRoom({
+      settings: { season: 'legends', difficulty: 'normale' },
+    });
+    const picked = roomReducer(room, { type: 'SETTINGS', settings: { season: 'legends' } });
+    expect(picked.settings.season).toBe('legends');
+    const next = roomReducer(auctionDone(picked), { type: 'START_TOURNAMENT', seed: 7 });
+    expect(next.tournament?.seasonId).toBe('legends');
+    // Le stanze non usano l'andata e ritorno
+    expect(next.tournament?.format ?? 'single').toBe('single');
+    expect(next.tournament?.bracket.every(m => (m.legs ?? 1) === 1)).toBe(true);
+  });
+});
+
 describe('REMATCH (rivincita)', () => {
   const finalRoom = (): RoomState => ({
     ...makeRoom(),

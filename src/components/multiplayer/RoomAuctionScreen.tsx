@@ -9,6 +9,7 @@ import { PlayerRole, Team } from '../../types';
 import { RoomState } from '../../multiplayer/protocol';
 import { AuctionAction, getCurrentCallerId } from '../../services/auction';
 import { playerOverall, teamStrength } from '../../services/auction/teamStrength';
+import { listoneLabel } from '../../services/seasons';
 import { shortName } from '../../utils/playerName';
 import { buildStartTournament } from '../../multiplayer/hostTournament';
 import { auctionHighlights } from './auctionHighlights';
@@ -174,7 +175,7 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
       <div className="w-full max-w-[1600px] mx-auto px-4 py-6 space-y-10">
         {/* Eroe */}
         <section className="relative bg-pitch-deep text-canvas border-2 border-ink shadow-block p-5 sm:p-8 overflow-hidden">
-          <p className="label !text-canvas/70">Serie A {state.settings.season} · Asta chiusa</p>
+          <p className="label !text-canvas/70">{listoneLabel(state.settings.season)} · Asta chiusa</p>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <h1 className="font-display font-black text-5xl sm:text-7xl leading-none text-canvas">
               Le rose sono fatte

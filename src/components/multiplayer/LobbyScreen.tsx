@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MAX_PLAYERS, MIN_HUMANS } from '../../multiplayer/constants';
 import { TOURNAMENT_NAME } from '../../domain/tournament';
-import { loadSeasonIndex, SeasonInfo } from '../../services/seasons';
+import { isLegends, LEGENDS_ID, listoneLabel, loadSeasonIndex, SeasonInfo } from '../../services/seasons';
 import { Icon } from '../Icon';
+import { ListoneMode, ListoneModePicker } from '../ListoneModePicker';
 import { SeasonPicker } from '../SeasonPicker';
 import { TeamBadge } from '../tournament/TeamBadge';
 import { useRoom } from './RoomProvider';
@@ -25,14 +26,32 @@ export function LobbyScreen({
   const state = room.state!;
   const [copied, setCopied] = useState<string | null>(null);
   const [seasons, setSeasons] = useState<SeasonInfo[] | null>(null);
+  // Ultima annata "vera" scelta: tornando a Classica la si ripristina
+  const lastSeason = useRef(isLegends(state.settings.season) ? '' : state.settings.season);
 
-  // L'host sceglie l'annata nella stanza; gli altri la vedono nel chip
+  // L'host sceglie il listone nella stanza; gli altri lo vedono nel chip
   useEffect(() => {
     if (!room.isHost) return;
     loadSeasonIndex()
-      .then(setSeasons)
+      .then(list => {
+        setSeasons(list);
+        lastSeason.current ||= list[Math.floor(Math.random() * list.length)]?.season ?? '';
+      })
       .catch(() => setSeasons(null));
   }, [room.isHost]);
+
+  const mode: ListoneMode = isLegends(state.settings.season) ? 'legends' : 'classic';
+  const setMode = (m: ListoneMode) => {
+    if (m === 'legends') {
+      room.updateSettings({ season: LEGENDS_ID });
+    } else if (lastSeason.current) {
+      room.updateSettings({ season: lastSeason.current });
+    }
+  };
+  const setSeason = (season: string) => {
+    lastSeason.current = season;
+    room.updateSettings({ season });
+  };
 
   const copy = async (label: string, text: string) => {
     try {
@@ -80,22 +99,26 @@ export function LobbyScreen({
           </span>
           {(!room.isHost || !seasons) && (
             <span className="inline-block border-2 border-canvas/50 px-3 py-1 font-display font-bold text-lg text-canvas">
-              Serie A {state.settings.season}
+              {listoneLabel(state.settings.season)}
             </span>
           )}
         </p>
         {room.isHost && seasons && (
-          <div className="mt-5 max-w-md mx-auto text-left">
-            <p className="font-display text-lg font-extrabold text-canvas/80 mb-2 text-center">Annata del listone</p>
-            {/* Le etichette interne del picker sono inchiostro: scatola crema */}
+          <div className="mt-5 max-w-md mx-auto text-left space-y-3">
+            {/* Le etichette interne dei picker sono inchiostro: scatola crema */}
             <div className="bg-canvas border-2 border-ink p-3">
-              <SeasonPicker
-                seasons={seasons}
-                value={state.settings.season}
-                onChange={season => room.updateSettings({ season })}
-                disabled={starting}
-              />
+              <ListoneModePicker value={mode} onChange={setMode} disabled={starting} />
             </div>
+            {mode === 'classic' && (
+              <div className="bg-canvas border-2 border-ink p-3">
+                <SeasonPicker
+                  seasons={seasons}
+                  value={state.settings.season}
+                  onChange={setSeason}
+                  disabled={starting}
+                />
+              </div>
+            )}
           </div>
         )}
         <div className="mt-5 flex flex-col items-center gap-2">

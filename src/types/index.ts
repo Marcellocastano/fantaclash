@@ -1,4 +1,4 @@
-import type { TournamentState } from '../domain/tournament/tournamentTypes';
+import type { TournamentFormat, TournamentState } from '../domain/tournament/tournamentTypes';
 
 /**
  * Ruoli dei calciatori nel Fantacalcio
@@ -47,7 +47,9 @@ export interface Player {
   reliability: number;
   /** Stagione di riferimento dei dati (es. '2015-16'); assente per il database di esempio */
   season?: string;
-  /** Overall derivato (50-95), solo per dati storici */
+  /** True nel listone Legends: il giocatore è nella sua annata migliore */
+  legend?: boolean;
+  /** Overall derivato (50-95; fino a 99 nel listone Legends) */
   overall?: number;
   /** Statistiche aggregate della stagione, solo per dati storici */
   stats?: {
@@ -219,8 +221,13 @@ export interface GameConfig {
   userTeamName: string;
   /** Livello di difficoltà dei bot */
   difficulty: DifficultyLevel;
-  /** Stagione storica da cui caricare i giocatori */
+  /** Stagione storica da cui caricare i giocatori ('legends' per il listone Legends) */
   season: string;
+  /**
+   * Formato della coppa: 'double' = quarti e semifinali andata/ritorno,
+   * finale secca; assente o 'single' = tutto a gara secca.
+   */
+  format?: TournamentFormat;
 }
 
 /**

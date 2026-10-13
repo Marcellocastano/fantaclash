@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Team } from '../../types';
-import { MatchResult, MatchSide } from '../../domain/match';
-import { findMatch, ROUND_LABELS, toMatchTeam, TournamentRound, TournamentState } from '../../domain/tournament';
+import { MatchResult, MatchSide, MatchOptions } from '../../domain/match';
+import {
+  findMatch,
+  legResult,
+  legSeed,
+  legSides,
+  matchLegs,
+  nextLeg,
+  ROUND_LABELS,
+  toMatchTeam,
+  TournamentRound,
+  TournamentState,
+} from '../../domain/tournament';
 import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
 import { playSound } from '../../services/sound';
@@ -36,23 +47,44 @@ const SPEEDS: PlaybackSpeed[] = [1, 2, 4];
  */
 export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScreenProps) {
   const match = findMatch(tournament.bracket, matchId);
-  const homeTeam = teams.find(t => t.id === match?.homeId);
-  const awayTeam = teams.find(t => t.id === match?.awayId);
+  // Gara da giocare del confronto: andata, ritorno (casa invertita) o secca
+  const leg = match ? (nextLeg(tournament, match) ?? 1) : 1;
+  const sides = match ? legSides(match, leg) : { homeId: null, awayId: null };
+  const homeTeam = teams.find(t => t.id === sides.homeId);
+  const awayTeam = teams.find(t => t.id === sides.awayId);
   const home = useMemo(() => (homeTeam ? toMatchTeam(homeTeam) : null), [homeTeam]);
   const away = useMemo(() => (awayTeam ? toMatchTeam(awayTeam) : null), [awayTeam]);
   if (!match || !home || !away) return null;
-  return <MatchPlayer tournament={tournament} home={home} away={away} seed={match.seed} round={match.round} onFinish={onFinish} />;
+  return (
+    <MatchPlayer
+      tournament={tournament}
+      home={home}
+      away={away}
+      seed={legSeed(match, leg)}
+      round={match.round}
+      leg={matchLegs(match) === 2 ? leg : undefined}
+      firstLeg={matchLegs(match) === 2 && leg === 2 ? legResult(tournament, match, 1) : undefined}
+      onFinish={onFinish}
+    />
+  );
 }
 
-function MatchPlayer({ tournament, home, away, seed, round, onFinish }: MatchPlayerProps) {
+function MatchPlayer({ tournament, home, away, seed, round, leg, firstLeg, onFinish }: MatchPlayerProps) {
   const userSide = home.id === tournament.userTeamId ? 'home' : 'away';
-  const pb = useMatchPlayback({ home, away, seed, userSide });
+  const twoLegged: MatchOptions['twoLegged'] = leg
+    ? leg === 1
+      ? { leg: 1 }
+      : { leg: 2, firstLeg: { home: firstLeg!.awayScore, away: firstLeg!.homeScore } }
+    : undefined;
+  const pb = useMatchPlayback({ home, away, seed, userSide, twoLegged });
   return (
     <MatchPlaybackView
       tournament={tournament}
       home={home}
       away={away}
       round={round}
+      leg={leg}
+      firstLeg={firstLeg}
       pb={pb}
       userSide={userSide}
       onFinish={onFinish}
@@ -66,6 +98,10 @@ interface MatchPlayerProps {
   away: ReturnType<typeof toMatchTeam>;
   seed: number;
   round: TournamentRound;
+  /** Gara del confronto a due: 1 = andata, 2 = ritorno */
+  leg?: 1 | 2;
+  /** Risultato dell'andata (solo al ritorno), dai lati del tie */
+  firstLeg?: MatchResult;
   onFinish: (result: MatchResult, exit: MatchExit) => void;
 }
 
@@ -88,6 +124,8 @@ export function MatchPlaybackView({
   home,
   away,
   round,
+  leg,
+  firstLeg,
   pb,
   userSide,
   onFinish,
@@ -97,12 +135,19 @@ export function MatchPlaybackView({
   home: ReturnType<typeof toMatchTeam>;
   away: ReturnType<typeof toMatchTeam>;
   round: TournamentRound;
+  /** Gara del confronto a due: 1 = andata, 2 = ritorno */
+  leg?: 1 | 2;
+  /** Risultato dell'andata dai lati del tie (solo al ritorno) */
+  firstLeg?: MatchResult;
   pb: MatchPlayback;
   userSide: MatchSide;
   onFinish: (result: MatchResult, exit: MatchExit) => void;
   room?: RoomMatchUi;
 }) {
   const { result, state } = pb;
+  // L'andata vista dai lati di questa partita (al ritorno sono invertiti)
+  const firstLegHere =
+    firstLeg && leg === 2 ? { home: firstLeg.awayScore, away: firstLeg.homeScore } : undefined;
   const [streamer] = useStreamerMode();
   const [tab, setTab] = useState<'cronaca' | 'statistiche'>('cronaca');
   const tick = result.ticks[state.tick.index];
@@ -128,7 +173,8 @@ export function MatchPlaybackView({
         home={tournament.teams.find(t => t.id === home.id)}
         away={tournament.teams.find(t => t.id === away.id)}
         state={state}
-        roundLabel={ROUND_LABELS[round]}
+        roundLabel={`${ROUND_LABELS[round]}${leg ? (leg === 1 ? ' · Andata' : ' · Ritorno') : ''}`}
+        firstLeg={firstLegHere}
         tactics={result.ticks[Math.max(1, state.tick.index)].tactic}
         userFiato={tick.energy[userSide]}
         userSide={userSide}
@@ -143,6 +189,8 @@ export function MatchPlaybackView({
             result={result}
             userTeamId={tournament.userTeamId}
             round={round}
+            leg={leg}
+            firstLeg={firstLeg}
             onContinue={() => (room ? room.onExit() : onFinish(result, 'continue'))}
             onConclude={() => (room ? room.onExit() : onFinish(result, 'conclude'))}
             exitLabel={room ? 'Torna al tabellone' : undefined}
@@ -174,7 +222,7 @@ export function MatchPlaybackView({
                   ))}
                 </div>
                 <div className="ml-auto flex items-center gap-5">
-                  {import.meta.env.DEV && !inShootout && (
+                  {import.meta.env.DEV && !inShootout && leg !== 1 && (
                     <button onClick={pb.jumpToShootout} className="link-action text-sm" title="Solo sviluppo: rigioca con un seme che finisce ai rigori">
                       Test rigori
                     </button>
@@ -210,7 +258,7 @@ export function MatchPlaybackView({
                     decisionIndex={pb.decisionIndex}
                     current={pb.currentTactic}
                     fiato={tick.energy[userSide]}
-                    scoreLine={`${state.score.home}-${state.score.away}`}
+                    scoreLine={`${state.score.home}-${state.score.away}${firstLegHere ? ` · agg. ${state.score.home + firstLegHere.home}-${state.score.away + firstLegHere.away}` : ''}`}
                     onChoose={t => {
                       if (pb.decisionIndex === 0) playSound('whistle');
                       pb.chooseTactic(t);
