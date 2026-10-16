@@ -133,7 +133,7 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
               {t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
             </p>
           </div>
-          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 sm:gap-5">
+          <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             {done ? (
               <span className="border-2 border-ink px-3 py-1.5 font-display text-lg font-extrabold leading-none shadow-block-sm bg-highlight text-on-highlight">
                 {progress}

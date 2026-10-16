@@ -1,10 +1,10 @@
-import { monogram, TournamentSummary, shareText } from '../domain/tournament';
-import type { Placement, SummaryMatch } from '../domain/tournament';
-import { kitOf } from '../domain/teamKits';
-import { PlayerRole } from '../types';
-import { CatalogKey, t } from '../i18n/translate';
-import { isLegends } from './seasons';
-import { TIER_COLORS, tierOf } from './playerTier';
+import { monogram, TournamentSummary, shareText } from "../domain/tournament";
+import type { Placement, SummaryMatch } from "../domain/tournament";
+import { kitOf } from "../domain/teamKits";
+import { PlayerRole } from "../types";
+import { CatalogKey, t } from "../i18n/translate";
+import { isLegends } from "./seasons";
+import { TIER_COLORS, tierOf } from "./playerTier";
 
 /**
  * Card del torneo come immagine PNG (1080x1350, formato 4:5 adatto ai
@@ -19,44 +19,54 @@ import { TIER_COLORS, tierOf } from './playerTier';
 const W = 1080;
 const H = 1350;
 const M = 60;
-const FOREST = '#07492A';
-const INK = '#15201A';
-const CREAM = '#F4EEDF';
-const MUTED = '#5C665F';
-const YELLOW = '#FFD23F';
-const RED = '#D22D28';
-const ORANGE = '#F45B18';
-const FIELD_DARK = '#1F7A45';
-const FIELD_LIGHT = '#2A8A51';
-const FIELD_LINE = 'rgba(228, 240, 223, 0.75)';
+const FOREST = "#07492A";
+const INK = "#15201A";
+const CREAM = "#F4EEDF";
+const MUTED = "#5C665F";
+const YELLOW = "#FFD23F";
+const RED = "#D22D28";
+const ORANGE = "#F45B18";
+const FIELD_DARK = "#1F7A45";
+const FIELD_LIGHT = "#2A8A51";
+const FIELD_LINE = "rgba(228, 240, 223, 0.75)";
 const DISPLAY = "'Big Shoulders', sans-serif";
 const SANS = "'Public Sans', sans-serif";
 
 /** Colore dell'esito: oro, argento, bronzo, crema */
 const PLACEMENT_COLOR: Record<Placement, string> = {
   campione: YELLOW,
-  finalista: '#D5DADD',
-  semifinalista: '#D9A577',
+  finalista: "#D5DADD",
+  semifinalista: "#D9A577",
   quarti: CREAM,
 };
 
-const ROUND_NAME: Record<SummaryMatch['round'], CatalogKey> = {
-  quarterfinals: 'tournament.summary.cardRound.quarterfinals',
-  semifinals: 'tournament.summary.cardRound.semifinals',
-  final: 'tournament.summary.cardRound.final',
+const ROUND_NAME: Record<SummaryMatch["round"], CatalogKey> = {
+  quarterfinals: "tournament.summary.cardRound.quarterfinals",
+  semifinals: "tournament.summary.cardRound.semifinals",
+  final: "tournament.summary.cardRound.final",
 };
 
 /** Colonne della formazione sul mini campo (attacco verso destra), in % */
-const FORMATION_X: Record<PlayerRole, number> = { P: 0.09, D: 0.3, C: 0.56, A: 0.84 };
+const FORMATION_X: Record<PlayerRole, number> = {
+  P: 0.09,
+  D: 0.3,
+  C: 0.56,
+  A: 0.84,
+};
 /** Altezze dei giocatori di un reparto, in % (il centrale dei 3 è più avanzato) */
-const FORMATION_Y: Record<number, number[]> = { 1: [0.5], 2: [0.3, 0.7], 3: [0.2, 0.5, 0.8] };
+const FORMATION_Y: Record<number, number[]> = {
+  1: [0.5],
+  2: [0.3, 0.7],
+  3: [0.2, 0.5, 0.8],
+};
 
 type Ctx = CanvasRenderingContext2D;
 
 function fit(ctx: Ctx, text: string, maxWidth: number): string {
   if (ctx.measureText(text).width <= maxWidth) return text;
   let t = text;
-  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth)
+    t = t.slice(0, -1);
   return `${t}…`;
 }
 
@@ -64,7 +74,15 @@ function fit(ctx: Ctx, text: string, maxWidth: number): string {
  * Riduce il corpo del font finché il testo entra in maxWidth; solo sotto
  * minPx ripiega sui puntini di `fit`.
  */
-function fitFont(ctx: Ctx, text: string, maxWidth: number, weight: number, family: string, px: number, minPx: number): string {
+function fitFont(
+  ctx: Ctx,
+  text: string,
+  maxWidth: number,
+  weight: number,
+  family: string,
+  px: number,
+  minPx: number,
+): string {
   let size = px;
   ctx.font = `${weight} ${size}px ${family}`;
   while (size > minPx && ctx.measureText(text).width > maxWidth) {
@@ -75,7 +93,15 @@ function fitFont(ctx: Ctx, text: string, maxWidth: number, weight: number, famil
 }
 
 /** Blocco con bordo inchiostro e ombra piena (linguaggio "figurina") */
-function block(ctx: Ctx, x: number, y: number, w: number, h: number, fill: string, shadow = 8) {
+function block(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fill: string,
+  shadow = 8,
+) {
   if (shadow) {
     ctx.fillStyle = INK;
     ctx.fillRect(x + shadow, y + shadow, w, h);
@@ -92,19 +118,20 @@ function block(ctx: Ctx, x: number, y: number, w: number, h: number, fill: strin
  * manico e cappelle crema, testa gialla, ceppo con lastra arancio e due
  * punte di velocità. Tracciati piatti, senza contorno inchiostro.
  */
-const LOGO_SLAB = 'M 13.03 22.9 A 6.86 0.8 0 1 0 26.75 22.9 A 6.86 0.8 0 1 0 13.03 22.9 Z';
+const LOGO_SLAB =
+  "M 13.03 22.9 A 6.86 0.8 0 1 0 26.75 22.9 A 6.86 0.8 0 1 0 13.03 22.9 Z";
 const LOGO_BASE =
-  'M 12.87 24.39 L 27.12 24.39 Q 27.58 24.39 27.75 24.85 L 28.48 26.31 Q 19.96 28.27 11.38 26.31 L 12.17 24.85 Q 12.34 24.39 12.87 24.39 Z';
+  "M 12.87 24.39 L 27.12 24.39 Q 27.58 24.39 27.75 24.85 L 28.48 26.31 Q 19.96 28.27 11.38 26.31 L 12.17 24.85 Q 12.34 24.39 12.87 24.39 Z";
 const LOGO_HANDLE =
-  'M 3.14 20.19 L 14.9 14.2 Q 15.96 13.66 16.5 14.72 L 16.5 14.72 Q 17.04 15.78 15.98 16.32 L 4.23 22.31 Q 3.16 22.85 2.62 21.79 L 2.62 21.79 Q 2.08 20.73 3.14 20.19 Z';
+  "M 3.14 20.19 L 14.9 14.2 Q 15.96 13.66 16.5 14.72 L 16.5 14.72 Q 17.04 15.78 15.98 16.32 L 4.23 22.31 Q 3.16 22.85 2.62 21.79 L 2.62 21.79 Q 2.08 20.73 3.14 20.19 Z";
 const LOGO_CAP_B =
-  'M 16.18 18.21 L 22.74 14.87 Q 23.33 14.57 23.63 15.16 L 24.24 16.37 Q 24.54 16.96 23.95 17.26 L 17.4 20.6 Q 16.81 20.91 16.51 20.31 L 15.89 19.1 Q 15.59 18.51 16.18 18.21 Z';
+  "M 16.18 18.21 L 22.74 14.87 Q 23.33 14.57 23.63 15.16 L 24.24 16.37 Q 24.54 16.96 23.95 17.26 L 17.4 20.6 Q 16.81 20.91 16.51 20.31 L 15.89 19.1 Q 15.59 18.51 16.18 18.21 Z";
 const LOGO_HEAD =
-  'M 13.92 12.57 L 19.83 9.57 Q 19.89 9.54 19.92 9.59 L 22.38 14.44 Q 22.41 14.5 22.35 14.53 L 16.45 17.54 Q 16.39 17.57 16.36 17.51 L 13.89 12.66 Q 13.86 12.61 13.92 12.57 Z';
+  "M 13.92 12.57 L 19.83 9.57 Q 19.89 9.54 19.92 9.59 L 22.38 14.44 Q 22.41 14.5 22.35 14.53 L 16.45 17.54 Q 16.39 17.57 16.36 17.51 L 13.89 12.66 Q 13.86 12.61 13.92 12.57 Z";
 const LOGO_CAP_T =
-  'M 12.14 9.59 L 18.7 6.25 Q 19.29 5.95 19.59 6.54 L 20.21 7.75 Q 20.51 8.35 19.92 8.65 L 13.36 11.99 Q 12.77 12.29 12.47 11.7 L 11.85 10.49 Q 11.55 9.9 12.14 9.59 Z';
-const LOGO_SPIKE_1 = 'M 25.43 18.22 L 27.68 12.99 L 29.37 14.08 Z';
-const LOGO_SPIKE_2 = 'M 25.46 19.81 L 29.94 16.9 L 30.5 18.32 Z';
+  "M 12.14 9.59 L 18.7 6.25 Q 19.29 5.95 19.59 6.54 L 20.21 7.75 Q 20.51 8.35 19.92 8.65 L 13.36 11.99 Q 12.77 12.29 12.47 11.7 L 11.85 10.49 Q 11.55 9.9 12.14 9.59 Z";
+const LOGO_SPIKE_1 = "M 25.43 18.22 L 27.68 12.99 L 29.37 14.08 Z";
+const LOGO_SPIKE_2 = "M 25.46 19.81 L 29.94 16.9 L 30.5 18.32 Z";
 
 function drawLogo(ctx: Ctx, x: number, y: number, size: number) {
   const k = size / 32;
@@ -129,12 +156,18 @@ function drawLogo(ctx: Ctx, x: number, y: number, size: number) {
   ctx.restore();
 }
 
-function drawTrophy(ctx: Ctx, cx: number, y: number, size: number, color: string) {
+function drawTrophy(
+  ctx: Ctx,
+  cx: number,
+  y: number,
+  size: number,
+  color: string,
+) {
   const k = size / 20;
   const x = cx - size / 2;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2 * k;
-  ctx.lineCap = 'square';
+  ctx.lineCap = "square";
   ctx.beginPath();
   ctx.moveTo(x + 6 * k, y + 3 * k);
   ctx.lineTo(x + 14 * k, y + 3 * k);
@@ -171,18 +204,38 @@ function drawSeasonStamp(ctx: Ctx, cx: number, cy: number, season: string) {
   ctx.arc(0, 0, 70, 0, Math.PI * 2);
   ctx.stroke();
   ctx.fillStyle = YELLOW;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.font = `700 22px ${SANS}`;
-  ctx.fillText('SERIE A', 0, -24);
-  ctx.fillText(fitFont(ctx, isLegends(season) ? 'LEGENDS' : season, 120, 900, DISPLAY, 46, 28), 0, 16);
+  ctx.fillText("SERIE A", 0, -24);
+  ctx.fillText(
+    fitFont(
+      ctx,
+      isLegends(season) ? "LEGENDS" : season,
+      120,
+      900,
+      DISPLAY,
+      46,
+      28,
+    ),
+    0,
+    16,
+  );
   ctx.restore();
 }
 
 /** Biglietto di un turno: avversario, punteggio e timbro V/P */
-function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round: SummaryMatch['round'], m: SummaryMatch | undefined) {
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
+function drawTicket(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  round: SummaryMatch["round"],
+  m: SummaryMatch | undefined,
+) {
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   if (!m) {
     ctx.strokeStyle = MUTED;
     ctx.lineWidth = 3;
@@ -193,7 +246,7 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
     ctx.font = `700 28px ${DISPLAY}`;
     ctx.fillText(t(ROUND_NAME[round]), x + 22, y + 44);
     ctx.font = `400 24px ${SANS}`;
-    ctx.fillText(t('tournament.summary.cardNotPlayed'), x + 22, y + h - 30);
+    ctx.fillText(t("tournament.summary.cardNotPlayed"), x + 22, y + h - 30);
     return;
   }
   block(ctx, x, y, w, h, CREAM);
@@ -201,23 +254,56 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.font = `800 28px ${DISPLAY}`;
   ctx.fillText(t(ROUND_NAME[round]), x + 22, y + 44);
   ctx.fillStyle = INK;
-  ctx.fillText(fitFont(ctx, t('tournament.summary.cardVs', { opponent: m.opponentName }), w - 44, 600, SANS, 24, 16), x + 22, y + 80);
+  ctx.fillText(
+    fitFont(
+      ctx,
+      t("tournament.summary.cardVs", { opponent: m.opponentName }),
+      w - 44,
+      600,
+      SANS,
+      24,
+      16,
+    ),
+    x + 22,
+    y + 80,
+  );
   if (m.legs) {
     // Confronto a due gare: il punteggio in grande è l'aggregato
     ctx.fillStyle = MUTED;
     ctx.font = `600 20px ${SANS}`;
     const [a, r] = m.legs;
-    ctx.fillText(t('tournament.summary.cardLegs', { l1f: a.for, l1a: a.against, l2f: r?.for ?? '—', l2a: r?.against ?? '—' }), x + 22, y + 112);
+    ctx.fillText(
+      t("tournament.summary.cardLegs", {
+        l1f: a.for,
+        l1a: a.against,
+        l2f: r?.for ?? "—",
+        l2a: r?.against ?? "—",
+      }),
+      x + 22,
+      y + 110,
+    );
     ctx.fillStyle = INK;
   }
-  ctx.font = `900 92px ${DISPLAY}`;
-  ctx.fillText(`${m.goalsFor}-${m.goalsAgainst}`, x + 22, y + h - 28);
+  // A due gare l'aggregato sta un po' più in basso e piccolo: non copre le gare
+  ctx.font = `900 ${m.legs ? 78 : 92}px ${DISPLAY}`;
+  ctx.fillText(
+    `${m.goalsFor}-${m.goalsAgainst}`,
+    x + 22,
+    y + h - (m.legs ? 14 : 28),
+  );
   if (m.shootout) {
     ctx.fillStyle = MUTED;
     ctx.font = `700 22px ${SANS}`;
-    ctx.textAlign = 'right';
-    ctx.fillText(t('tournament.summary.cardShootout', { for: m.shootout.for, against: m.shootout.against }), x + w - 22, y + 44);
-    ctx.textAlign = 'left';
+    ctx.textAlign = "right";
+    ctx.fillText(
+      t("tournament.summary.cardShootout", {
+        for: m.shootout.for,
+        against: m.shootout.against,
+      }),
+      x + w - 22,
+      y + 44,
+    );
+    ctx.textAlign = "left";
   }
   // Timbro V/P
   const sx = x + w - 62;
@@ -230,16 +316,26 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.strokeStyle = INK;
   ctx.lineWidth = 4;
   ctx.strokeRect(-34, -34, 68, 68);
-  ctx.fillStyle = m.won ? INK : '#FFFFFF';
+  ctx.fillStyle = m.won ? INK : "#FFFFFF";
   ctx.font = `900 48px ${DISPLAY}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(t(m.won ? 'tournament.summary.cardWon' : 'tournament.summary.cardLost'), 0, 3);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(
+    t(m.won ? "tournament.summary.cardWon" : "tournament.summary.cardLost"),
+    0,
+    3,
+  );
   ctx.restore();
 }
 
 /** Stemma sociale: quadrato primario con banda secondaria e sigla */
-function drawKitBadge(ctx: Ctx, x: number, y: number, size: number, summary: TournamentSummary) {
+function drawKitBadge(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  size: number,
+  summary: TournamentSummary,
+) {
   const kit = kitOf({ name: summary.teamName, kit: summary.kit });
   block(ctx, x, y, size, size, kit.primary, 4);
   const bandH = Math.round(size * 0.28);
@@ -247,13 +343,20 @@ function drawKitBadge(ctx: Ctx, x: number, y: number, size: number, summary: Tou
   ctx.fillRect(x + 2, y + size - bandH - 2, size - 4, bandH);
   ctx.fillStyle = kit.on;
   ctx.font = `900 ${Math.round(size * 0.55)}px ${DISPLAY}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillText(monogram(summary.teamName), x + size / 2, y + size / 2 + 2);
 }
 
 /** Mini campo a strisce con la formazione 1-2-3-2 e i cognomi */
-function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup: TournamentSummary['lineup']) {
+function drawLineup(
+  ctx: Ctx,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  lineup: TournamentSummary["lineup"],
+) {
   const stripes = 12;
   for (let i = 0; i < stripes; i++) {
     ctx.fillStyle = i % 2 ? FIELD_LIGHT : FIELD_DARK;
@@ -276,10 +379,12 @@ function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup
   ctx.lineWidth = 4;
   ctx.strokeRect(x, y, w, h);
 
-  for (const role of ['P', 'D', 'C', 'A'] as PlayerRole[]) {
-    const players = lineup.filter(p => p.role === role);
+  for (const role of ["P", "D", "C", "A"] as PlayerRole[]) {
+    const players = lineup.filter((p) => p.role === role);
     players.forEach((p, i) => {
-      const ys = FORMATION_Y[players.length] ?? players.map((_, k) => (k + 1) / (players.length + 1));
+      const ys =
+        FORMATION_Y[players.length] ??
+        players.map((_, k) => (k + 1) / (players.length + 1));
       const forward = players.length === 3 && i === 1 ? 0.07 : 0;
       const cx = x + w * (FORMATION_X[role] + forward);
       const cy = y + h * ys[i] - 12;
@@ -288,13 +393,13 @@ function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup
       block(ctx, cx - 30, cy - 30, 60, 48, tier.bg, 4);
       ctx.fillStyle = tier.ink;
       ctx.font = `900 34px ${DISPLAY}`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
       ctx.fillText(String(p.overall), cx, cy - 5);
       // Cognome su etichetta scura per la leggibilità sulle strisce
       const label = fitFont(ctx, p.name, 170, 700, SANS, 22, 15);
       const lw = ctx.measureText(label).width + 16;
-      ctx.fillStyle = 'rgba(7, 73, 42, 0.85)';
+      ctx.fillStyle = "rgba(7, 73, 42, 0.85)";
       ctx.fillRect(cx - lw / 2, cy + 24, lw, 30);
       ctx.fillStyle = CREAM;
       ctx.fillText(label, cx, cy + 40);
@@ -303,7 +408,9 @@ function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup
 }
 
 /** Disegna la card e restituisce il PNG */
-export async function renderSummaryCard(summary: TournamentSummary): Promise<Blob> {
+export async function renderSummaryCard(
+  summary: TournamentSummary,
+): Promise<Blob> {
   if (document.fonts) {
     await Promise.all([
       document.fonts.load(`900 64px ${DISPLAY}`),
@@ -312,13 +419,13 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
       document.fonts.load(`700 32px ${SANS}`),
     ]).catch(() => undefined);
   }
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error(t('errors.canvasUnavailable'));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error(t("errors.canvasUnavailable"));
 
-  const champion = summary.placement === 'campione';
+  const champion = summary.placement === "campione";
   const accent = PLACEMENT_COLOR[summary.placement];
 
   // Fondo carta e fascia verde dell'esito
@@ -327,7 +434,7 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   const bandH = 500;
   ctx.fillStyle = FOREST;
   ctx.fillRect(0, 0, W, bandH);
-  ctx.strokeStyle = 'rgba(244, 238, 223, 0.12)';
+  ctx.strokeStyle = "rgba(244, 238, 223, 0.12)";
   ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.arc(W / 2, bandH, 190, Math.PI, 0);
@@ -338,35 +445,73 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   // Testata: logo e timbro dell'annata
   drawLogo(ctx, M, M - 4, 88);
   ctx.fillStyle = CREAM;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
   ctx.font = `800 50px ${DISPLAY}`;
-  ctx.fillText('FantaClash', M + 112, M + 38);
+  ctx.fillText("FantaClash", M + 112, M + 38);
   ctx.font = `800 46px ${DISPLAY}`;
   ctx.fillStyle = YELLOW;
-  ctx.fillText(fitFont(ctx, summary.tournamentName, 640, 800, DISPLAY, 46, 28), M + 112, M + 96);
+  ctx.fillText(
+    fitFont(ctx, summary.tournamentName, 640, 800, DISPLAY, 46, 28),
+    M + 112,
+    M + 96,
+  );
   drawSeasonStamp(ctx, W - M - 82, M + 88, summary.seasonId);
 
   // Esito e squadra
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
   if (champion) drawTrophy(ctx, W / 2, 175, 96, accent);
   ctx.fillStyle = accent;
-  ctx.fillText(fitFont(ctx, summary.placementLabel.toUpperCase(), W - 2 * M, 900, DISPLAY, champion ? 150 : 120, 70), W / 2, champion ? 400 : 350);
+  ctx.fillText(
+    fitFont(
+      ctx,
+      summary.placementLabel.toUpperCase(),
+      W - 2 * M,
+      900,
+      DISPLAY,
+      champion ? 150 : 120,
+      70,
+    ),
+    W / 2,
+    champion ? 400 : 350,
+  );
   ctx.fillStyle = CREAM;
   const teamNameY = champion ? 462 : 440;
-  const teamName = fitFont(ctx, summary.teamName, W - 2 * M - 150, 800, DISPLAY, 64, 34);
+  const teamName = fitFont(
+    ctx,
+    summary.teamName,
+    W - 2 * M - 150,
+    800,
+    DISPLAY,
+    64,
+    34,
+  );
   ctx.fillText(teamName, W / 2, teamNameY);
   // Stemma a due colori a sinistra del nome
-  drawKitBadge(ctx, W / 2 - ctx.measureText(teamName).width / 2 - 84, teamNameY - 54, 64, summary);
+  drawKitBadge(
+    ctx,
+    W / 2 - ctx.measureText(teamName).width / 2 - 84,
+    teamNameY - 54,
+    64,
+    summary,
+  );
 
   // Percorso: tre biglietti
   const ticketY = 548;
   const ticketH = 200;
   const gap = 28;
   const ticketW = (W - 2 * M - 2 * gap) / 3;
-  (['quarterfinals', 'semifinals', 'final'] as const).forEach((round, i) => {
-    drawTicket(ctx, M + i * (ticketW + gap), ticketY, ticketW, ticketH, round, summary.matches.find(m => m.round === round));
+  (["quarterfinals", "semifinals", "final"] as const).forEach((round, i) => {
+    drawTicket(
+      ctx,
+      M + i * (ticketW + gap),
+      ticketY,
+      ticketW,
+      ticketH,
+      round,
+      summary.matches.find((m) => m.round === round),
+    );
   });
 
   // Formazione
@@ -374,31 +519,61 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
 
   // In fondo: MVP, gol, marcatori
   const footY = 1170;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   const stat = (x: number, label: string, value: string, maxW: number) => {
     ctx.fillStyle = MUTED;
     ctx.font = `600 24px ${SANS}`;
     ctx.fillText(label, x, footY);
     ctx.fillStyle = INK;
-    ctx.fillText(fitFont(ctx, value, maxW, 900, DISPLAY, 60, 36), x, footY + 60);
+    ctx.fillText(
+      fitFont(ctx, value, maxW, 900, DISPLAY, 60, 36),
+      x,
+      footY + 60,
+    );
   };
-  stat(M, 'MVP', summary.mvp?.name ?? '-', 400);
-  stat(M + 440, t('tournament.summary.cardGoals'), `${summary.stats.goalsFor} / ${summary.stats.goalsAgainst}`, 260);
-  stat(M + 720, t('tournament.summary.cardWins'), t('tournament.summary.cardWinsValue', { wins: summary.stats.wins, played: summary.stats.played }), 240);
+  stat(M, "MVP", summary.mvp?.name ?? "-", 400);
+  stat(
+    M + 440,
+    t("tournament.summary.cardGoals"),
+    `${summary.stats.goalsFor} / ${summary.stats.goalsAgainst}`,
+    260,
+  );
+  stat(
+    M + 720,
+    t("tournament.summary.cardWins"),
+    t("tournament.summary.cardWinsValue", {
+      wins: summary.stats.wins,
+      played: summary.stats.played,
+    }),
+    240,
+  );
   if (summary.scorers.length) {
     ctx.fillStyle = INK;
     ctx.fillText(
-      fitFont(ctx, t('tournament.summary.cardScorers', { list: summary.scorers.slice(0, 4).map(s => `${s.name} ${s.goals}`).join(' · ') }), W - 2 * M - 260, 600, SANS, 26, 18),
+      fitFont(
+        ctx,
+        t("tournament.summary.cardScorers", {
+          list: summary.scorers
+            .slice(0, 4)
+            .map((s) => `${s.name} ${s.goals}`)
+            .join(" · "),
+        }),
+        W - 2 * M - 260,
+        600,
+        SANS,
+        26,
+        18,
+      ),
       M,
-      footY + 120
+      footY + 120,
     );
   }
   // Indirizzo del sito: ogni card condivisa fa da biglietto da visita
   ctx.fillStyle = MUTED;
-  ctx.textAlign = 'right';
+  ctx.textAlign = "right";
   ctx.font = `600 26px ${SANS}`;
-  ctx.fillText('fantaclash.it', W - M, footY + 120);
+  ctx.fillText("fantaclash.it", W - M, footY + 120);
 
   // Cornice
   ctx.strokeStyle = INK;
@@ -406,19 +581,27 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   ctx.strokeRect(8, 8, W - 16, H - 16);
 
   return new Promise((resolve, reject) =>
-    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error(t('errors.exportFailed')))), 'image/png')
+    canvas.toBlob(
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error(t("errors.exportFailed"))),
+      "image/png",
+    ),
   );
 }
 
 export function cardFileName(summary: TournamentSummary): string {
-  const slug = summary.teamName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'squadra';
+  const slug =
+    summary.teamName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "squadra";
   return `fantaclash-${slug}-${summary.seasonId}.png`;
 }
 
 /** Scarica il PNG */
 export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = fileName;
   a.click();
@@ -427,9 +610,10 @@ export function downloadBlob(blob: Blob, fileName: string): void {
 
 /** Copia l'immagine negli appunti (se il browser lo consente) */
 export async function copyImage(blob: Blob): Promise<boolean> {
-  if (!navigator.clipboard || typeof ClipboardItem === 'undefined') return false;
+  if (!navigator.clipboard || typeof ClipboardItem === "undefined")
+    return false;
   try {
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
     return true;
   } catch {
     return false;
@@ -437,9 +621,16 @@ export async function copyImage(blob: Blob): Promise<boolean> {
 }
 
 /** Condivisione nativa con file (mobile); false se non supportata */
-export async function shareNative(blob: Blob, summary: TournamentSummary): Promise<boolean> {
-  const file = new File([blob], cardFileName(summary), { type: 'image/png' });
-  const data = { files: [file], text: shareText(summary), title: summary.tournamentName };
+export async function shareNative(
+  blob: Blob,
+  summary: TournamentSummary,
+): Promise<boolean> {
+  const file = new File([blob], cardFileName(summary), { type: "image/png" });
+  const data = {
+    files: [file],
+    text: shareText(summary),
+    title: summary.tournamentName,
+  };
   if (!navigator.canShare?.(data)) return false;
   try {
     await navigator.share(data);

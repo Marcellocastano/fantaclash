@@ -191,11 +191,13 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
   const isUserMatch = match.homeId === tournament.userTeamId || match.awayId === tournament.userTeamId;
   const empty = status === 'upcoming' && !match.homeId && !match.awayId;
-  // Testata verde chiaro; righe crema sotto; match utente con cornice
-  // gialla, i vuoti tratteggiati sul verde scuro
+  // Testata verde chiaro; righe crema sotto; match utente con testata e
+  // cornice gialla come nel sorteggio, i vuoti tratteggiati sul verde scuro
   const tone = empty
     ? 'border-dashed border-canvas/30 bg-transparent'
-    : `border-ink bg-pitch shadow-block-sm${isUserMatch ? ' border-highlight outline outline-2 outline-highlight' : ''}`;
+    : isUserMatch
+      ? 'border-highlight bg-ink shadow-block-sm outline outline-2 outline-highlight'
+      : 'border-ink bg-pitch shadow-block-sm';
 
   // Nei confronti a due gare il numero in grande è l'aggregato sul tie
   const score = double ? tieScore(tournament, match) : null;
@@ -237,12 +239,12 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
         });
   return (
     <div className={`w-full border-2 ${tone}`}>
-      <div className={`flex items-center justify-between gap-2 px-2 py-1 ${empty ? 'text-canvas/50' : 'text-canvas'}`}>
+      <div className={`flex items-center justify-between gap-2 px-2 py-1 ${empty ? 'text-canvas/50' : isUserMatch ? 'bg-highlight text-on-highlight' : 'text-canvas'}`}>
         <span className="font-display text-sm font-black uppercase tracking-wider leading-none">{matchLabel}</span>
         {double && (
           <span
             className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider leading-none ${
-              empty ? 'border border-canvas/30 text-canvas/50' : 'bg-highlight text-on-highlight'
+              empty ? 'border border-canvas/30 text-canvas/50' : isUserMatch ? 'bg-ink text-canvas' : 'bg-highlight text-on-highlight'
             }`}
           >
             {t('tournament.bracket.twoLegsShort')}
