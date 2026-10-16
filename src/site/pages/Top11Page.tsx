@@ -90,7 +90,7 @@ export function Top11Page({ season, data: initial }: { season: string; data: Top
         <nav aria-label={t('site.top11.ariaOthers')} className="mt-14 flex items-center justify-between gap-4 max-w-3xl">
           {data.prev ? (
             <a href={`/top-11/${data.prev}/`} className="btn-ghost">
-              <Icon name="chevron" className="w-4 h-4 -rotate-90" />
+              <Icon name="chevron" className="w-4 h-4 rotate-90" />
               {t('site.top11.serieA', { season: data.prev })}
             </a>
           ) : (
@@ -102,7 +102,7 @@ export function Top11Page({ season, data: initial }: { season: string; data: Top
           {data.next ? (
             <a href={`/top-11/${data.next}/`} className="btn-ghost">
               {t('site.top11.serieA', { season: data.next })}
-              <Icon name="chevron" className="w-4 h-4 rotate-90" />
+              <Icon name="chevron" className="w-4 h-4 -rotate-90" />
             </a>
           ) : (
             <span />

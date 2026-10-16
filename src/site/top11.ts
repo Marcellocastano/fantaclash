@@ -1,7 +1,7 @@
-import { Player, PlayerRole } from '../types';
-import { playerOverall } from '../services/auction/teamStrength';
-import { splitName } from '../utils/playerName';
-import { tierOf, Tier } from '../services/playerTier';
+import { Player, PlayerRole } from "../types";
+import { playerOverall } from "../services/auction/teamStrength";
+import { splitName } from "../utils/playerName";
+import { tierOf, Tier } from "../services/playerTier";
 
 /**
  * Selezione della "Top 11" di un'annata: formazione ideale 4-3-3 con i
@@ -42,24 +42,33 @@ export interface Top11IndexEntry {
 }
 
 const FORMATION: { role: PlayerRole; count: number }[] = [
-  { role: 'P', count: 1 },
-  { role: 'D', count: 4 },
-  { role: 'C', count: 3 },
-  { role: 'A', count: 3 },
+  { role: "P", count: 1 },
+  { role: "D", count: 4 },
+  { role: "C", count: 3 },
+  { role: "A", count: 3 },
 ];
 
 /** I migliori `count` per ruolo, ordinati per overall, poi valore, poi nome */
-function topByRole(players: Player[], role: PlayerRole, count: number): Player[] {
+function topByRole(
+  players: Player[],
+  role: PlayerRole,
+  count: number,
+): Player[] {
   return players
-    .filter(p => p.role === role)
-    .sort((a, b) => playerOverall(b) - playerOverall(a) || b.baseValue - a.baseValue || a.name.localeCompare(b.name, 'it'))
+    .filter((p) => p.role === role)
+    .sort(
+      (a, b) =>
+        playerOverall(b) - playerOverall(a) ||
+        b.baseValue - a.baseValue ||
+        a.name.localeCompare(b.name, "it"),
+    )
     .slice(0, count);
 }
 
 /** La Top 11 di una stagione, in ordine di campo: P, 4D, 3C, 3A */
 export function pickTop11(players: Player[]): Top11Player[] {
   return FORMATION.flatMap(({ role, count }) =>
-    topByRole(players, role, count).map(p => {
+    topByRole(players, role, count).map((p) => {
       const { surname, firstName } = splitName(p.name);
       return {
         name: p.name,
@@ -70,29 +79,36 @@ export function pickTop11(players: Player[]): Top11Player[] {
         overall: playerOverall(p),
         tier: tierOf(playerOverall(p)),
       };
-    })
+    }),
   );
 }
 
 /** Testo introduttivo della pagina, generato solo dai dati veri */
-export function buildSeasonData(season: string, label: string, players: Player[], all: string[]): Top11SeasonData {
+export function buildSeasonData(
+  season: string,
+  label: string,
+  players: Player[],
+  all: string[],
+): Top11SeasonData {
   const top = pickTop11(players);
   const byClub = new Map<string, number>();
   for (const p of top) byClub.set(p.team, (byClub.get(p.team) ?? 0) + 1);
-  const [topClub, topClubCount] = [...byClub.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'it'))[0];
+  const [topClub, topClubCount] = [...byClub.entries()].sort(
+    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "it"),
+  )[0];
   const i = all.indexOf(season);
   return {
     season,
     label,
     players: top,
     stats: {
-      elite: top.filter(p => p.tier === 'elite').length,
+      elite: top.filter((p) => p.tier === "elite").length,
       topPlayer: top.reduce((a, b) => (b.overall > a.overall ? b : a)).surname,
       topClub,
       topClubCount,
     },
-    prev: all[i + 1] ?? null,
-    next: all[i - 1] ?? null,
+    prev: all[i - 1] ?? null,
+    next: all[i + 1] ?? null,
   };
 }
 
@@ -102,7 +118,11 @@ export function indexEntry(season: string, players: Player[]): Top11IndexEntry {
     season,
     best: FORMATION.map(({ role }) => {
       const p = topByRole(players, role, 1)[0];
-      return { role, surname: splitName(p.name).surname, overall: playerOverall(p) };
+      return {
+        role,
+        surname: splitName(p.name).surname,
+        overall: playerOverall(p),
+      };
     }),
   };
 }
@@ -110,17 +130,17 @@ export function indexEntry(season: string, players: Player[]): Top11IndexEntry {
 /** ItemList JSON-LD degli 11 giocatori */
 export function top11JsonLd(data: Top11SeasonData): object {
   return {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
+    "@context": "https://schema.org",
+    "@type": "ItemList",
     name: `Top 11 ${data.label}`,
     numberOfItems: data.players.length,
     itemListElement: data.players.map((p, i) => ({
-      '@type': 'ListItem',
+      "@type": "ListItem",
       position: i + 1,
       item: {
-        '@type': 'Person',
+        "@type": "Person",
         name: `${p.firstName} ${p.surname}`.trim() || p.surname,
-        affiliation: { '@type': 'SportsTeam', name: p.team },
+        affiliation: { "@type": "SportsTeam", name: p.team },
       },
     })),
   };
