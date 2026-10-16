@@ -42,7 +42,23 @@ describe('landing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
-    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected, format: 'double' });
+    expect(onSubmit.mock.calls[0][0]).toEqual({ userTeamName: input.value, difficulty: 'difficile', season: expected, format: 'double', userTeamKit: expect.any(String) });
+  });
+
+  it('colori sociali: il picker si apre, la scelta aggiorna il campioncino e finisce nel config', async () => {
+    const onSubmit = vi.fn();
+    render(<Landing onSubmit={onSubmit} />);
+    const picker = screen.getByRole('button', { name: /^Colori:/ });
+    fireEvent.click(picker);
+    const granata = await screen.findByRole('radio', { name: 'Granata' });
+    fireEvent.click(granata);
+    // Il bottone ora annuncia il kit scelto
+    expect(screen.getByRole('button', { name: 'Colori: Granata' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Granata' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].userTeamKit).toBe('granata');
   });
 
   it('modalità Legends: la tile prende il posto dell\'annata e il submit manda "legends"', async () => {

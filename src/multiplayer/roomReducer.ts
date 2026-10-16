@@ -21,6 +21,7 @@ import {
   RoomSettings,
   RoomState,
 } from './protocol';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Macchina a stati pura della stanza. Stesse regole degli altri reducer
@@ -31,7 +32,7 @@ import {
 export interface CreateRoomInput {
   code: string;
   hostId: string;
-  host: { nickname: string; teamName: string };
+  host: { nickname: string; teamName: string; kit?: KitId };
   settings: RoomSettings;
   now: number;
 }
@@ -55,6 +56,7 @@ export function createRoom({ code, hostId, host, settings, now }: CreateRoomInpu
     connected: true,
     joinedAt: now,
     teamId: null,
+    kit: host.kit,
   };
   return {
     protocol: PROTOCOL_VERSION,

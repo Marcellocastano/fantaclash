@@ -1,4 +1,5 @@
 import type { TournamentFormat, TournamentState } from '../domain/tournament/tournamentTypes';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Ruoli dei calciatori nel Fantacalcio
@@ -125,6 +126,8 @@ export interface Team {
   roster: OwnedPlayer[];
   /** Configurazione bot (null se squadra utente) */
   botConfig: BotConfig | null;
+  /** Colori sociali scelti (assente nei salvataggi precedenti: fallback deterministico via kitOf) */
+  kit?: KitId;
   /**
    * Chi guida la squadra: assente nel gioco singolo (vale isUserTeam),
    * nel multiplayer 'human' = giocatore remoto, 'autopilot' = umano assistito
@@ -228,6 +231,8 @@ export interface GameConfig {
    * finale secca; assente o 'single' = tutto a gara secca.
    */
   format?: TournamentFormat;
+  /** Colori sociali scelti per la squadra dell'utente */
+  userTeamKit?: KitId;
 }
 
 /**

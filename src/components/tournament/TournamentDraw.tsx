@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
-import { drawOrder, TournamentState, TournamentTeam } from '../../domain/tournament';
-import { playSound } from '../../services/sound';
-import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { drawOrder, TournamentState } from '../../domain/tournament';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useT } from '../../i18n/I18nProvider';
-import { TeamBadge } from './TeamBadge';
+import { Icon } from '../Icon';
+import { StreamerReserve } from '../layout/GameShell';
+import { buildDrawSequence, slotOf } from './draw/drawSequence';
+import { DrawBoard } from './draw/DrawBoard';
+import { DrawCard } from './draw/DrawCard';
+import { FLY_MS, useDrawPlayback } from './draw/useDrawPlayback';
 
 interface TournamentDrawProps {
   tournament: TournamentState;
@@ -14,209 +18,178 @@ interface TournamentDrawProps {
   order?: string[];
   /** Registra il sorteggio nello stato (a fine animazione) */
   onDrawn?: (order: string[]) => void;
-  /** Animazione finita: si va al tabellone */
+  /** Animazione finita: si va al tabellone (click su "Vai al torneo") */
   onDone: () => void;
 }
 
-/** Tempi dell'estrazione (ms) */
-const INTRO_MS = 900;
-const RISE_MS = 550;
-const SHOW_MS = 800;
-const USER_MOMENT_MS = 1800;
-const OUTRO_MS = 900;
-
-/** Posizioni delle palline nella boccia (% del contenitore) */
-const BALL_SPOTS = [
-  [30, 70], [50, 74], [70, 70], [20, 52], [40, 55], [60, 54], [80, 52], [50, 36],
-];
-
-type Stage = 'intro' | 'rise' | 'show' | 'user' | 'outro';
+/** Primo elemento visibile della query (i layout desktop/mobile coesistono nel DOM) */
+function visibleEl(selector: string): HTMLElement | null {
+  for (const el of document.querySelectorAll<HTMLElement>(selector)) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return el;
+  }
+  return null;
+}
 
 /**
- * Sorteggio stile UEFA: le palline escono una alla volta dalla boccia, si
- * aprono e la squadra finisce nel suo posto dei quarti. Quando il tuo
- * accoppiamento è completo c'è un momento dedicato al tuo avversario.
- * L'ordine è deciso al montaggio e registrato nello stato solo alla fine.
+ * Sorteggio a tabellone live: la figurina estratta compare sopra la
+ * coppa, una luce gialla corre sugli slot liberi e si ferma su quello
+ * giusto, la card ci vola dentro con un timbro. Gli slot si riempiono in
+ * ordine sparso ma il tabellone finale coincide con `order`. Lo skip è
+ * sempre disponibile; a tabellone completo appare il CTA "Vai al torneo".
  */
 export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone }: TournamentDrawProps) {
   const t = useT();
   const [order] = useState(() => fixedOrder ?? drawOrder(tournament, Math.random));
-  const [placed, setPlaced] = useState(0);
-  const [stage, setStage] = useState<Stage>('intro');
-  const [streamer] = useStreamerMode();
-  const committed = useRef(false);
-  // Callback sempre aggiornati senza riavviare i timer quando il genitore si ridisegna
-  const callbacks = useRef({ onDrawn, onDone });
-  callbacks.current = { onDrawn, onDone };
-  const team = (id: string | undefined) => tournament.teams.find(t => t.id === id);
-  const current = team(order[placed]);
-  const userPair = Math.floor(order.indexOf(tournament.userTeamId) / 2);
+  const steps = useMemo(
+    () => buildDrawSequence(order, tournament.userTeamId || null),
+    [order, tournament.userTeamId]
+  );
+  const reduced = useReducedMotion();
+  const pb = useDrawPlayback({ steps, order, reduced, onDrawn });
+  const [flyStyle, setFlyStyle] = useState<CSSProperties | null>(null);
+  const ctaRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    const next = (s: Stage, ms: number, after?: () => void) =>
-      setTimeout(() => {
-        after?.();
-        setStage(s);
-      }, ms);
-    let t: ReturnType<typeof setTimeout>;
-    switch (stage) {
-      case 'intro':
-        t = next('rise', INTRO_MS);
-        break;
-      case 'rise':
-        playSound('draw-ball');
-        t = next('show', RISE_MS);
-        break;
-      case 'show': {
-        const done = placed + 1;
-        const pairComplete = done % 2 === 0 && Math.floor(placed / 2) === userPair;
-        t = next(done >= order.length ? 'outro' : pairComplete ? 'user' : 'rise', SHOW_MS, () => setPlaced(done));
-        break;
-      }
-      case 'user':
-        t = next('rise', USER_MOMENT_MS);
-        break;
-      case 'outro':
-        if (!committed.current) {
-          committed.current = true;
-          callbacks.current.onDrawn?.(order);
-        }
-        t = setTimeout(() => callbacks.current.onDone(), OUTRO_MS);
-        break;
+  const done = pb.phase === 'done';
+  const step = pb.step;
+  const teamOf = (id: string | undefined) => tournament.teams.find(x => x.id === id);
+  const drawnTeam = step ? teamOf(step.teamId) : undefined;
+
+  // Volo FLIP: le misure si leggono al momento del volo (mai in cache);
+  // se una delle due manca (jsdom, layout nascosto) il volo si salta.
+  useLayoutEffect(() => {
+    if (pb.phase !== 'fly' || !step) {
+      setFlyStyle(null);
+      return;
     }
-    return () => clearTimeout(t);
-  }, [stage, placed, order, userPair]);
+    const cardEl = visibleEl('[data-draw-card]');
+    const slotEl = visibleEl(`[data-draw-slot="${step.slot}"]`);
+    if (!cardEl || !slotEl) {
+      setFlyStyle(null);
+      return;
+    }
+    const c = cardEl.getBoundingClientRect();
+    const s = slotEl.getBoundingClientRect();
+    const dx = s.left + s.width / 2 - (c.left + c.width / 2);
+    const dy = s.top + s.height / 2 - (c.top + c.height / 2);
+    const scale = Math.min(1, s.width / c.width);
+    setFlyStyle({
+      transform: `translate(${dx}px, ${dy}px) scale(${scale})`,
+      transition: `transform ${FLY_MS - 60}ms cubic-bezier(.35,.1,.25,1)`,
+    });
+  }, [pb.phase, step]);
 
-  const skip = () => {
-    setPlaced(order.length);
-    setStage('outro');
-  };
+  // A tabellone completo il focus va al CTA
+  useEffect(() => {
+    if (done) ctaRef.current?.focus();
+  }, [done]);
 
-  const inBowl = order.slice(placed + (stage === 'rise' || stage === 'show' ? 1 : 0));
-  const opponent = team(order[userPair * 2] === tournament.userTeamId ? order[userPair * 2 + 1] : order[userPair * 2]);
+  const progress = done
+    ? t('tournament.draw.complete')
+    : t('tournament.draw.pick', { n: Math.min(pb.stepIndex + 1, order.length), total: order.length });
+
+  const announce = useMemo(() => {
+    if (done) return t('tournament.draw.complete');
+    if (pb.phase === 'land' && step) {
+      const { quarter, side } = slotOf(step.slot);
+      return t('tournament.draw.announce', {
+        team: tournament.teams.find(x => x.id === step.teamId)?.name ?? '',
+        n: quarter + 1,
+        side: t(side === 'home' ? 'tournament.draw.home' : 'tournament.draw.away'),
+      });
+    }
+    return '';
+  }, [done, pb.phase, step, tournament.teams, t]);
+
+  // Lampo sul box quando il quarto appena completato ha entrambe le squadre
+  const landingQuarter = pb.phase === 'land' && step ? slotOf(step.slot).quarter : null;
+  const flashQuarter =
+    landingQuarter !== null && pb.placed.has(landingQuarter * 2) && pb.placed.has(landingQuarter * 2 + 1)
+      ? landingQuarter
+      : null;
+
+  const onStage = pb.phase === 'reveal' || pb.phase === 'spin' || pb.phase === 'fly';
+  const card =
+    drawnTeam && onStage ? (
+      <DrawCard
+        key={pb.stepIndex}
+        team={drawnTeam}
+        caption={t('tournament.draw.pick', { n: pb.stepIndex + 1, total: order.length })}
+        dropping={pb.phase === 'reveal'}
+        style={flyStyle ?? undefined}
+      />
+    ) : null;
 
   return (
-    <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-        <div>
-          <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
-          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">{t('tournament.draw.title')}</h1>
-          <p className="text-lg text-ink-soft mt-3">
-            {t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-10 items-start">
-        {/* Boccia + pallina estratta */}
-        <div className="col-span-12 md:col-span-5">
-          <div className="relative aspect-square max-w-[260px] sm:max-w-[420px] mx-auto">
-            <div className="absolute inset-0 rounded-full border-4 border-ink bg-canvas" />
-            <div className="absolute inset-[6%] rounded-full border-2 border-line-strong" aria-hidden="true" />
-            {inBowl.map(id => {
-              const t = team(id);
-              const [x, y] = BALL_SPOTS[order.indexOf(id) % BALL_SPOTS.length];
-              return (
-                <span
-                  key={id}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${x}%`, top: `${y}%` }}
-                >
-                  <span className={`block ${stage !== 'intro' ? 'motion-safe:animate-wobble' : ''}`} style={{ animationDelay: `${(order.indexOf(id) * 110) % 900}ms` }}>
-                    <Ball team={t} />
-                  </span>
+    <StreamerReserve>
+      <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-10">
+          <div>
+            <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
+            <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">
+              {t('tournament.draw.title')}
+            </h1>
+            <p className="text-lg text-ink-soft mt-3">
+              {t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
+            </p>
+          </div>
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 sm:gap-5">
+            {done ? (
+              <span className="border-2 border-ink px-3 py-1.5 font-display text-lg font-extrabold leading-none shadow-block-sm bg-highlight text-on-highlight">
+                {progress}
+              </span>
+            ) : (
+              // Avanzamento: etichetta + una tacca per estrazione
+              <div className="flex flex-col items-start sm:items-end gap-1.5">
+                <span className="font-display text-lg font-extrabold leading-none text-ink">{progress}</span>
+                <span className="flex gap-1" aria-hidden="true">
+                  {order.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`w-4 h-2 border border-ink transition-colors duration-200 ${
+                        i < pb.placed.size ? 'bg-pitch' : i === pb.stepIndex ? 'bg-highlight' : 'bg-transparent'
+                      }`}
+                    />
+                  ))}
                 </span>
-              );
-            })}
-
-            {/* Pallina appena estratta, sopra la boccia */}
-            {current && (stage === 'rise' || stage === 'show') && (
-              <div key={current.id} className="absolute inset-0 flex items-center justify-center">
-                {stage === 'rise' ? (
-                  <span className="motion-safe:animate-ball-rise">
-                    <Ball team={current} big />
-                  </span>
-                ) : (
-                  <div className="panel shadow-block-lg px-6 py-4 flex items-center gap-4 motion-safe:animate-ball-open max-w-[90%]">
-                    <TeamBadge team={current} size="lg" />
-                    <span className="font-display text-2xl sm:text-4xl font-black leading-none text-ink break-words">{current.name}</span>
-                  </div>
-                )}
               </div>
             )}
+            {!done && (
+              <button onClick={pb.skip} className="btn-bid whitespace-nowrap !text-base sm:!text-lg !px-4 sm:!px-5 !py-2.5">
+                {t('tournament.draw.skip')}
+                <Icon name="skip" className="w-5 h-5" />
+              </button>
+            )}
           </div>
-          <p className="text-center font-display text-lg sm:text-2xl font-extrabold text-ink-soft mt-4 sm:mt-6 min-h-[2rem]" aria-live="polite">
-            {stage === 'intro' ? t('tournament.draw.mixing') : stage === 'outro' ? t('tournament.draw.done') : t('tournament.draw.pick', { n: Math.min(placed + 1, 8), total: 8 })}
-          </p>
         </div>
 
-        {/* Quarti */}
-        {/* Streamer: i quarti scendono sotto il riquadro della webcam */}
-        <div className={`col-span-12 md:col-span-7 ${streamer ? 'lg:pt-16 2xl:pt-24' : ''}`}>
-          <h2 className="section-heading mb-6">{t('tournament.bracket.quartersFull')}</h2>
-          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} className={`border-2 ${i === userPair && placed > i * 2 + 1 ? 'border-pitch shadow-block-sm' : 'border-ink'}`}>
-                <p className="px-3 py-1.5 text-sm font-bold text-ink-muted border-b-2 border-line">{t('tournament.draw.quarter', { n: i + 1 })}</p>
-                <Slot team={placed > i * 2 ? team(order[i * 2]) : undefined} />
-                <Slot team={placed > i * 2 + 1 ? team(order[i * 2 + 1]) : undefined} />
-              </div>
-            ))}
+        <section aria-label={t('tournament.draw.boardAria')}>
+          <DrawBoard
+            tournament={tournament}
+            order={order}
+            placed={pb.placed}
+            litSlot={pb.litSlot}
+            lockedSlot={pb.lockedSlot}
+            landingSlot={pb.landingSlot}
+            flashQuarter={flashQuarter}
+            done={done}
+            card={card}
+          />
+        </section>
+
+        {/* Annunci delle estrazioni per lo screen reader */}
+        <p className="sr-only" aria-live="polite">
+          {announce}
+        </p>
+
+        {done && (
+          <div className="mt-8 sm:mt-10 flex justify-center">
+            <button ref={ctaRef} onClick={onDone} className="btn-cta w-full sm:w-auto motion-safe:animate-reveal">
+              {t('tournament.draw.toTournament')}
+            </button>
           </div>
-        </div>
+        )}
       </div>
-
-      {stage !== 'outro' && (
-        <div className="flex justify-center mt-10">
-          <button onClick={skip} className="btn-ghost">
-            {t('tournament.draw.skip')}
-          </button>
-        </div>
-      )}
-
-      {/* Momento della tua squadra */}
-      {stage === 'user' && opponent && (
-        <div className="fixed inset-x-0 top-1/3 z-40 bg-highlight border-y-4 border-ink py-8 motion-safe:animate-stamp" role="status">
-          <div className="max-w-[1300px] mx-auto px-4 flex flex-wrap items-center justify-center gap-6 text-on-highlight">
-            <span className="font-display text-3xl font-extrabold">{t('tournament.draw.yourOpponent')}</span>
-            <TeamBadge team={opponent} size="lg" />
-            <span className="font-display text-4xl sm:text-6xl font-black leading-none break-words">{opponent.name}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Ball({ team, big = false }: { team: TournamentTeam | undefined; big?: boolean }) {
-  return (
-    <span
-      className={`flex items-center justify-center rounded-full border-2 border-ink font-display font-black leading-none shadow-block-sm ${
-        big ? 'w-24 h-24 text-4xl sm:w-32 sm:h-32 sm:text-5xl' : 'w-12 h-12 text-xl sm:w-16 sm:h-16 sm:text-2xl'
-      } ${team?.isUserTeam ? 'bg-pitch text-on-pitch' : 'bg-highlight text-on-highlight'}`}
-    >
-      {team?.monogram}
-    </span>
-  );
-}
-
-function Slot({ team }: { team: TournamentTeam | undefined }) {
-  const t = useT();
-  return (
-    <div className="flex items-center gap-3 px-3 py-2.5 min-h-[3.75rem]">
-      {team ? (
-        <div key={team.id} className="flex items-center gap-3 min-w-0 motion-safe:animate-stamp">
-          <TeamBadge team={team} size="md" />
-          <span className={`font-display text-xl sm:text-2xl font-extrabold leading-none truncate ${team.isUserTeam ? 'text-pitch' : 'text-ink'}`}>
-            {team.name}
-          </span>
-        </div>
-      ) : (
-        <>
-          <TeamBadge team={undefined} size="md" />
-          <span className="text-ink-faint">{t('tournament.draw.toDraw')}</span>
-        </>
-      )}
-    </div>
+    </StreamerReserve>
   );
 }

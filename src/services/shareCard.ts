@@ -1,5 +1,6 @@
-import { TournamentSummary, shareText } from '../domain/tournament';
+import { monogram, TournamentSummary, shareText } from '../domain/tournament';
 import type { Placement, SummaryMatch } from '../domain/tournament';
+import { kitOf } from '../domain/teamKits';
 import { PlayerRole } from '../types';
 import { CatalogKey, t } from '../i18n/translate';
 import { isLegends } from './seasons';
@@ -237,6 +238,20 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.restore();
 }
 
+/** Stemma sociale: quadrato primario con banda secondaria e sigla */
+function drawKitBadge(ctx: Ctx, x: number, y: number, size: number, summary: TournamentSummary) {
+  const kit = kitOf({ name: summary.teamName, kit: summary.kit });
+  block(ctx, x, y, size, size, kit.primary, 4);
+  const bandH = Math.round(size * 0.28);
+  ctx.fillStyle = kit.secondary;
+  ctx.fillRect(x + 2, y + size - bandH - 2, size - 4, bandH);
+  ctx.fillStyle = kit.on;
+  ctx.font = `900 ${Math.round(size * 0.55)}px ${DISPLAY}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(monogram(summary.teamName), x + size / 2, y + size / 2 + 2);
+}
+
 /** Mini campo a strisce con la formazione 1-2-3-2 e i cognomi */
 function drawLineup(ctx: Ctx, x: number, y: number, w: number, h: number, lineup: TournamentSummary['lineup']) {
   const stripes = 12;
@@ -339,7 +354,11 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   ctx.fillStyle = accent;
   ctx.fillText(fitFont(ctx, summary.placementLabel.toUpperCase(), W - 2 * M, 900, DISPLAY, champion ? 150 : 120, 70), W / 2, champion ? 400 : 350);
   ctx.fillStyle = CREAM;
-  ctx.fillText(fitFont(ctx, summary.teamName, W - 2 * M, 800, DISPLAY, 64, 34), W / 2, champion ? 462 : 440);
+  const teamNameY = champion ? 462 : 440;
+  const teamName = fitFont(ctx, summary.teamName, W - 2 * M - 150, 800, DISPLAY, 64, 34);
+  ctx.fillText(teamName, W / 2, teamNameY);
+  // Stemma a due colori a sinistra del nome
+  drawKitBadge(ctx, W / 2 - ctx.measureText(teamName).width / 2 - 84, teamNameY - 54, 64, summary);
 
   // Percorso: tre biglietti
   const ticketY = 548;

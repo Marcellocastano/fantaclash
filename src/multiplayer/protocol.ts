@@ -2,6 +2,7 @@ import { AuctionState, DifficultyLevel, Team } from '../types';
 import { AuctionAction } from '../services/auction';
 import { TournamentAction, TournamentState } from '../domain/tournament';
 import { MatchOptions, MatchSide, Tactic, TacticChange } from '../domain/match';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Protocollo della stanza multiplayer (host autorevole).
@@ -27,6 +28,8 @@ export interface RoomPlayer {
   teamName: string;
   connected: boolean;
   joinedAt: number;
+  /** Colori sociali scelti in ingresso (assente nei salvataggi precedenti) */
+  kit?: KitId;
   /** Squadra assegnata a START_AUCTION (null in lobby) */
   teamId: string | null;
 }
@@ -100,7 +103,7 @@ export type RoomAction =
   | { type: 'REMATCH' };
 
 export type ClientIntent =
-  | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator'; pubKey?: JsonWebKey }
+  | { type: 'HELLO'; playerId: string; token: string; nickname: string; teamName: string; protocol: number; role: 'player' | 'spectator'; pubKey?: JsonWebKey; kit?: string }
   | { type: 'CALL'; footballerId: string }
   | { type: 'BID'; amount: number }
   | { type: 'PING'; t: number }

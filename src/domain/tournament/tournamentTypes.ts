@@ -1,4 +1,5 @@
 import { MatchResult } from '../match/matchTypes';
+import type { KitId } from '../teamKits';
 
 /**
  * Tipi del torneo a eliminazione diretta (8 -> 4 -> 2 -> 1).
@@ -26,6 +27,8 @@ export interface TournamentTeam {
   rating: number;
   /** Sigla per l'avatar (2 lettere) */
   monogram: string;
+  /** Colori sociali (assente nei salvataggi precedenti: fallback deterministico) */
+  kit?: KitId;
 }
 
 /** Slot del tabellone verso cui avanza il vincitore */

@@ -175,7 +175,7 @@ export function LobbyScreen({
                 }`}
               >
                 <TeamBadge
-                  team={{ name: p.teamName, isUserTeam: mine }}
+                  team={{ name: p.teamName, isUserTeam: mine, kit: p.kit }}
                   size="md"
                 />
                 <span className="min-w-0 flex-1">

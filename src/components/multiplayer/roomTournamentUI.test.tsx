@@ -35,8 +35,8 @@ function teams(): Team[] {
   ];
 }
 
-/** Asta completata -> torneo sorteggiato (ordine deterministico) */
-function tournamentState(opts: { finish?: boolean } = {}): RoomState {
+/** Asta completata -> torneo sorteggiato (ordine deterministico); draw:false = tabellone ancora da sorteggiare */
+function tournamentState(opts: { finish?: boolean; draw?: boolean } = {}): RoomState {
   let s = createRoom({
     code: 'ABCDE', hostId: 'h1',
     host: { nickname: 'Host', teamName: 'Host FC' },
@@ -53,10 +53,12 @@ function tournamentState(opts: { finish?: boolean } = {}): RoomState {
     auction: { ...createInitialAuctionState([createTestPlayer({ id: 'p1', role: 'P' })]), phase: 'complete' },
   });
   s = roomReducer(s, { type: 'START_TOURNAMENT', seed: 42 });
-  s = roomReducer(s, {
-    type: 'TOURNAMENT',
-    action: { type: 'DRAW', order: teams().map(t => t.id) },
-  });
+  if (opts.draw !== false) {
+    s = roomReducer(s, {
+      type: 'TOURNAMENT',
+      action: { type: 'DRAW', order: teams().map(t => t.id) },
+    });
+  }
   if (opts.finish) {
     for (let g = 0; g < 10 && s.tournament!.status !== 'completed'; g++) {
       for (const a of buildRoundRecords(s)) s = roomReducer(s, a);
@@ -141,6 +143,27 @@ describe('torneo in stanza (UI)', () => {
     expect(screen.getByText(/attesa che l'host avvii il turno/)).toBeInTheDocument();
     expect(screen.queryByText('Gioca il turno')).toBeNull();
     expect(screen.queryByText(/Gioca i quarti/)).toBeNull();
+  });
+
+  it("chi era presente al sorteggio anima l'ordine dell'host senza dispatchare, poi arriva all'hub", () => {
+    const s0 = tournamentState({ draw: false });
+    expect(s0.tournament!.status).toBe('draw');
+    const s1 = roomReducer(s0, {
+      type: 'TOURNAMENT',
+      action: { type: 'DRAW', order: teams().map(t => t.id) },
+    });
+    setRoom(s0, 'c1', 'player');
+    const { rerender } = render(<RoomTournamentScreen />);
+    // Torneo in 'draw': attesa del sorteggio dell'host (sawDraw resta vero)
+    mockRoom.state = s1;
+    rerender(<RoomTournamentScreen />);
+    // L'ordine del bracket viene animato: il client non dispatcha nulla
+    expect(screen.getByRole('button', { name: 'Salta il sorteggio' })).toBeInTheDocument();
+    expect(dispatched).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Salta il sorteggio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Vai al torneo' }));
+    expect(screen.getByText(/attesa che l'host avvii il turno/)).toBeInTheDocument();
+    expect(dispatched).toHaveLength(0);
   });
 
   it("a torneo chiuso l'host va al riepilogo con FINISH", () => {

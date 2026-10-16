@@ -13,6 +13,7 @@ import {
 } from './protocol';
 import { applyHostAction } from './roomReducer';
 import { RoomTransport } from './transport/types';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Sessione client: entra nella stanza (LISTENING -> HELLO -> SNAPSHOT),
@@ -29,6 +30,8 @@ export interface ClientSessionOptions {
   role: 'player' | 'spectator';
   nickname: string;
   teamName: string;
+  /** Colori sociali scelti: viaggiano nell'HELLO */
+  kit?: KitId;
   /** Coppia ECDSA del partecipante: firma gli intenti in uscita */
   keyPair?: RoomKeyPair;
   /** Chiave pubblica dell'host già fissata per questo codice (TOFU) */
@@ -71,6 +74,7 @@ export function createClientSession({
   role,
   nickname,
   teamName,
+  kit,
   keyPair,
   knownHostKey,
   pubKey,
@@ -126,6 +130,7 @@ export function createClientSession({
       token: identity.token,
       nickname,
       teamName,
+      kit,
       protocol: PROTOCOL_VERSION,
       role,
       pubKey: pubKey ?? keyPair?.publicJwk,

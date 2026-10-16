@@ -5,6 +5,7 @@ import { CatalogKey, t } from '../../i18n/translate';
 import { shortName } from '../match/matchEvents';
 import { legResult, matchLegs, ROUND_SHORT_KEY, userPath } from './bracket';
 import { TournamentRound, TournamentState } from './tournamentTypes';
+import type { KitId } from '../teamKits';
 
 /**
  * Riepilogo del torneo dal punto di vista dell'utente: alimenta la
@@ -38,6 +39,8 @@ export interface TournamentSummary {
   tournamentName: string;
   seasonId: string;
   teamName: string;
+  /** Colori sociali della squadra (assente nei riepiloghi precedenti) */
+  kit?: KitId;
   placement: Placement;
   placementLabel: string;
   matches: SummaryMatch[];
@@ -119,6 +122,7 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
     tournamentName: state.name,
     seasonId: state.seasonId,
     teamName: user?.name ?? '',
+    kit: user?.kit,
     placement,
     placementLabel: t(PLACEMENT_KEY[placement]),
     matches,

@@ -5,7 +5,9 @@ import { LEGENDS_ID, loadSeasonIndex, SeasonInfo } from '../services/seasons';
 import { LEAGUE_SIZE, INITIAL_CREDITS } from '../services/auction';
 import { MAX_TEAM_NAME_LENGTH, randomTeamName } from '../mock/teamNames';
 import { TournamentFormat } from '../domain/tournament';
+import { KitId, randomKitId } from '../domain/teamKits';
 import { Icon } from './Icon';
+import { KitPicker } from './KitPicker';
 import { SeasonPicker } from './SeasonPicker';
 import { DifficultyPicker } from './DifficultyPicker';
 import { CupFormatPicker } from './CupFormatPicker';
@@ -29,6 +31,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
   const t = useT();
   // Valori casuali solo dopo il montaggio: il primo disegno coincide con l'HTML pre-renderizzato
   const [teamName, setTeamName] = useState('');
+  const [kit, setKit] = useState<KitId | null>(null);
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
   const [mode, setMode] = useState<ListoneMode>('classic');
   const [format, setFormat] = useState<TournamentFormat>('double');
@@ -40,6 +43,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
 
   useEffect(() => {
     setTeamName(current => current || randomTeamName());
+    setKit(current => current ?? randomKitId());
   }, []);
 
   /**
@@ -111,6 +115,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       difficulty,
       season: listoneId,
       format,
+      userTeamKit: kit ?? undefined,
     };
     setSubmitting(true);
     try {
@@ -123,7 +128,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [teamName, difficulty, listoneId, format, submitting, validateForm, onSubmit, t]);
+  }, [teamName, kit, difficulty, listoneId, format, submitting, validateForm, onSubmit, t]);
 
   const seasonsReady = mode === 'legends' || (seasons !== null && seasons.length > 0 && !seasonsError);
   return (
@@ -133,26 +138,30 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
         <label htmlFor="teamName" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">
           {t('setup.teamLabel')}
         </label>
-        <div className="relative">
-          <input
-            type="text"
-            id="teamName"
-            value={teamName}
-            maxLength={MAX_TEAM_NAME_LENGTH + 10}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder={t('setup.teamPlaceholder')}
-            className={`input-field pr-10 sm:pr-12 py-2 sm:py-3 font-display text-xl sm:text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
-          />
-          {/* Generatore discreto dentro il campo: il dado giallo resta solo per l'annata */}
-          <button
-            type="button"
-            onClick={() => setTeamName(current => randomTeamName(current))}
-            title={t('setup.generateName')}
-            aria-label={t('setup.generateName')}
-            className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
-          >
-            <Icon name="reset" className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+        <div className="flex items-stretch gap-2">
+          {/* Colori sociali: campioncino alto quanto il campo, apre i preset */}
+          <KitPicker value={kit ?? 'nerazzurro'} onChange={setKit} disabled={submitting} />
+          <div className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              id="teamName"
+              value={teamName}
+              maxLength={MAX_TEAM_NAME_LENGTH + 10}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder={t('setup.teamPlaceholder')}
+              className={`input-field w-full pr-10 sm:pr-12 py-2 sm:py-3 font-display text-xl sm:text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
+            />
+            {/* Generatore discreto dentro il campo: il dado giallo resta solo per l'annata */}
+            <button
+              type="button"
+              onClick={() => setTeamName(current => randomTeamName(current))}
+              title={t('setup.generateName')}
+              aria-label={t('setup.generateName')}
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
+            >
+              <Icon name="reset" className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </div>
         </div>
         {errors.teamName && <p className="mt-2 text-sm text-danger">{errors.teamName}</p>}
       </div>

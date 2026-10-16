@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useReducedMotion } from './useReducedMotion';
 
 /**
  * Conteggio animato da 0 a `target` in ~`ms` (ease-out). Con movimento
  * ridotto o senza matchMedia (jsdom) restituisce subito il target.
  */
 export function useCountUp(target: number, ms = 900): number {
-  const reduced =
-    typeof window === 'undefined' ||
-    typeof window.matchMedia !== 'function' ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = useReducedMotion();
   const [value, setValue] = useState(reduced ? target : 0);
 
   useEffect(() => {

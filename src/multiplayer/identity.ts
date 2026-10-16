@@ -1,4 +1,5 @@
 import { generateRoomKeyPair, RoomKeyPair } from './crypto';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Identità persistente del partecipante per stanza: serve a rientrare
@@ -14,6 +15,8 @@ export interface RoomIdentity {
   keyPair?: RoomKeyPair;
   nickname?: string;
   teamName?: string;
+  /** Colori sociali scelti l'ultima volta in questa stanza */
+  kit?: KitId;
 }
 
 const keyFor = (code: string) => `fanta-fc-room-id-${code}`;
@@ -62,7 +65,7 @@ export function getRoomIdentity(code: string): RoomIdentity {
  */
 export async function ensureRoomIdentity(
   code: string,
-  names?: { nickname?: string; teamName?: string }
+  names?: { nickname?: string; teamName?: string; kit?: KitId }
 ): Promise<RoomIdentity> {
   const identity = getRoomIdentity(code);
   let changed = false;
@@ -76,6 +79,10 @@ export async function ensureRoomIdentity(
   }
   if (names?.teamName && names.teamName !== identity.teamName) {
     identity.teamName = names.teamName;
+    changed = true;
+  }
+  if (names?.kit && names.kit !== identity.kit) {
+    identity.kit = names.kit;
     changed = true;
   }
   if (changed) write(code, identity);

@@ -7,6 +7,8 @@ import {
   randomRolePreferences,
 } from './auction/personalities';
 import type { Rng } from './auction/rng';
+import { assignKits } from '../domain/teamKits';
+import type { KitId } from '../domain/teamKits';
 
 /**
  * Genera una configurazione Bot: difficoltà comune a tutta la lega,
@@ -94,14 +96,18 @@ export function generateBotTeams(
 /**
  * Genera tutte le squadre della lega: l'utente più LEAGUE_SIZE - 1 bot,
  * tutte con INITIAL_CREDITS crediti.
+ * @param userKit Colori sociali scelti in setup; ai bot vanno preset
+ *   distinti via assignKits (deterministico, senza consumare `rng`)
  */
 export function generateAllTeams(
   userTeamName: string,
   difficulty: DifficultyLevel,
   pool: Player[],
-  rng: Rng = Math.random
+  rng: Rng = Math.random,
+  userKit?: KitId
 ): Team[] {
   const userTeam = generateUserTeam(userTeamName, INITIAL_CREDITS, rng);
+  if (userKit) userTeam.kit = userKit;
   const botTeams = generateBotTeams(
     LEAGUE_SIZE - 1,
     INITIAL_CREDITS,
@@ -111,7 +117,7 @@ export function generateAllTeams(
     rng
   );
 
-  return [userTeam, ...botTeams];
+  return assignKits([userTeam, ...botTeams]);
 }
 
 /**

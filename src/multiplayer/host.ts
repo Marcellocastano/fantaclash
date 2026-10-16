@@ -25,6 +25,7 @@ import { stateHash } from './hash';
 import { isOffensiveName } from './moderation';
 import { MatchResult, MatchSide, nextStop, Tactic } from '../domain/match';
 import { findMatch, simulateBracketMatch } from '../domain/tournament';
+import { assignKits, isKitId } from '../domain/teamKits';
 import {
   ClientIntent,
   HostMessage,
@@ -184,6 +185,9 @@ export function handleIntent(
         connected: true,
         joinedAt: hostNow,
         teamId: null,
+        // Il kit è fidato solo se è un preset: valori a caso si scartano
+        // senza impedire l'ingresso
+        ...(isKitId(intent.kit) ? { kit: intent.kit } : {}),
       };
       return {
         actions: [{ type: 'PLAYER_JOINED', player }],
@@ -330,6 +334,7 @@ export function buildStartAuction(
     botConfig: generateBotConfig(difficulty, 'equilibrato', pool, rng),
     controller: 'human',
     ownerId: p.id,
+    kit: p.kit,
   }));
 
   const botCount = LEAGUE_SIZE - humanTeams.length;
@@ -345,7 +350,8 @@ export function buildStartAuction(
 
   return {
     type: 'START_AUCTION',
-    teams: [...humanTeams, ...botTeams],
+    // Kit degli umani conservati; i bot prendono preset distinti dagli altri
+    teams: assignKits([...humanTeams, ...botTeams]),
     auction: createInitialAuctionState(pool),
   };
 }

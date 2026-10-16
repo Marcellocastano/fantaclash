@@ -147,6 +147,18 @@ describe('handleIntent HELLO', () => {
     const r = handleIntent(lobby(), book, 'p2', hello('p2'), T0, rng);
     expect(r.replies[0]).toMatchObject({ type: 'REJECT', reason: 'kicked' });
   });
+
+  it('kit valido -> salvato sul giocatore; invalido -> scartato ma si entra', () => {
+    const book = createHostBook();
+    const ok = handleIntent(lobby(), book, 'p2', hello('p2', { kit: 'viola' }), T0, rng);
+    const joined = ok.actions[0] as Extract<RoomAction, { type: 'PLAYER_JOINED' }>;
+    expect(joined.player.kit).toBe('viola');
+
+    const bad = handleIntent(lobby(), book, 'p3', hello('p3', { kit: 'blu-elettrico' }), T0, rng);
+    expect(bad.actions[0].type).toBe('PLAYER_JOINED');
+    const joinedBad = bad.actions[0] as Extract<RoomAction, { type: 'PLAYER_JOINED' }>;
+    expect(joinedBad.player.kit).toBeUndefined();
+  });
 });
 
 describe('handleIntent CALL/BID', () => {
@@ -237,6 +249,30 @@ describe('comandi host', () => {
       expect(action.teams.filter(t => t.controller === 'human')).toHaveLength(3);
       expect(action.teams.filter(t => t.controller === 'bot')).toHaveLength(5);
     }
+  });
+
+  it('buildStartAuction: tutte le squadre hanno un kit, gli umani conservano il proprio', () => {
+    let s = createRoom({
+      code: 'ABC23', hostId: 'h1',
+      host: { nickname: 'H', teamName: 'T', kit: 'nerazzurro' },
+      settings: SETTINGS, now: T0,
+    });
+    let book = createHostBook();
+    const join = handleIntent(s, book, 'p2', hello('p2', { kit: 'viola' }), T0, rng);
+    s = applyHostAction(s, s.rev + 1, join.actions[0]);
+    book = join.book;
+
+    const action = buildStartAuction(s, makePool(), rng);
+    expect(action?.type).toBe('START_AUCTION');
+    const teams = (action as Extract<RoomAction, { type: 'START_AUCTION' }>).teams;
+    expect(teams.every(t => t.kit !== undefined)).toBe(true);
+    expect(teams.find(t => t.ownerId === 'h1')?.kit).toBe('nerazzurro');
+    expect(teams.find(t => t.ownerId === 'p2')?.kit).toBe('viola');
+    const bots = teams.filter(t => t.controller === 'bot');
+    const botKits = new Set(bots.map(t => t.kit));
+    expect(botKits.size).toBe(bots.length);
+    expect(botKits.has('nerazzurro')).toBe(false);
+    expect(botKits.has('viola')).toBe(false);
   });
 
   it('buildStartCalling produce START con tutte le squadre', () => {

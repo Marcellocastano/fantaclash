@@ -191,7 +191,11 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
   const isUserMatch = match.homeId === tournament.userTeamId || match.awayId === tournament.userTeamId;
   const empty = status === 'upcoming' && !match.homeId && !match.awayId;
-  const tone = empty ? 'border-dashed border-canvas/30 bg-transparent' : isUserMatch ? 'border-highlight bg-canvas' : 'border-ink bg-canvas';
+  // Testata verde chiaro; righe crema sotto; match utente con cornice
+  // gialla, i vuoti tratteggiati sul verde scuro
+  const tone = empty
+    ? 'border-dashed border-canvas/30 bg-transparent'
+    : `border-ink bg-pitch shadow-block-sm${isUserMatch ? ' border-highlight outline outline-2 outline-highlight' : ''}`;
 
   // Nei confronti a due gare il numero in grande è l'aggregato sul tie
   const score = double ? tieScore(tournament, match) : null;
@@ -205,7 +209,7 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
       shootout={double ? (score?.shootout?.[side] ?? null) : (single?.shootout?.[side] ?? null)}
       outcome={getTeamOutcome(match, id)}
       revealDelay={revealDelay}
-      onDark={empty}
+      filled={!empty}
     />
   );
 
@@ -215,23 +219,38 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
     const f = legResult(tournament, match, 1);
     const s = legResult(tournament, match, 2);
     if (!f) {
-      return <p className="px-2 py-1 text-[10px] font-bold text-ink-muted uppercase tracking-wide border-t border-ink/15">{t('tournament.bracket.twoLegs')}</p>;
+      return <p className="px-2 py-1 text-[10px] font-bold text-canvas/80 uppercase tracking-wide border-t border-canvas/15">{t('tournament.bracket.twoLegs')}</p>;
     }
     const l2 = s ? `${s.homeScore}-${s.awayScore}` : leg === 2 ? t('tournament.bracket.toPlay') : t('tournament.bracket.none');
     return (
-      <p className="px-2 py-1 text-[10px] font-bold text-ink-soft tabular-nums border-t border-ink/15">
+      <p className="px-2 py-1 text-[10px] font-bold text-ink-soft tabular-nums bg-canvas border-t border-ink/15">
         {t('tournament.bracket.legLine', { l1: `${f.homeScore}-${f.awayScore}`, l2 })}
       </p>
     );
   };
 
+  const matchLabel =
+    match.round === 'final'
+      ? t('tournament.bracket.final')
+      : t(match.round === 'semifinals' ? 'tournament.bracket.semiTag' : 'tournament.bracket.matchTag', {
+          n: match.index + 1,
+        });
   return (
-    <div className={`w-full border-2 ${tone} ${isUserMatch ? 'outline outline-2 outline-highlight' : ''}`}>
-      {double && (
-        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-wider text-whistle-deep">{t('tournament.bracket.twoLegsShort')}</p>
-      )}
+    <div className={`w-full border-2 ${tone}`}>
+      <div className={`flex items-center justify-between gap-2 px-2 py-1 ${empty ? 'text-canvas/50' : 'text-canvas'}`}>
+        <span className="font-display text-sm font-black uppercase tracking-wider leading-none">{matchLabel}</span>
+        {double && (
+          <span
+            className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider leading-none ${
+              empty ? 'border border-canvas/30 text-canvas/50' : 'bg-highlight text-on-highlight'
+            }`}
+          >
+            {t('tournament.bracket.twoLegsShort')}
+          </span>
+        )}
+      </div>
       {row(match.homeId, 'home')}
-      <div className={`border-t-2 ${empty ? 'border-dashed border-canvas/30' : 'border-line'}`} />
+      <div className={empty ? 'border-t-2 border-dashed border-canvas/30' : 'border-t border-canvas/15'} />
       {row(match.awayId, 'away')}
       {double && !empty && legLine()}
     </div>
@@ -244,11 +263,11 @@ interface TeamRowProps {
   shootout: number | null;
   outcome: 'winner' | 'eliminated' | 'pending';
   revealDelay: number | null;
-  /** Riga dentro un riquadro vuoto sul verde: segnaposto chiari */
-  onDark: boolean;
+  /** Riga con sfondo crema (riquadro pieno); vuota = segnaposto sul verde */
+  filled: boolean;
 }
 
-function TeamRow({ team, score, shootout, outcome, revealDelay, onDark }: TeamRowProps) {
+function TeamRow({ team, score, shootout, outcome, revealDelay, filled }: TeamRowProps) {
   const t = useT();
   const reveal = revealDelay !== null;
   const revealStyle = reveal ? { animationDelay: `${revealDelay}ms` } : undefined;
@@ -261,14 +280,14 @@ function TeamRow({ team, score, shootout, outcome, revealDelay, onDark }: TeamRo
           ? 'text-ink font-bold'
           : 'text-ink';
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 min-w-0 min-h-[2.5rem]">
+    <div className={`flex items-center gap-2 px-2 py-1.5 min-w-0 min-h-[2.5rem] ${filled ? 'bg-canvas' : ''}`}>
       {team ? (
         <TeamBadge team={team} />
       ) : (
-        <span className={`w-7 h-7 shrink-0 border-2 border-dashed ${onDark ? 'border-canvas/30' : 'border-line-strong'}`} aria-hidden="true" />
+        <span className={`w-7 h-7 shrink-0 border-2 border-dashed ${filled ? 'border-line-strong' : 'border-canvas/30'}`} aria-hidden="true" />
       )}
       <span
-        className={`flex-1 min-w-0 truncate text-sm ${team ? nameClass : onDark ? 'text-canvas/50' : 'text-ink-faint'} ${reveal ? 'motion-safe:animate-reveal' : ''}`}
+        className={`flex-1 min-w-0 truncate text-sm ${team ? nameClass : filled ? 'text-ink-faint' : 'text-canvas/50'} ${reveal ? 'motion-safe:animate-reveal' : ''}`}
         style={revealStyle}
         title={team?.name}
       >

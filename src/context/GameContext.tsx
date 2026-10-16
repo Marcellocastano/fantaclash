@@ -69,7 +69,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'START_GAME': {
       const { config, players } = action.payload;
       const pool = buildAuctionPool(players);
-      const teams = generateAllTeams(config.userTeamName, config.difficulty, pool);
+      const teams = generateAllTeams(config.userTeamName, config.difficulty, pool, Math.random, config.userTeamKit);
 
       // Prepara lo stato iniziale dell'asta
       const auctionState: AuctionState = createInitialAuctionState(pool);

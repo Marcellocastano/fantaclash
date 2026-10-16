@@ -14,6 +14,7 @@ import { t } from '../../i18n/translate';
 import { HOST_SILENT_LEFT_MS, HOST_SILENT_MS } from '../../multiplayer/constants';
 import { RoomKeyPair } from '../../multiplayer/crypto';
 import { Player } from '../../types';
+import type { KitId } from '../../domain/teamKits';
 
 /**
  * Possesso React della sessione di stanza (host o client).
@@ -28,6 +29,8 @@ export type RoomStatus = 'idle' | 'connecting' | 'joining' | 'ready' | 'rejected
 export interface CreateRoomInput {
   nickname: string;
   teamName: string;
+  /** Colori sociali dell'host, salvati col profilo e messi sul giocatore */
+  kit?: KitId;
   settings: RoomSettings;
 }
 
@@ -35,6 +38,8 @@ export interface JoinRoomInput {
   code: string;
   nickname: string;
   teamName: string;
+  /** Colori sociali mandati nell'HELLO */
+  kit?: KitId;
   role: 'player' | 'spectator';
 }
 
@@ -214,7 +219,7 @@ export function RoomProvider({
   const createRoomSession = useCallback(async (input: CreateRoomInput) => {
     for (let attempt = 0; attempt < COLLISION_TRIES; attempt++) {
       const code = generateRoomCode();
-      const identity = await ensureRoomIdentity(code, { nickname: input.nickname, teamName: input.teamName });
+      const identity = await ensureRoomIdentity(code, { nickname: input.nickname, teamName: input.teamName, kit: input.kit });
       const hostKey = identity.keyPair!;
       const transport = await transportFactory({
         code,
@@ -238,7 +243,7 @@ export function RoomProvider({
       const initial = createRoom({
         code,
         hostId: identity.participantId,
-        host: { nickname: input.nickname, teamName: input.teamName },
+        host: { nickname: input.nickname, teamName: input.teamName, kit: input.kit },
         settings: input.settings,
         now: Date.now(),
       });
@@ -275,7 +280,7 @@ export function RoomProvider({
     const prev = sessionRef.current;
     sessionRef.current = null;
     if (prev) await ('destroy' in prev ? prev.destroy() : prev.close());
-    const identity = await ensureRoomIdentity(input.code, { nickname: input.nickname, teamName: input.teamName });
+    const identity = await ensureRoomIdentity(input.code, { nickname: input.nickname, teamName: input.teamName, kit: input.kit });
     notify({ ...IDLE, status: 'connecting', role: input.role, me: identity.participantId, hostOnline: false });
     const transport = await transportFactory({
       code: input.code,
@@ -290,6 +295,7 @@ export function RoomProvider({
       role: input.role,
       nickname: input.nickname,
       teamName: input.teamName,
+      kit: input.kit,
       keyPair: identity.keyPair,
       knownHostKey: readHostKey(input.code) ?? undefined,
       tick: createWorkerTick(),

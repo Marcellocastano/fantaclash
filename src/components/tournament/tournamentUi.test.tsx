@@ -16,6 +16,7 @@ import {
 import { simulateMatch } from '../../domain/match';
 import { strongTeam, weakTeam } from '../../test/matchFixtures';
 import { TournamentBracket } from './TournamentBracket';
+import { TournamentDraw } from './TournamentDraw';
 import { TournamentHub } from './TournamentHub';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { summaryAlt } from './useSummaryCard';
@@ -39,6 +40,15 @@ function drawnDoubleAfterFirstLegs() {
 }
 
 const noop = () => {};
+
+/** Guida la sequenza del sorteggio passo dopo passo (i timer nascono negli effetti) */
+function runDraw() {
+  for (let i = 0; i < 60; i++) {
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+  }
+}
 
 describe('UI torneo (smoke)', () => {
   it('il tabellone mostra le 8 squadre e il campione da decidere', () => {
@@ -119,6 +129,62 @@ describe('UI torneo (smoke)', () => {
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(1);
     expect(buttons[0]).toHaveTextContent('Avanti: ritorno');
+  });
+
+  it('sorteggio: apre sul tabellone vuoto, si riempie e chiama onDrawn una volta', () => {
+    vi.useFakeTimers();
+    const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11 });
+    const order = t.teams.map(x => x.id);
+    const onDrawn = vi.fn();
+    const onDone = vi.fn();
+    const { container } = render(<TournamentDraw tournament={t} order={order} onDrawn={onDrawn} onDone={onDone} />);
+
+    // 8 slot vuoti (layout mobile + desktop) e la coppa al centro
+    expect(container.querySelectorAll('[data-draw-slot]')).toHaveLength(16);
+    expect(container.querySelectorAll('[data-draw-cup]').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Da sorteggiare')).toHaveLength(16);
+
+    runDraw();
+
+    for (const team of t.teams) expect(screen.getAllByText(team.name).length).toBeGreaterThan(0);
+    expect(onDrawn).toHaveBeenCalledTimes(1);
+    expect(onDrawn).toHaveBeenCalledWith(order);
+    expect(onDone).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Vai al torneo' }));
+    expect(onDone).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('sorteggio: skip -> tabellone completo subito, stessa uscita', () => {
+    vi.useFakeTimers();
+    const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11 });
+    const order = t.teams.map(x => x.id);
+    const onDrawn = vi.fn();
+    const onDone = vi.fn();
+    render(<TournamentDraw tournament={t} order={order} onDrawn={onDrawn} onDone={onDone} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salta il sorteggio' }));
+    for (const team of t.teams) expect(screen.getAllByText(team.name).length).toBeGreaterThan(0);
+    expect(onDrawn).toHaveBeenCalledTimes(1);
+    expect(onDrawn).toHaveBeenCalledWith(order);
+    expect(onDone).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Vai al torneo' }));
+    expect(onDone).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('sorteggio: il Quarto 1 accoppia order[0] e order[1]', () => {
+    vi.useFakeTimers();
+    const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11 });
+    const order = t.teams.map(x => x.id);
+    const { container } = render(<TournamentDraw tournament={t} order={order} onDone={noop} />);
+    runDraw();
+    const name = (j: number) => t.teams.find(x => x.id === order[j])!.name;
+    expect(container.querySelector('[data-draw-slot="0"]')).toHaveTextContent(name(0));
+    expect(container.querySelector('[data-draw-slot="1"]')).toHaveTextContent(name(1));
+    vi.useRealTimers();
   });
 
   it('card del torneo: descrizione accessibile con esito, squadra e risultati', () => {

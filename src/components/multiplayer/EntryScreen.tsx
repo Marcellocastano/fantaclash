@@ -6,7 +6,9 @@ import { ListoneMode, ListoneModePicker } from '../ListoneModePicker';
 import { CUP_NAME_MAX, MAX_PLAYERS, NICKNAME_MAX } from '../../multiplayer/constants';
 import { isOffensiveName } from '../../multiplayer/moderation';
 import { Icon } from '../Icon';
-import { loadSavedNickname, loadSavedTeamName, saveRoomProfile } from './storage';
+import { loadSavedKit, loadSavedNickname, loadSavedTeamName, saveRoomProfile } from './storage';
+import { KitId, randomKitId } from '../../domain/teamKits';
+import { KitPicker } from '../KitPicker';
 import { CreateRoomInput, JoinOutcome, JoinRoomInput } from './RoomProvider';
 import { RejectReason } from '../../multiplayer/protocol';
 import { isCapacityError } from '../../multiplayer/errors';
@@ -67,6 +69,7 @@ export function EntryScreen({
   const [view, setView] = useState<'crea' | 'entra'>(initialView);
   const [nickname, setNickname] = useState(loadSavedNickname);
   const [teamName, setTeamName] = useState(() => loadSavedTeamName() || randomTeamName());
+  const [kit, setKit] = useState<KitId>(() => loadSavedKit() ?? randomKitId());
   const [code, setCode] = useState(initialCode ?? '');
   const [season, setSeason] = useState('');
   const [mode, setMode] = useState<ListoneMode>('classic');
@@ -103,10 +106,11 @@ export function EntryScreen({
     setBusy(true);
     setError(null);
     try {
-      saveRoomProfile(nickname.trim(), teamName.trim());
+      saveRoomProfile(nickname.trim(), teamName.trim(), kit);
       await onCreate({
         nickname: nickname.trim(),
         teamName: teamName.trim(),
+        kit,
         settings: { season: listone, difficulty: 'normale', cupName: cupName.trim() || undefined },
       });
     } catch (e) {
@@ -161,11 +165,12 @@ export function EntryScreen({
       setError(t('room.entry.needJoin'));
       return;
     }
-    saveRoomProfile(nickname.trim(), teamName.trim());
+    saveRoomProfile(nickname.trim(), teamName.trim(), kit);
     await tryJoin({
       code: normalized,
       nickname: nickname.trim() || t('room.entry.spectatorNick'),
       teamName: teamName.trim(),
+      kit,
       role: asSpectator ? 'spectator' : 'player',
     });
   };
@@ -232,30 +237,34 @@ export function EntryScreen({
                 <label htmlFor="mp-team" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
                   {t(view === 'crea' ? 'room.entry.yourTeam' : 'room.entry.teamName')}
                 </label>
-                <div className="relative">
-                  <input
-                    id="mp-team"
-                    ref={teamRef}
-                    type="text"
-                    value={teamName}
-                    maxLength={MAX_TEAM_NAME_LENGTH + 10}
-                    disabled={busy}
-                    aria-invalid={teamError || undefined}
-                    onChange={e => {
-                      setTeamName(e.target.value);
-                      setTeamError(false);
-                    }}
-                    className={`input-field font-display text-xl sm:text-2xl font-extrabold py-2 sm:py-3 pr-10 ${teamError ? 'input-error' : ''}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setTeamName(c => randomTeamName(c))}
-                    title={t('room.entry.genName')}
-                    aria-label={t('room.entry.genName')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-ink-muted hover:text-ink transition-colors duration-150"
-                  >
-                    <Icon name="reset" className="w-4 h-4" />
-                  </button>
+                <div className="flex items-stretch gap-2">
+                  {/* Colori sociali: campioncino alto quanto il campo, apre i preset */}
+                  <KitPicker value={kit} onChange={setKit} disabled={busy} />
+                  <div className="relative flex-1 min-w-0">
+                    <input
+                      id="mp-team"
+                      ref={teamRef}
+                      type="text"
+                      value={teamName}
+                      maxLength={MAX_TEAM_NAME_LENGTH + 10}
+                      disabled={busy}
+                      aria-invalid={teamError || undefined}
+                      onChange={e => {
+                        setTeamName(e.target.value);
+                        setTeamError(false);
+                      }}
+                      className={`input-field w-full font-display text-xl sm:text-2xl font-extrabold py-2 sm:py-3 pr-10 ${teamError ? 'input-error' : ''}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setTeamName(c => randomTeamName(c))}
+                      title={t('room.entry.genName')}
+                      aria-label={t('room.entry.genName')}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-ink-muted hover:text-ink transition-colors duration-150"
+                    >
+                      <Icon name="reset" className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 {teamError && <p className="mt-2 text-sm text-danger">{t('room.entry.teamTaken')}</p>}
               </div>
@@ -321,6 +330,7 @@ export function EntryScreen({
                         code: initialCode,
                         nickname: nickname.trim() || 'Giocatore',
                         teamName: teamName.trim() || 'Squadra',
+                        kit,
                         role: 'player',
                       })
                     }
@@ -375,7 +385,7 @@ export function EntryScreen({
               >
                 {i === 0 ? (
                   <>
-                    <div className="flex justify-center"><TeamBadge team={{ name: teamName || t('room.entry.yourTeamFallback'), isUserTeam: true }} size="md" /></div>
+                    <div className="flex justify-center"><TeamBadge team={{ name: teamName || t('room.entry.yourTeamFallback'), isUserTeam: true, kit }} size="md" /></div>
                     <p className="mt-2 font-display font-extrabold text-ink truncate" title={teamName}>{teamName || t('room.entry.yourTeamFallback')}</p>
                     <p className="text-sm font-semibold text-ink-muted truncate">{nickname.trim() || t('room.entry.you')}</p>
                   </>

@@ -44,6 +44,7 @@ export function toTournamentTeam(team: Team): TournamentTeam {
     isUserTeam: team.isUserTeam,
     rating: rosterRating(team.roster.map(o => o.player)),
     monogram: monogram(team.name),
+    kit: team.kit,
   };
 }
 

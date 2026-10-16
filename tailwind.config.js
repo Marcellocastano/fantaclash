@@ -119,15 +119,16 @@ export default {
           '35%': { backgroundColor: 'rgb(var(--c-highlight) / 1)' },
           '100%': { backgroundColor: 'rgb(var(--c-highlight) / 0.25)' },
         },
-        // Sorteggio: la pallina sale dalla boccia e si apre
-        'ball-rise': {
-          '0%': { opacity: '0', transform: 'translateY(60px) scale(0.6)' },
-          '60%': { opacity: '1', transform: 'translateY(-10px) scale(1.05)' },
-          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        // Sorteggio: la luce della roulette si accende sullo slot
+        'slot-lit': {
+          '0%': { transform: 'scale(0.96)' },
+          '60%': { transform: 'scale(1.06)' },
+          '100%': { transform: 'scale(1.04)' },
         },
-        'ball-open': {
-          '0%': { opacity: '0', transform: 'scaleX(0.2)' },
-          '100%': { opacity: '1', transform: 'scaleX(1)' },
+        // Sorteggio: la destinazione lampeggia due volte prima del volo
+        'slot-flash': {
+          '0%, 50%, 100%': { opacity: '1' },
+          '25%, 75%': { opacity: '0.3' },
         },
         wobble: {
           '0%, 100%': { transform: 'translate(0, 0)' },
@@ -188,8 +189,8 @@ export default {
         shake: 'shake 420ms ease-out both',
         heartbeat: 'heartbeat 1200ms ease-in-out infinite',
         sweep: 'sweep 420ms ease-out both',
-        'ball-rise': 'ball-rise 520ms cubic-bezier(.2,.9,.3,1.2) both',
-        'ball-open': 'ball-open 260ms ease-out both',
+        'slot-lit': 'slot-lit 180ms ease-out both',
+        'slot-flash': 'slot-flash 300ms ease-in-out',
         wobble: 'wobble 900ms ease-in-out infinite',
         ripple: 'ripple 500ms ease-out both',
         beat: 'beat 1000ms ease-in-out infinite',
