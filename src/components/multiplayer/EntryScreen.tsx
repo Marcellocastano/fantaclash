@@ -9,15 +9,17 @@ import { Icon } from '../Icon';
 import { loadSavedNickname, loadSavedTeamName, saveRoomProfile } from './storage';
 import { CreateRoomInput, JoinOutcome, JoinRoomInput } from './RoomProvider';
 import { RejectReason } from '../../multiplayer/protocol';
+import { isCapacityError } from '../../multiplayer/errors';
 import { TeamBadge } from '../tournament/TeamBadge';
 
 /** Motivi di rifiuto mostrati come toast (name_taken e not_found restano sui campi) */
-const JOIN_TOAST: Partial<Record<RejectReason | 'not_found', string>> = {
+const JOIN_TOAST: Partial<Record<RejectReason | 'not_found' | 'unavailable', string>> = {
   full: 'La stanza è piena.',
   started: 'La partita è già iniziata.',
   kicked: 'Sei stato espulso da questa stanza.',
   protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
   bad_token: "Questo browser ha già un'altra identità per la stanza.",
+  unavailable: 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.',
 };
 
 /** Toast di form: fisso in basso, si chiude da solo */
@@ -104,13 +106,17 @@ export function EntryScreen({
         settings: { season: listone, difficulty: 'normale', cupName: cupName.trim() || undefined },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore nella creazione della stanza');
+      setError(
+        isCapacityError(e)
+          ? 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.'
+          : e instanceof Error ? e.message : 'Errore nella creazione della stanza'
+      );
       setBusy(false);
     }
   };
 
   // Esito del join: errori mirati sui campi o toast, senza lasciare il form
-  const applyOutcome = (reason: RejectReason | 'not_found') => {
+  const applyOutcome = (reason: RejectReason | 'not_found' | 'unavailable') => {
     if (reason === 'name_taken') {
       setTeamError(true);
       teamRef.current?.focus();
@@ -132,7 +138,11 @@ export function EntryScreen({
       const outcome = await onJoin(input);
       if (!outcome.ok) applyOutcome(outcome.reason);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore di connessione');
+      setError(
+        isCapacityError(e)
+          ? 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.'
+          : e instanceof Error ? e.message : 'Errore di connessione'
+      );
     }
     setBusy(false);
   };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { RoomProvider } from './RoomProvider';
+import { RoomProvider, useRoom } from './RoomProvider';
 import { MultiplayerApp } from './MultiplayerApp';
 import { MultiplayerPage } from '../../site/pages/MultiplayerPage';
 import { createMemoryNetwork } from '../../multiplayer/transport/memory';
@@ -124,6 +124,69 @@ describe('multiplayer UI su rete in memoria', () => {
     fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
     await waitFor(() => expect(guest.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument(), { timeout: 5000 });
   }, 20000);
+
+  it("presence senza host ma traffico vivo: l'host resta online; se tace va offline", async () => {
+    const shared = net();
+    const hostApp = renderApp(shared);
+    await waitFor(() => expect(hostApp.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(hostApp.getByLabelText('Nickname'), { target: { value: 'Hostu' } });
+    await waitFor(() => expect(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]).not.toBeDisabled());
+    fireEvent.click(hostApp.getAllByRole('button', { name: 'Crea stanza' })[1]);
+    await waitFor(() => expect(window.location.search).toMatch(/codice=[A-Z0-9]{5}/), { timeout: 5000 });
+
+    // presence "stantia" (come dopo una riconnessione del socket): niente host
+    const stale = async (opts: TransportOptions) => {
+      const t = shared.createTransport(opts);
+      return {
+        ...t,
+        onPresence: (cb: Parameters<typeof t.onPresence>[0]) =>
+          t.onPresence(entries => cb(entries.filter(e => e.role !== 'host'))),
+      };
+    };
+    function Probe() {
+      const room = useRoom();
+      return <span data-testid="host-online">{room.status === 'ready' ? String(room.hostOnline) : '-'}</span>;
+    }
+    const guestApp = render(
+      <RoomProvider transportFactory={stale}>
+        <MultiplayerApp />
+        <Probe />
+      </RoomProvider>
+    );
+    const guest = within(guestApp.container);
+    await waitFor(() => expect(guest.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.change(guest.getByLabelText('Nickname'), { target: { value: 'Ospite' } });
+    fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
+    await waitFor(() => expect(guest.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument(), { timeout: 5000 });
+
+    // oltre la soglia "uscito" (3s): PONG/HASH tengono l'host online
+    await new Promise(r => setTimeout(r, 4500));
+    expect(guest.getByTestId('host-online').textContent).toBe('true');
+
+    // l'host sparisce davvero: niente più traffico -> offline
+    hostApp.unmount();
+    await waitFor(() => expect(guest.getByTestId('host-online').textContent).toBe('false'), { timeout: 6000 });
+  }, 25000);
+
+  it('quota Realtime esaurita: messaggio dedicato, non "stanza non trovata"', async () => {
+    const full = async () => {
+      throw new Error('canale room:ABCDE: CHANNEL_ERROR too_many_connections');
+    };
+    render(
+      <RoomProvider transportFactory={full}>
+        <MultiplayerApp />
+      </RoomProvider>
+    );
+    await waitFor(() => expect(screen.getByLabelText('Nickname')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Entra con codice' }));
+    fireEvent.change(screen.getByLabelText('Nickname'), { target: { value: 'Ospite' } });
+    fireEvent.change(screen.getByLabelText('Codice stanza'), { target: { value: 'ABCDE' } });
+    fireEvent.click(screen.getByRole('button', { name: /Entra nella stanza/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/server del multiplayer sono al completo/i)).toBeInTheDocument(), { timeout: 5000 }
+    );
+    expect(screen.queryByText(/Codice non corretto/)).toBeNull();
+  });
 
   it("leave dopo l'ingresso: si torna al form (mai 'Stanza non trovata')", async () => {
     const shared = net();

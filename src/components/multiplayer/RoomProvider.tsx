@@ -9,6 +9,8 @@ import { createWorkerTick } from '../../multiplayer/clock/workerTick';
 import { createSupabaseTransport } from '../../multiplayer/transport/supabase';
 import { RoomTransport, TransportOptions } from '../../multiplayer/transport/types';
 import { ClientIntent, RejectReason, RoomAction, RoomSettings, RoomState } from '../../multiplayer/protocol';
+import { isCapacityError } from '../../multiplayer/errors';
+import { HOST_SILENT_LEFT_MS, HOST_SILENT_MS } from '../../multiplayer/constants';
 import { RoomKeyPair } from '../../multiplayer/crypto';
 import { Player } from '../../types';
 
@@ -36,7 +38,7 @@ export interface JoinRoomInput {
 }
 
 /** Esito del tentativo di ingresso: mostrato nel form, senza schermate */
-export type JoinOutcome = { ok: true } | { ok: false; reason: RejectReason | 'not_found' };
+export type JoinOutcome = { ok: true } | { ok: false; reason: RejectReason | 'not_found' | 'unavailable' };
 
 interface RoomSnapshot {
   status: RoomStatus;
@@ -121,6 +123,7 @@ export function RoomProvider({
   const sessionRef = useRef<HostSession | ClientSession | null>(null);
   const snapRef = useRef<RoomSnapshot>(IDLE);
   const listenersRef = useRef(new Set<() => void>());
+  const stopWatchRef = useRef<(() => void) | null>(null);
   const detachSaverRef = useRef<(() => void) | null>(null);
 
   const notify = useCallback((snap: RoomSnapshot) => {
@@ -128,15 +131,40 @@ export function RoomProvider({
     listenersRef.current.forEach(cb => cb());
   }, []);
 
-  /** Spettatori e presenza dell'host dalla presence */
+  /**
+   * Spettatori dalla presence; presenza dell'host dal suo traffico.
+   * La presence da sola non basta: dopo una riconnessione del socket può
+   * restare senza host anche se i suoi messaggi continuano ad arrivare.
+   */
   const watchPresence = useCallback((transport: RoomTransport, role: RoomRole) => {
-    transport.onPresence(entries => {
-      const n = entries.filter(e => e.role === 'spectator').length;
-      const hostOn = role === 'host' ? true : entries.some(e => e.role === 'host');
-      if (snapRef.current.spectatorCount !== n || snapRef.current.hostOnline !== hostOn) {
-        notify({ ...snapRef.current, spectatorCount: n, hostOnline: hostOn });
-      }
+    stopWatchRef.current?.();
+    let hostInPresence = false;
+    let lastHostMsg = Date.now();
+    const update = (patch: Partial<RoomSnapshot>) => {
+      const cur = snapRef.current;
+      if (Object.entries(patch).some(([k, v]) => cur[k as keyof RoomSnapshot] !== v)) notify({ ...cur, ...patch });
+    };
+    const check = () => {
+      if (role === 'host') return;
+      const silence = Date.now() - lastHostMsg;
+      update({ hostOnline: silence < (hostInPresence ? HOST_SILENT_MS : HOST_SILENT_LEFT_MS) });
+    };
+    const offPresence = transport.onPresence(entries => {
+      hostInPresence = entries.some(e => e.role === 'host');
+      update({ spectatorCount: entries.filter(e => e.role === 'spectator').length });
+      check();
     });
+    const offHost = transport.onHostMessage(() => {
+      lastHostMsg = Date.now();
+      check();
+    });
+    const timer = setInterval(check, 1000);
+    stopWatchRef.current = () => {
+      offPresence();
+      offHost();
+      clearInterval(timer);
+      stopWatchRef.current = null;
+    };
   }, [notify]);
 
   const subscribe = useCallback((cb: () => void) => {
@@ -288,7 +316,7 @@ export function RoomProvider({
     notify({ ...snapRef.current, status: session.getStatus(), rejectReason: null, state: null, role: input.role, me: identity.participantId });
 
     // Fallimento silenzioso: si torna al form con un motivo, niente schermate
-    const fail = async (reason: RejectReason | 'not_found'): Promise<JoinOutcome> => {
+    const fail = async (reason: RejectReason | 'not_found' | 'unavailable'): Promise<JoinOutcome> => {
       if (sessionRef.current === session) {
         // ref azzerato PRIMA di close(): il 'closed' della close è scartato
         sessionRef.current = null;
@@ -302,7 +330,9 @@ export function RoomProvider({
 
     try {
       await session.connect();
-    } catch {
+    } catch (e) {
+      // Quota Realtime esaurita: messaggio diverso da "stanza inesistente"
+      if (isCapacityError(e)) return fail('unavailable');
       // LISTENING mai arrivato: nessuna stanza con questo codice
       return fail('not_found');
     }
@@ -328,6 +358,7 @@ export function RoomProvider({
 
   // Dismissione del provider: chiude la sessione senza toccare l'URL
   useEffect(() => () => {
+    stopWatchRef.current?.();
     const s = sessionRef.current;
     sessionRef.current = null;
     if (s) void ('destroy' in s ? s.destroy() : s.close());
@@ -336,6 +367,7 @@ export function RoomProvider({
   const leave = useCallback(async () => {
     const s = sessionRef.current;
     sessionRef.current = null;
+    stopWatchRef.current?.();
     detachSaverRef.current?.();
     detachSaverRef.current = null;
     notify(IDLE);

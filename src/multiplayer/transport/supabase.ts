@@ -26,11 +26,21 @@ type RealtimeChannel = import('@supabase/supabase-js').RealtimeChannel;
 const MSG_EVENT = 'msg';
 const INTENT_EVENT = 'intent';
 
-function subscribeChannel(ch: RealtimeChannel, onClosed: () => void): Promise<void> {
+function subscribeChannel(
+  ch: RealtimeChannel,
+  onClosed: () => void,
+  onResubscribed: () => void = () => {}
+): Promise<void> {
+  let subscribed = false;
   return new Promise((resolve, reject) => {
     ch.subscribe((status, err) => {
-      if (status === 'SUBSCRIBED') resolve();
-      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      if (status === 'SUBSCRIBED') {
+        // realtime-js rientra da solo dopo una caduta del socket, ma la
+        // presence propria va registrata di nuovo
+        if (subscribed) onResubscribed();
+        subscribed = true;
+        resolve();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         reject(new Error(`canale ${ch.topic}: ${status} ${err?.message ?? ''}`));
       } else if (status === 'CLOSED') {
         onClosed();
@@ -96,11 +106,12 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
 
   const transport: RoomTransport = {
     async connect() {
-      await subscribeChannel(downlink, () => presenceCbs.forEach(cb => cb([])));
+      const track = () => downlink.track({ id: opts.selfId, role: opts.role, pubKey: opts.pubKey });
+      await subscribeChannel(downlink, () => presenceCbs.forEach(cb => cb([])), () => void track());
       if (uplink) {
         await subscribeChannel(uplink, () => presenceCbs.forEach(cb => cb([])));
       }
-      await downlink.track({ id: opts.selfId, role: opts.role, pubKey: opts.pubKey });
+      await track();
     },
 
     async close() {

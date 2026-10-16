@@ -52,3 +52,14 @@ export const SHOOTOUT_ORDER_TIMEOUT_MS = 20000;
 
 /** Ogni quanto l'host ritrasmette l'hash di stato (riallinea le code perse) */
 export const HASH_INTERVAL_MS = 4000;
+
+/**
+ * Silenzio dell'host oltre il quale i client lo danno per disconnesso.
+ * Fa fede il traffico (HASH ogni 4s, PONG ogni 2s), non la sola presence:
+ * dopo una riconnessione del socket la presence può restare vuota mentre
+ * i broadcast continuano ad arrivare.
+ */
+export const HOST_SILENT_MS = 10_000;
+
+/** Silenzio sufficiente se la presence ha già segnalato l'uscita dell'host */
+export const HOST_SILENT_LEFT_MS = 3000;
