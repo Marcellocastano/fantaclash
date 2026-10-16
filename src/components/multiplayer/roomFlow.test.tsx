@@ -92,7 +92,7 @@ describe('multiplayer UI su rete in memoria', () => {
 
     // espulsione: l'host espelle l'ospite
     fireEvent.click(hostView.getByRole('button', { name: 'Espelli' }));
-    await waitFor(() => expect(guest.getByText(/espulso dalla stanza/i)).toBeInTheDocument(), { timeout: 3000 });
+    await waitFor(() => expect(guest.getByText(/espulso da questa stanza/i)).toBeInTheDocument(), { timeout: 3000 });
     await waitFor(() => expect(hostView.getByText('Giocatori 1/8', { exact: false })).toBeInTheDocument());
   }, 20000);
 

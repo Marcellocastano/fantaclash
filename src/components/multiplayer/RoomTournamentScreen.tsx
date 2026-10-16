@@ -7,6 +7,7 @@ import { buildBotRecords, buildDraw, buildRoundStart } from '../../multiplayer/h
 import { MatchPlaybackView } from '../match/MatchScreen';
 import { useRoomMatchPlayback } from './useRoomMatchPlayback';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/I18nProvider';
 import { useRoom } from './RoomProvider';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { useRoomTournament } from './useRoomTournament';
@@ -24,29 +25,30 @@ const noop = () => {};
  * gli altri aspettano.
  */
 function RoomControls() {
+  const t = useT();
   const room = useRoom();
   const state = room.state;
-  const t = state?.tournament;
-  if (!t) return null;
+  const tournament = state?.tournament;
+  if (!tournament) return null;
 
   if (!room.isHost) {
     return (
       <p className="text-ink-soft font-semibold">
-        {t.status === 'completed'
-          ? 'In attesa del riepilogo…'
-          : "In attesa che l'host avvii il turno…"}
+        {tournament.status === 'completed'
+          ? t('room.game.waitSummary')
+          : t('room.game.waitHostTurn')}
       </p>
     );
   }
 
-  if (t.status === 'completed') {
+  if (tournament.status === 'completed') {
     return (
       <button
         type="button"
         onClick={() => room.dispatchRoomAction({ type: 'FINISH' })}
         className="btn-cta"
       >
-        Vai al riepilogo
+        {t('tournament.hub.toSummary')}
         <Icon name="arrow" className="w-7 h-7" />
       </button>
     );
@@ -67,7 +69,7 @@ function RoomControls() {
       className="btn-cta"
     >
       <Icon name="play" className="w-7 h-7" />
-      Gioca il turno
+      {t('room.game.playRound')}
     </button>
   );
 }
@@ -78,6 +80,7 @@ function RoomControls() {
  * gli altri guardano senza interazioni.
  */
 export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: () => void }) {
+  const tr = useT();
   const controller = useRoomTournament();
   const room = useRoom();
   const t = controller.tournament;
@@ -109,8 +112,8 @@ export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: 
       onFinish={() => {}}
       room={{
         onExit,
-        waitingText: waiting ? 'In attesa delle scelte…' : null,
-        sentLabel: twoHumans ? undefined : 'In attesa…',
+        waitingText: waiting ? tr('room.game.waitChoices') : null,
+        sentLabel: twoHumans ? undefined : tr('room.game.waiting'),
       }}
     />
   );
@@ -122,6 +125,7 @@ export function RoomMatchScreen({ matchId, onExit }: { matchId: string; onExit: 
  * del gioco singolo; lo stato cambia solo via RoomAction dell'host.
  */
 export function RoomTournamentScreen() {
+  const tr = useT();
   const room = useRoom();
   const controller = useRoomTournament();
   const t = controller.tournament;
@@ -213,7 +217,7 @@ export function RoomTournamentScreen() {
       <TournamentDraw tournament={t} order={order} onDone={() => setAnimDone(true)} />
     ) : (
       <p className="py-20 text-center font-display text-2xl font-extrabold text-ink-muted">
-        Sorteggio in corso…
+        {tr('room.game.drawing')}
       </p>
     );
   } else {
@@ -234,16 +238,18 @@ export function RoomTournamentScreen() {
 
 /** Attesa della rivincita per chi non è host */
 function RematchWaiting() {
+  const t = useT();
   return (
     <p className="mt-10 inline-flex items-center gap-2 font-display text-xl font-extrabold text-ink">
       <span className="w-2.5 h-2.5 rounded-full bg-highlight motion-safe:animate-pulse" aria-hidden="true" />
-      In attesa che l'host lanci la rivincita…
+      {t('room.game.rematchWait')}
     </p>
   );
 }
 
 /** Fase 'final': riepilogo personale per i giocatori, campione+tabellone per gli spettatori */
 export function RoomFinalScreen() {
+  const tr = useT();
   const room = useRoom();
   const controller = useRoomTournament();
   const t = controller.tournament;
@@ -256,9 +262,9 @@ export function RoomFinalScreen() {
         <div className="max-w-3xl mx-auto py-8 text-center">
           <p className="section-heading">{t.name}</p>
           <h1 className="font-display text-4xl sm:text-6xl font-black text-ink mt-4">
-            Campione: {champion?.name ?? '—'}
+            {tr('room.game.championLine', { name: champion?.name ?? '—' })}
           </h1>
-          <section className="mt-10" aria-label="Tabellone">
+          <section className="mt-10" aria-label={tr('tournament.hub.bracketAria')}>
             <TournamentBracket tournament={t} />
           </section>
           {!room.isHost && <RematchWaiting />}
@@ -270,9 +276,9 @@ export function RoomFinalScreen() {
 
   const finalSlot = room.isHost ? (
     <>
-      <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+      <p className="mt-10 font-display text-2xl font-extrabold text-ink">{tr('tournament.summary.again')}</p>
       <button type="button" onClick={room.rematch} className="btn-cta mt-4 text-2xl sm:text-3xl py-4 sm:py-5 px-8">
-        Rigioca
+        {tr('room.game.rematch')}
         <Icon name="reset" className="w-7 h-7" />
       </button>
       <div className="mt-4"><RoomExitLink /></div>

@@ -3,6 +3,7 @@
  * Indirizzi assoluti: funzionano da qualsiasi pagina.
  */
 import { MULTIPLAYER_ENABLED } from '../config';
+import { t } from '../i18n/translate';
 
 export interface NavLink {
   label: string;
@@ -10,35 +11,35 @@ export interface NavLink {
 }
 
 export const NAV_LINKS: NavLink[] = [
-  { label: 'Come si gioca', href: '/#come-si-gioca' },
-  { label: 'Regole', href: '/#regole' },
-  { label: 'Guide', href: '/guida/' },
-  { label: 'Top 11', href: '/top-11/' },
+  { label: t('ui.nav.howToPlay'), href: '/#come-si-gioca' },
+  { label: t('ui.nav.rules'), href: '/#regole' },
+  { label: t('ui.nav.guides'), href: '/guida/' },
+  { label: t('ui.nav.top11'), href: '/top-11/' },
   // Voce multiplayer solo con il flag attivo (stanza su /multiplayer/)
-  ...(MULTIPLAYER_ENABLED ? [{ label: 'Multiplayer', href: '/multiplayer/' }] : []),
+  ...(MULTIPLAYER_ENABLED ? [{ label: t('ui.nav.multiplayer'), href: '/multiplayer/' }] : []),
 ];
 
 /** Link nel footer: gioco da una parte, guide e pagine dall'altra */
 export const FOOTER_LINK_GROUPS: { title: string; links: NavLink[] }[] = [
   {
-    title: 'Il gioco',
+    title: t('site.footer.game'),
     links: [
-      { label: 'Come si gioca', href: '/#come-si-gioca' },
-      { label: 'Regole', href: '/regole/' },
-      { label: 'Domande frequenti', href: '/faq/' },
-      { label: 'Chi siamo', href: '/chi-siamo/' },
-      { label: 'Privacy', href: '/privacy/' },
+      { label: t('ui.nav.howToPlay'), href: '/#come-si-gioca' },
+      { label: t('ui.nav.rules'), href: '/regole/' },
+      { label: t('site.footer.faq'), href: '/faq/' },
+      { label: t('site.footer.about'), href: '/chi-siamo/' },
+      { label: t('site.footer.privacy'), href: '/privacy/' },
     ],
   },
   {
-    title: 'Guide',
+    title: t('site.footer.guides'),
     links: [
-      { label: "Come funziona l'asta del fantacalcio", href: '/guida/come-funziona-asta-fantacalcio/' },
-      { label: 'Strategie per l’asta', href: '/guida/strategie-asta-fantacalcio/' },
-      { label: 'Simulatore d’asta', href: '/guida/simulatore-asta-fantacalcio/' },
-      { label: 'Stagioni storiche', href: '/guida/fantacalcio-stagioni-passate/' },
-      { label: 'Bonus e malus', href: '/guida/bonus-malus-fantacalcio/' },
-      { label: 'Top 11 delle stagioni', href: '/top-11/' },
+      { label: t('site.footer.g1'), href: '/guida/come-funziona-asta-fantacalcio/' },
+      { label: t('site.footer.g2'), href: '/guida/strategie-asta-fantacalcio/' },
+      { label: t('site.footer.g3'), href: '/guida/simulatore-asta-fantacalcio/' },
+      { label: t('site.footer.g4'), href: '/guida/fantacalcio-stagioni-passate/' },
+      { label: t('site.footer.g5'), href: '/guida/bonus-malus-fantacalcio/' },
+      { label: t('site.footer.g6'), href: '/top-11/' },
     ],
   },
 ];

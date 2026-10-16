@@ -1,4 +1,6 @@
 import { formatMinute, MatchEvent, MatchResult, shortName } from '../../domain/match';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 import { EventIcon } from './EventIcon';
 
 /** Priorità degli eventi che meritano un'animazione dedicata (i rigori finali hanno il loro stage) */
@@ -14,15 +16,15 @@ const PRIORITY: Partial<Record<MatchEvent['type'], number>> = {
   yellow_card: 3,
 };
 
-const TITLE: Partial<Record<MatchEvent['type'], string>> = {
-  goal: 'GOL!',
-  own_goal: 'Autogol!',
-  red_card: 'Espulso!',
-  penalty: 'Rigore!',
-  penalty_missed: 'Rigore fallito',
-  save: 'Parata!',
-  woodwork: 'Legno!',
-  yellow_card: 'Ammonito',
+const TITLE: Partial<Record<MatchEvent['type'], CatalogKey>> = {
+  goal: 'match.banner.goal',
+  own_goal: 'match.banner.ownGoal',
+  red_card: 'match.banner.red',
+  penalty: 'match.banner.penalty',
+  penalty_missed: 'match.banner.penaltyMissed',
+  save: 'match.banner.save',
+  woodwork: 'match.banner.woodwork',
+  yellow_card: 'match.banner.yellow',
 };
 
 /** Colore della fascia per tipo di evento */
@@ -44,6 +46,7 @@ interface MatchEventBannerProps {
  * l'animazione parte sempre da zero.
  */
 export function MatchEventBanner({ latest, result }: MatchEventBannerProps) {
+  const t = useT();
   const main = [...latest]
     .filter(e => PRIORITY[e.type] && (e.type !== 'save' || e.impact >= 2))
     .sort((a, b) => (PRIORITY[b.type] ?? 0) - (PRIORITY[a.type] ?? 0))[0];
@@ -54,7 +57,7 @@ export function MatchEventBanner({ latest, result }: MatchEventBannerProps) {
   const assist = latest.find(e => e.type === 'assist');
   const big = main.type === 'goal' || main.type === 'own_goal' || main.type === 'red_card';
   const title =
-    main.type === 'chance' ? (main.chanceKind === 'contropiede' ? 'Contropiede!' : 'Grande occasione') : TITLE[main.type] ?? '';
+    main.type === 'chance' ? t(main.chanceKind === 'contropiede' ? 'match.banner.counter' : 'match.banner.bigChance') : TITLE[main.type] ? t(TITLE[main.type]!) : '';
   const who = main.type === 'save' ? names.get(main.relatedPlayerId ?? '') : names.get(main.playerId ?? '');
 
   return (
@@ -72,7 +75,7 @@ export function MatchEventBanner({ latest, result }: MatchEventBannerProps) {
             {who && <p className={`font-display font-black leading-none ${big ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl'}`}>{who}</p>}
             <p className="text-xs sm:text-sm font-semibold opacity-80 mt-1">
               {team} · {formatMinute(main.minute, main.extra)}
-              {main.type === 'goal' && assist && <> · assist {names.get(assist.playerId ?? '')}</>}
+              {main.type === 'goal' && assist && <> · {t('match.banner.assistBy', { name: names.get(assist.playerId ?? '') ?? '' })}</>}
             </p>
           </div>
         </div>

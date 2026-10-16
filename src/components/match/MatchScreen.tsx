@@ -8,13 +8,14 @@ import {
   legSides,
   matchLegs,
   nextLeg,
-  ROUND_LABELS,
+  ROUND_KEY,
   toMatchTeam,
   TournamentRound,
   TournamentState,
 } from '../../domain/tournament';
 import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { useT } from '../../i18n/I18nProvider';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
 import { AttackIndicator } from './AttackIndicator';
@@ -145,6 +146,7 @@ export function MatchPlaybackView({
   room?: RoomMatchUi;
 }) {
   const { result, state } = pb;
+  const t = useT();
   // L'andata vista dai lati di questa partita (al ritorno sono invertiti)
   const firstLegHere =
     firstLeg && leg === 2 ? { home: firstLeg.awayScore, away: firstLeg.homeScore } : undefined;
@@ -173,7 +175,7 @@ export function MatchPlaybackView({
         home={tournament.teams.find(t => t.id === home.id)}
         away={tournament.teams.find(t => t.id === away.id)}
         state={state}
-        roundLabel={`${ROUND_LABELS[round]}${leg ? (leg === 1 ? ' · Andata' : ' · Ritorno') : ''}`}
+        roundLabel={`${t(ROUND_KEY[round])}${leg ? ` · ${t(leg === 1 ? 'match.leg.go' : 'match.leg.back')}` : ''}`}
         firstLeg={firstLegHere}
         tactics={result.ticks[Math.max(1, state.tick.index)].tactic}
         userFiato={tick.energy[userSide]}
@@ -193,7 +195,7 @@ export function MatchPlaybackView({
             firstLeg={firstLeg}
             onContinue={() => (room ? room.onExit() : onFinish(result, 'continue'))}
             onConclude={() => (room ? room.onExit() : onFinish(result, 'conclude'))}
-            exitLabel={room ? 'Torna al tabellone' : undefined}
+            exitLabel={room ? t('match.playback.backToBracket') : undefined}
           />
         ) : (
           <div className="grid grid-cols-12 gap-x-0 gap-y-8 lg:gap-x-8">
@@ -205,11 +207,11 @@ export function MatchPlaybackView({
                   onClick={() => pb.setPlaying(!pb.playing)}
                   disabled={pb.pendingDecision !== null || pb.pendingShootoutOrder}
                   className="btn-ghost px-3 py-2"
-                  aria-label={pb.playing ? 'Pausa' : 'Riprendi'}
+                  aria-label={pb.playing ? t('match.playback.pause') : t('match.playback.resume')}
                 >
                   <Icon name={pb.playing ? 'pause' : 'play'} className="w-5 h-5" />
                 </button>
-                <div className="flex border-2 border-ink" role="group" aria-label="Velocità">
+                <div className="flex border-2 border-ink" role="group" aria-label={t('match.playback.speed')}>
                   {SPEEDS.map(s => (
                     <button
                       key={s}
@@ -223,13 +225,13 @@ export function MatchPlaybackView({
                 </div>
                 <div className="ml-auto flex items-center gap-5">
                   {import.meta.env.DEV && !inShootout && leg !== 1 && (
-                    <button onClick={pb.jumpToShootout} className="link-action text-sm" title="Solo sviluppo: rigioca con un seme che finisce ai rigori">
-                      Test rigori
+                    <button onClick={pb.jumpToShootout} className="link-action text-sm" title={t('match.playback.testShootoutTitle')}>
+                      {t('match.playback.testShootout')}
                     </button>
                   )}
                   <button onClick={pb.skipToEnd} className="link-action">
                     <Icon name="skip" className="w-4 h-4" />
-                    Fischio finale
+                    {t('match.playback.skip')}
                   </button>
                 </div>
               </div>
@@ -277,15 +279,15 @@ export function MatchPlaybackView({
 
             <aside className={`col-span-12 lg:col-span-4${streamer ? ' lg:mt-40' : ''}`}>
               <div className="flex border-b-2 border-ink mb-4" role="tablist">
-                {(['cronaca', 'statistiche'] as const).map(t => (
+                {(['cronaca', 'statistiche'] as const).map(id => (
                   <button
-                    key={t}
+                    key={id}
                     role="tab"
-                    aria-selected={tab === t}
-                    onClick={() => setTab(t)}
-                    className={`flex-1 py-2 font-display text-2xl font-extrabold capitalize ${tab === t ? 'bg-ink text-canvas' : 'text-ink-muted hover:text-ink'}`}
+                    aria-selected={tab === id}
+                    onClick={() => setTab(id)}
+                    className={`flex-1 py-2 font-display text-2xl font-extrabold capitalize ${tab === id ? 'bg-ink text-canvas' : 'text-ink-muted hover:text-ink'}`}
                   >
-                    {t}
+                    {id === 'cronaca' ? t('match.playback.feed') : t('match.playback.stats')}
                   </button>
                 ))}
               </div>

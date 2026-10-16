@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MAX_PLAYERS, MIN_HUMANS } from '../../multiplayer/constants';
 import { TOURNAMENT_NAME } from '../../domain/tournament';
 import { isLegends, LEGENDS_ID, listoneLabel, loadSeasonIndex, SeasonInfo } from '../../services/seasons';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { ListoneMode, ListoneModePicker } from '../ListoneModePicker';
 import { SeasonPicker } from '../SeasonPicker';
@@ -22,6 +23,7 @@ export function LobbyScreen({
   onStart: () => void;
   starting: boolean;
 }) {
+  const t = useT();
   const room = useRoom();
   const state = room.state!;
   const [copied, setCopied] = useState<string | null>(null);
@@ -73,15 +75,15 @@ export function LobbyScreen({
     (import.meta.env.DEV ? humans >= 1 : humans >= MIN_HUMANS);
   const startReason =
     humans < (import.meta.env.DEV ? 1 : MIN_HUMANS)
-      ? `Servono almeno ${MIN_HUMANS} giocatori`
+      ? t('room.lobby.needPlayers', { min: MIN_HUMANS })
       : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Biglietto stanza */}
       <section className="bg-pitch-deep text-canvas border-2 border-ink shadow-block p-5 sm:p-8 text-center">
-        <p className="font-display text-lg font-extrabold text-canvas/80">Codice stanza</p>
-        <p className="mt-3 flex justify-center gap-1.5 sm:gap-2" aria-label={`Codice ${state.code}`}>
+        <p className="font-display text-lg font-extrabold text-canvas/80">{t('room.lobby.code')}</p>
+        <p className="mt-3 flex justify-center gap-1.5 sm:gap-2" aria-label={t('room.lobby.codeAria', { code: state.code })}>
           {state.code.split('').map((ch, i) => (
             <span
               key={i}
@@ -99,7 +101,7 @@ export function LobbyScreen({
           </span>
           {(!room.isHost || !seasons) && (
             <span className="inline-block border-2 border-canvas/50 px-3 py-1 font-display font-bold text-lg text-canvas">
-              {listoneLabel(state.settings.season)}
+              {listoneLabel(state.settings.season, t)}
             </span>
           )}
         </p>
@@ -128,7 +130,7 @@ export function LobbyScreen({
             onClick={() => copy('link', playerLink)}
           >
             <Icon name="copy" className="w-4 h-4" />
-            {copied === 'link' ? 'Copiato' : 'Copia link d’invito'}
+            {copied === 'link' ? t('room.lobby.copied') : t('room.lobby.copyInvite')}
           </button>
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm">
             <button
@@ -136,20 +138,20 @@ export function LobbyScreen({
               className="font-semibold text-canvas underline underline-offset-4 hover:text-highlight transition-colors duration-150"
               onClick={() => copy('codice', state.code)}
             >
-              {copied === 'codice' ? 'Copiato' : 'Copia codice'}
+              {copied === 'codice' ? t('room.lobby.copied') : t('room.lobby.copyCode')}
             </button>
             <button
               type="button"
               className="font-semibold text-canvas underline underline-offset-4 hover:text-highlight transition-colors duration-150"
               onClick={() => copy('spett', spectatorLink)}
             >
-              {copied === 'spett' ? 'Copiato' : 'Link spettatori'}
+              {copied === 'spett' ? t('room.lobby.copied') : t('room.lobby.spectatorLink')}
             </button>
           </div>
         </div>
         {room.isHost && (
           <p className="mt-5 text-sm text-canvas/70">
-            Tieni aperta questa scheda: se la chiudi la stanza si ferma.
+            {t('room.lobby.keepOpen')}
           </p>
         )}
       </section>
@@ -158,9 +160,9 @@ export function LobbyScreen({
       <section>
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 className="section-heading">
-            Giocatori {humans}/{MAX_PLAYERS}
+            {t('room.lobby.players', { n: humans, max: MAX_PLAYERS })}
           </h2>
-          <span className="text-sm text-ink-muted">Spettatori {spectatorCount}</span>
+          <span className="text-sm text-ink-muted">{t('room.lobby.spectators', { n: spectatorCount })}</span>
         </div>
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
           {state.players.map(p => {
@@ -180,10 +182,10 @@ export function LobbyScreen({
                   <span className="flex items-center gap-1.5 min-w-0">
                     <span className="font-display font-extrabold text-ink truncate">{p.nickname}</span>
                     {p.id === state.hostId && (
-                      <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">Host</span>
+                      <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">{t('room.lobby.host')}</span>
                     )}
                     {mine && (
-                      <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">Tu</span>
+                      <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">{t('room.lobby.you')}</span>
                     )}
                   </span>
                   <span className="block text-sm text-ink-soft truncate">{p.teamName}</span>
@@ -192,7 +194,7 @@ export function LobbyScreen({
                       className={`w-2 h-2 rounded-full ${p.connected ? 'bg-pitch' : 'bg-ink-faint'}`}
                       aria-hidden="true"
                     />
-                    {p.connected ? 'online' : 'offline'}
+                    {p.connected ? t('room.lobby.online') : t('room.lobby.offline')}
                   </span>
                 </span>
                 {room.isHost && p.id !== state.hostId && (
@@ -201,7 +203,7 @@ export function LobbyScreen({
                     onClick={() => room.kick(p.id)}
                     className="link-action shrink-0 text-danger"
                   >
-                    Espelli
+                    {t('room.lobby.kick')}
                   </button>
                 )}
               </li>
@@ -213,14 +215,14 @@ export function LobbyScreen({
               key={`empty-${i}`}
               className="hidden sm:flex border-2 border-dashed border-line-strong px-3 py-2.5 flex-col items-center justify-center gap-0.5 min-h-16"
             >
-              <span className="font-display font-extrabold text-ink-muted">Bot</span>
-              <span className="text-xs text-ink-faint">posto libero</span>
+              <span className="font-display font-extrabold text-ink-muted">{t('room.lobby.bot')}</span>
+              <span className="text-xs text-ink-faint">{t('room.lobby.freeSeat')}</span>
             </li>
           ))}
         </ul>
         {emptySeats > 0 && (
           <p className="sm:hidden mt-3 text-sm text-ink-faint font-semibold">
-            {emptySeats} {emptySeats === 1 ? 'posto' : 'posti'} ai bot
+            {t(emptySeats === 1 ? 'room.lobby.seatsOne' : 'room.lobby.seatsMany', { n: emptySeats })}
           </p>
         )}
       </section>
@@ -235,7 +237,7 @@ export function LobbyScreen({
               disabled={!canStart || starting}
               className="btn-cta w-full text-xl py-3"
             >
-              {starting ? 'Caricamento listone…' : 'Avvia l’asta'}
+              {starting ? t('room.lobby.starting') : t('room.lobby.start')}
               <Icon name="arrow" className="w-5 h-5" />
             </button>
             {!canStart && startReason && <p className="mt-2 text-sm text-ink-soft">{startReason}</p>}
@@ -244,7 +246,7 @@ export function LobbyScreen({
           <div className="panel p-5 text-center">
             <p className="inline-flex items-center gap-2 font-display font-extrabold text-ink text-xl">
               <span className="w-2.5 h-2.5 rounded-full bg-highlight motion-safe:animate-pulse" aria-hidden="true" />
-              In attesa che l'host avvii l'asta
+              {t('room.lobby.waiting')}
             </p>
           </div>
         )}

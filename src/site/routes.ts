@@ -1,4 +1,5 @@
 import { SITE_NAME, SITE_URL } from '../config';
+import { t } from '../i18n/translate';
 import { FAQ_ITEMS } from './faqData';
 
 /**
@@ -79,12 +80,12 @@ function staticRoute(
 
 function breadcrumbsLabel(path: string): string {
   const labels: Record<string, string> = {
-    '/regole/': 'Regole',
-    '/faq/': 'Domande frequenti',
-    '/guida/': 'Guide',
-    '/top-11/': 'Top 11',
-    '/chi-siamo/': 'Chi siamo',
-    '/privacy/': 'Privacy',
+    '/regole/': t('site.seo.crumbRules'),
+    '/faq/': t('site.seo.crumbFaq'),
+    '/guida/': t('site.seo.crumbGuides'),
+    '/top-11/': t('site.seo.crumbTop11'),
+    '/chi-siamo/': t('site.seo.crumbAbout'),
+    '/privacy/': t('site.seo.crumbPrivacy'),
   };
   return labels[path] ?? path;
 }
@@ -99,33 +100,28 @@ export interface GuideInfo {
 export const GUIDES: GuideInfo[] = [
   {
     slug: 'come-funziona-asta-fantacalcio',
-    title: "Come funziona l'asta del fantacalcio",
-    description:
-      'Chiamata, rilanci, budget e offerta massima: le regole dell’asta del fantacalcio spiegate con un esempio pratico e gli errori da evitare.',
+    title: t('site.guides.cf.title'),
+    description: t('site.guides.cf.desc'),
   },
   {
     slug: 'strategie-asta-fantacalcio',
-    title: "Strategie per l'asta del fantacalcio",
-    description:
-      'Come gestire i crediti tra i reparti, quando rilanciare, l’ultimo secondo e come leggere gli avversari: le mosse che decidono un’asta.',
+    title: t('site.guides.st.title'),
+    description: t('site.guides.st.desc'),
   },
   {
     slug: 'simulatore-asta-fantacalcio',
-    title: 'Simulatore d’asta del fantacalcio',
-    description:
-      'Perché arrivare preparato all’asta cambia la stagione, e come allenarsi gratis con FantaClash contro 7 bot su 23 annate storiche.',
+    title: t('site.guides.sim.title'),
+    description: t('site.guides.sim.desc'),
   },
   {
     slug: 'fantacalcio-stagioni-passate',
-    title: 'Fantacalcio con le stagioni passate',
-    description:
-      'Dal 2003-04 al 2025-26: com’è fare il fantacalcio con i campioni di vent’anni di Serie A, e come nasce l’overall di ogni giocatore.',
+    title: t('site.guides.sta.title'),
+    description: t('site.guides.sta.desc'),
   },
   {
     slug: 'bonus-malus-fantacalcio',
-    title: 'Bonus e malus del fantacalcio',
-    description:
-      'Gol, assist, cartellini, rigori e autogol: la tabella completa di bonus e malus di FantaClash e come si ottiene il fantavoto.',
+    title: t('site.guides.bm.title'),
+    description: t('site.guides.bm.desc'),
   },
 ];
 
@@ -135,9 +131,9 @@ function guideRoute(guide: GuideInfo): SiteRoute {
     path,
     kind: 'guide',
     params: { slug: guide.slug },
-    title: `${guide.title} · ${SITE_NAME}`,
+    title: t('site.seo.guideTitleSuffix', { title: guide.title, site: SITE_NAME }),
     description: guide.description,
-    breadcrumbs: [home, { name: 'Guide', path: '/guida/' }, { name: guide.title.split(':')[0], path }],
+    breadcrumbs: [home, { name: t('site.seo.crumbGuides'), path: '/guida/' }, { name: guide.title.split(':')[0], path }],
     indexable: true,
     priority: 0.7,
     changefreq: 'monthly',
@@ -187,13 +183,12 @@ export function breadcrumbJsonLd(items: Breadcrumb[]): object {
   };
 }
 
-const HOME_DESCRIPTION =
-  "Gioco di fantacalcio online gratis: scegli un'annata o il listone Legends, vinci l'asta contro 7 bot e porta la tua rosa in finale, anche con andata e ritorno.";
+const HOME_DESCRIPTION = t('site.seo.homeDesc');
 
 export const HOME_ROUTE: SiteRoute = {
   path: '/',
   kind: 'home',
-  title: "FantaClash · Fantacalcio d'asta con la Serie A di ieri",
+  title: t('site.seo.homeTitle'),
   description: HOME_DESCRIPTION,
   breadcrumbs: [],
   indexable: true,
@@ -219,8 +214,8 @@ export const HOME_ROUTE: SiteRoute = {
       url: `${SITE_URL}/`,
       description: HOME_DESCRIPTION,
       image: OG_IMAGE,
-      genre: ['Fantacalcio', 'Calcio', 'Manageriale'],
-      gamePlatform: 'Web browser',
+      genre: [t('site.seo.genre1'), t('site.seo.genre2'), t('site.seo.genre3')],
+      gamePlatform: t('site.seo.platform'),
       applicationCategory: 'GameApplication',
       operatingSystem: 'Any',
       inLanguage: 'it-IT',
@@ -234,8 +229,8 @@ export const HOME_ROUTE: SiteRoute = {
 export const NOT_FOUND_ROUTE: SiteRoute = {
   path: '/404/',
   kind: 'not-found',
-  title: 'Pagina non trovata · FantaClash',
-  description: "La pagina che cerchi non esiste o è stata spostata. Torna alla home di FantaClash e inizia un'asta con le stagioni storiche della Serie A.",
+  title: t('site.seo.nfTitle'),
+  description: t('site.seo.nfDesc'),
   breadcrumbs: [],
   indexable: false,
   priority: 0,
@@ -251,9 +246,9 @@ function top11Route(seasonId: string, jsonLd: object[] = []): SiteRoute {
     path,
     kind: 'top11',
     params: { season: seasonId },
-    title: `Top 11 Serie A ${seasonId}: la formazione ideale · ${SITE_NAME}`,
-    description: `I migliori giocatori della Serie A ${seasonId} schierati in una formazione ideale 4-3-3: overall, squadra e il link per rifare quell’asta.`,
-    breadcrumbs: [home, { name: 'Top 11', path: '/top-11/' }, { name: `Serie A ${seasonId}`, path }],
+    title: t('site.seo.top11Title', { season: seasonId, site: SITE_NAME }),
+    description: t('site.seo.top11Desc', { season: seasonId }),
+    breadcrumbs: [home, { name: t('site.seo.crumbTop11'), path: '/top-11/' }, { name: t('site.top11.crumbSeason', { season: seasonId }), path }],
     indexable: true,
     priority: 0.6,
     changefreq: 'yearly',
@@ -267,10 +262,10 @@ function top11Route(seasonId: string, jsonLd: object[] = []): SiteRoute {
 export function buildRoutes(seasonIds: string[] = [], top11JsonLd: Record<string, object[]> = {}): SiteRoute[] {
   return [
     HOME_ROUTE,
-    staticRoute('rules', '/regole/', 'Regole di FantaClash: asta, rosa e torneo',
-      'Tutte le regole del gioco: asta da 100 crediti con rilanci, modulo 1-2-3-2, torneo a eliminazione diretta, bonus e malus del fantavoto.', 0.8),
-    staticRoute('faq', '/faq/', 'Domande frequenti su FantaClash · FantaClash',
-      "Costo, registrazione, stagioni disponibili, funzionamento dell'asta e del torneo: le risposte alle domande più comuni su FantaClash.", 0.6,
+    staticRoute('rules', '/regole/', t('site.seo.rulesTitle'),
+      t('site.seo.rulesDesc'), 0.8),
+    staticRoute('faq', '/faq/', t('site.seo.faqTitle'),
+      t('site.seo.faqDesc'), 0.6,
       [
         {
           '@context': 'https://schema.org',
@@ -282,17 +277,17 @@ export function buildRoutes(seasonIds: string[] = [], top11JsonLd: Record<string
           })),
         },
       ]),
-    staticRoute('guide-index', '/guida/', 'Guide al fantacalcio: asta e strategia · FantaClash',
-      "Guide pratiche al fantacalcio ad asta: come funziona l'asta, le strategie vincenti, bonus e malus e il fantacalcio sulle stagioni storiche.", 0.6,
-      [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Guide al fantacalcio', url: absoluteUrl('/guida/'), isPartOf: { '@id': `${SITE_URL}/#website` }, inLanguage: 'it-IT' }]),
+    staticRoute('guide-index', '/guida/', t('site.seo.guideIndexTitle'),
+      t('site.seo.guideIndexDesc'), 0.6,
+      [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: t('site.seo.collectionName'), url: absoluteUrl('/guida/'), isPartOf: { '@id': `${SITE_URL}/#website` }, inLanguage: 'it-IT' }]),
     ...GUIDES.map(guideRoute),
-    staticRoute('top11-index', '/top-11/', 'Top 11 della Serie A dal 2003-04 al 2025-26 · FantaClash',
-      'La formazione ideale 4-3-3 di ognuna delle 23 stagioni della Serie A: i migliori giocatori per annata, anno dopo anno.', 0.6),
+    staticRoute('top11-index', '/top-11/', t('site.seo.top11IndexTitle'),
+      t('site.seo.top11IndexDesc'), 0.6),
     ...seasonIds.map(id => top11Route(id, top11JsonLd[id] ?? [])),
-    staticRoute('about', '/chi-siamo/', 'Chi siamo · FantaClash',
-      "FantaClash è un progetto amatoriale nato per chi il fantacalcio d'asta lo ama davvero: storia del gioco, come è fatto e contatti.", 0.4),
-    staticRoute('privacy', '/privacy/', 'Privacy · FantaClash',
-      'FantaClash non raccoglie dati personali: nessun account, nessun cookie di profilazione e analytics anonime senza cookie.', 0.2),
+    staticRoute('about', '/chi-siamo/', t('site.seo.aboutTitle'),
+      t('site.seo.aboutDesc'), 0.4),
+    staticRoute('privacy', '/privacy/', t('site.seo.privacyTitle'),
+      t('site.seo.privacyDesc'), 0.2),
     MULTIPLAYER_ROUTE,
   ];
 }
@@ -301,9 +296,9 @@ export function buildRoutes(seasonIds: string[] = [], top11JsonLd: Record<string
 export const MULTIPLAYER_ROUTE: SiteRoute = {
   path: '/multiplayer/',
   kind: 'multiplayer',
-  title: `Multiplayer · ${SITE_NAME}`,
-  description: 'Crea una stanza privata o entra con un codice: l’asta del fantacalcio con gli amici in diretta, con le stagioni storiche della Serie A.',
-  breadcrumbs: [home, { name: 'Multiplayer', path: '/multiplayer/' }],
+  title: t('site.seo.mpTitle', { site: SITE_NAME }),
+  description: t('site.seo.mpDesc'),
+  breadcrumbs: [home, { name: t('site.common.multiplayer'), path: '/multiplayer/' }],
   indexable: false,
   priority: 0,
   changefreq: 'yearly',

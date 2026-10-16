@@ -3,15 +3,17 @@ import { FAQ_ITEMS } from '../faqData';
 import { ContentLayout } from '../ContentLayout';
 import { GameCta, PageTitle } from '../blocks';
 import { Icon } from '../../components/Icon';
+import { useT } from '../../i18n/I18nProvider';
 
 const route = buildRoutes().find(r => r.kind === 'faq')!;
 
 /** Domande frequenti: il testo è condiviso con i dati strutturati (faqData.ts) */
 export function FaqPage() {
+  const t = useT();
   return (
     <ContentLayout breadcrumbs={route.breadcrumbs}>
       <article>
-        <PageTitle kicker="FAQ">Domande frequenti su FantaClash</PageTitle>
+        <PageTitle kicker={t('site.faq.kicker')}>{t('site.faq.title')}</PageTitle>
         <dl className="max-w-3xl space-y-4">
           {FAQ_ITEMS.map(item => (
             <div key={item.question} className="bg-surface border-2 border-ink shadow-block-sm">
@@ -25,7 +27,7 @@ export function FaqPage() {
             </div>
           ))}
         </dl>
-        <GameCta title="Altra domanda? La risposta è un'asta" text="Apri il gioco e prova: si impara in fretta." />
+        <GameCta title={t('site.faq.ctaTitle')} text={t('site.faq.ctaText')} />
       </article>
     </ContentLayout>
   );

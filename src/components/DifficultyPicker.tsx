@@ -1,19 +1,13 @@
+import { useT } from '../i18n/I18nProvider';
+import { CatalogKey } from '../i18n/translate';
 import { DifficultyLevel } from '../types';
 
 /**
- * Opzioni disponibili per il livello di difficoltà
+ * Opzioni disponibili per il livello di difficoltà (chiavi di catalogo)
  */
-const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: string; description: string }[] = [
-  {
-    value: 'normale',
-    label: 'Normale',
-    description: 'Bot con valutazioni ragionevoli e un po\' di rumore nelle decisioni.',
-  },
-  {
-    value: 'difficile',
-    label: 'Difficile',
-    description: 'Valutazioni precise, chiamate tattiche per farti spendere.',
-  },
+const DIFFICULTY_OPTIONS: { value: DifficultyLevel; label: CatalogKey; description: CatalogKey }[] = [
+  { value: 'normale', label: 'setup.difficulty.normale.label', description: 'setup.difficulty.normale.desc' },
+  { value: 'difficile', label: 'setup.difficulty.difficile.label', description: 'setup.difficulty.difficile.desc' },
 ];
 
 interface DifficultyPickerProps {
@@ -24,10 +18,11 @@ interface DifficultyPickerProps {
 
 /** Selettore della difficoltà dei bot, condiviso tra setup e lobby */
 export function DifficultyPicker({ value, onChange, disabled }: DifficultyPickerProps) {
+  const t = useT();
   const selected = DIFFICULTY_OPTIONS.find(o => o.value === value);
   return (
     <div>
-      <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label="Difficoltà dei bot">
+      <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label={t('setup.difficulty.group')}>
         {DIFFICULTY_OPTIONS.map((option, i) => (
           <button
             key={option.value}
@@ -40,11 +35,11 @@ export function DifficultyPicker({ value, onChange, disabled }: DifficultyPicker
               i > 0 ? 'border-l-2 border-ink' : ''
             } ${value === option.value ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
           >
-            {option.label}
+            {t(option.label)}
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selected?.description}</p>
+      <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selected && t(selected.description)}</p>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { ContentLayout } from '../ContentLayout';
 import { ROLE_TAG } from '../../components/player/tier';
 import { GameCta, PageTitle, Prose } from '../blocks';
 import { Icon } from '../../components/Icon';
+import { useT } from '../../i18n/I18nProvider';
 
 const route = buildRoutes().find(r => r.kind === 'top11-index')!;
 
@@ -14,21 +15,18 @@ const route = buildRoutes().find(r => r.kind === 'top11-index')!;
  * in sviluppo vengono caricati dai JSON pubblici.
  */
 export function Top11IndexPage({ data }: { data: Top11IndexEntry[] | null }) {
+  const t = useT();
   const { entries: seasons, loading, total } = useTop11Index(data);
   return (
     <ContentLayout breadcrumbs={route.breadcrumbs}>
       <article>
-        <PageTitle kicker="Archivio">Top 11 della Serie A dal 2003-04 al 2025-26</PageTitle>
+        <PageTitle kicker={t('site.top11.indexKicker')}>{t('site.top11.indexTitle')}</PageTitle>
         <Prose>
-          <p>
-            Ventitré stagioni di Serie A, ventitré formazioni ideali. Per ogni annata la Top 11 dei migliori per
-            overall, schierata in un 4-3-3: sfoglia le annate, ritrova i campioni della tua infanzia e, se ti viene
-            voglia, rifai quell'asta con FantaClash.
-          </p>
+          <p>{t('site.top11.indexIntro')}</p>
         </Prose>
         {loading && (
           <p className="mt-6 text-sm font-bold text-ink-muted" role="status">
-            Carico le annate{total ? `… ${seasons.length}/${total}` : '…'}
+            {t('site.top11.loading')}{total ? `… ${seasons.length}/${total}` : '…'}
           </p>
         )}
         <ul className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -46,7 +44,7 @@ export function Top11IndexPage({ data }: { data: Top11IndexEntry[] | null }) {
                   ))}
                 </span>
                 <span className="mt-3 inline-flex items-center gap-2 font-bold text-pitch-deep text-sm">
-                  Vedi la formazione
+                  {t('site.top11.see')}
                   <Icon name="arrow" className="w-4 h-4" />
                 </span>
               </a>
@@ -71,7 +69,7 @@ export function Top11IndexPage({ data }: { data: Top11IndexEntry[] | null }) {
               </li>
             ))}
         </ul>
-        <GameCta title="L'annata giusta per la tua asta" text="Scegli la stagione, chiama i campioni e prova a completare l'album." />
+        <GameCta title={t('site.top11.indexCtaTitle')} text={t('site.top11.indexCtaText')} />
       </article>
     </ContentLayout>
   );

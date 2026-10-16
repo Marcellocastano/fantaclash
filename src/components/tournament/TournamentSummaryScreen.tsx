@@ -1,7 +1,9 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTournamentController } from '../../hooks/tournamentController';
-import { buildTournamentSummary, TournamentState, TournamentSummary } from '../../domain/tournament';
+import { buildTournamentSummary, PLACEMENT_KEY, TournamentState, TournamentSummary } from '../../domain/tournament';
 import { listoneLabel } from '../../services/seasons';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 import { cardFileName, copyImage, downloadBlob, shareNative, whatsappShareUrl, xShareUrl } from '../../services/shareCard';
 import { playSound } from '../../services/sound';
 import { Footer } from '../Footer';
@@ -41,6 +43,7 @@ interface SummaryProps {
 }
 
 function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: SummaryProps) {
+  const t = useT();
   const { card, failed } = useSummaryCard(summary);
   const [notice, setNotice] = useState<string | null>(null);
   const champion = summary.placement === 'campione';
@@ -57,11 +60,11 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
   const actions: { icon: IconName; label: string; run: () => void }[] = [
     {
       icon: 'share',
-      label: 'Condividi',
+      label: t('tournament.summary.share'),
       run: withCard(async blob => {
         if (await shareNative(blob, summary)) return null;
         download(blob);
-        return 'Condivisione non disponibile: immagine scaricata.';
+        return t('tournament.summary.shareFail');
       }),
     },
     { icon: 'brand-whatsapp', label: 'WhatsApp', run: () => window.open(whatsappShareUrl(summary), '_blank', 'noopener') },
@@ -72,16 +75,16 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
       run: withCard(async blob => {
         if (await shareNative(blob, summary)) return null;
         download(blob);
-        return 'Immagine scaricata in formato 4:5: caricala su Instagram.';
+        return t('tournament.summary.instagramFail');
       }),
     },
-    { icon: 'copy', label: 'Copia immagine', run: withCard(async blob => ((await copyImage(blob)) ? 'Immagine copiata.' : 'Il browser non permette di copiare immagini.')) },
+    { icon: 'copy', label: t('tournament.summary.copyImage'), run: withCard(async blob => ((await copyImage(blob)) ? t('tournament.summary.copied') : t('tournament.summary.copyFail'))) },
     {
       icon: 'download',
-      label: 'Scarica',
+      label: t('tournament.summary.download'),
       run: withCard(blob => {
         download(blob);
-        return 'Immagine scaricata.';
+        return t('tournament.summary.downloaded');
       }),
     },
   ];
@@ -96,7 +99,7 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
           <div className="col-span-12 md:col-span-6 lg:col-span-5">
             <div className="max-w-[460px] mx-auto motion-safe:animate-drop">
               <TournamentSummaryCard summary={summary} url={card?.url ?? null} failed={failed} />
-              <div className="flex mt-6 border-2 border-ink shadow-block-sm bg-canvas" role="group" aria-label="Condividi">
+              <div className="flex mt-6 border-2 border-ink shadow-block-sm bg-canvas" role="group" aria-label={t('tournament.summary.shareAria')}>
                 {actions.map(a => (
                   <button
                     key={a.label}
@@ -121,12 +124,12 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
           {/* Esito e numeri */}
           <div className="col-span-12 md:col-span-6 lg:col-span-7">
             <p className={`inline-block px-4 py-2 border-2 border-ink shadow-block font-display text-4xl sm:text-6xl md:text-8xl font-black leading-none motion-safe:animate-stamp ${PLACEMENT_TONE[summary.placement]}`}>
-              {summary.placementLabel}
+              {t(PLACEMENT_KEY[summary.placement])}
             </p>
             <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
             <p className="text-lg text-ink-soft mt-3">
-              {summary.tournamentName} · {listoneLabel(summary.seasonId)}
-              {summary.championName && !champion && <> · coppa a {summary.championName}</>}
+              {summary.tournamentName} · {listoneLabel(summary.seasonId, t)}
+              {summary.championName && !champion && <> · {t('tournament.summary.cupTo', { name: summary.championName })}</>}
             </p>
 
             <StatBlocks stats={summary.stats} />
@@ -134,17 +137,17 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
               <p className="mt-6 flex w-fit max-w-full flex-wrap items-center gap-3 border-2 border-ink bg-canvas shadow-block-sm px-3 py-2">
                 <span className="bg-highlight text-on-highlight border-2 border-ink px-2 font-display font-black">MVP</span>
                 <span className="font-display text-2xl font-black text-ink">{summary.mvp.name}</span>
-                <span className="text-ink-muted">fantavoto medio {summary.mvp.avgFantasy.toFixed(1)}</span>
+                <span className="text-ink-muted">{t('tournament.summary.mvpAvg', { score: summary.mvp.avgFantasy.toFixed(1) })}</span>
               </p>
             )}
 
             {finalSlot ?? (
               <>
                 {newGameLabel === undefined && (
-                  <p className="mt-10 font-display text-2xl font-extrabold text-ink">Un'altra annata, un'altra asta?</p>
+                  <p className="mt-10 font-display text-2xl font-extrabold text-ink">{t('tournament.summary.again')}</p>
                 )}
                 <button onClick={onNewGame} className={`btn-cta text-2xl sm:text-3xl py-4 sm:py-5 px-8 ${newGameLabel === undefined ? 'mt-4' : 'mt-10'}`}>
-                  {newGameLabel ?? 'Nuova partita'}
+                  {newGameLabel ?? t('tournament.summary.newGame')}
                   <Icon name="arrow" className="w-7 h-7" />
                 </button>
               </>
@@ -153,7 +156,7 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
         </div>
 
         <section className="mt-20">
-          <h2 className="section-heading mb-8">Il tuo torneo</h2>
+          <h2 className="section-heading mb-8">{t('tournament.summary.yourTournament')}</h2>
           <TournamentBracket tournament={tournament} />
         </section>
         </main>
@@ -163,14 +166,15 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
   );
 }
 
-const STAT_STYLE = [
-  { label: 'Vittorie', cls: 'bg-pitch text-on-pitch', tilt: '-rotate-1' },
-  { label: 'Gol fatti', cls: 'bg-highlight text-on-highlight', tilt: 'rotate-1' },
-  { label: 'Gol subiti', cls: 'bg-whistle text-on-whistle', tilt: '-rotate-1' },
-  { label: 'Porte inviolate', cls: 'bg-ink text-canvas', tilt: 'rotate-1' },
+const STAT_STYLE: { label: CatalogKey; cls: string; tilt: string }[] = [
+  { label: 'tournament.summary.statWins', cls: 'bg-pitch text-on-pitch', tilt: '-rotate-1' },
+  { label: 'tournament.summary.statGoalsFor', cls: 'bg-highlight text-on-highlight', tilt: 'rotate-1' },
+  { label: 'tournament.summary.statGoalsAgainst', cls: 'bg-whistle text-on-whistle', tilt: '-rotate-1' },
+  { label: 'tournament.summary.statCleanSheets', cls: 'bg-ink text-canvas', tilt: 'rotate-1' },
 ];
 
 function StatBlocks({ stats }: { stats: TournamentSummary['stats'] }) {
+  const t = useT();
   const wins = useCountUp(stats.wins);
   const gf = useCountUp(stats.goalsFor);
   const ga = useCountUp(stats.goalsAgainst);
@@ -184,7 +188,7 @@ function StatBlocks({ stats }: { stats: TournamentSummary['stats'] }) {
             className={`border-2 border-ink shadow-block p-3 sm:p-4 motion-safe:animate-drop ${s.cls}`}
             style={{ animationDelay: `${i * 100}ms` }}
           >
-            <dt className="text-sm font-bold opacity-80">{s.label}</dt>
+            <dt className="text-sm font-bold opacity-80">{t(s.label)}</dt>
             <dd className="font-display text-5xl sm:text-6xl font-black tabular-nums leading-none mt-1">{values[i]}</dd>
           </div>
         </div>

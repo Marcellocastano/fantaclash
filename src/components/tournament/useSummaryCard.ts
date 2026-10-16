@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { TournamentSummary } from '../../domain/tournament';
+import { PLACEMENT_KEY, TournamentSummary } from '../../domain/tournament';
 import { renderSummaryCard } from '../../services/shareCard';
 import { listoneLabel } from '../../services/seasons';
+import { t as defaultT, TFunction } from '../../i18n/translate';
 
 /** PNG della card generato una volta sola: lo stesso file si mostra e si condivide */
 export function useSummaryCard(summary: TournamentSummary) {
@@ -28,7 +29,15 @@ export function useSummaryCard(summary: TournamentSummary) {
 }
 
 /** Descrizione testuale della card (alt dell'immagine e ripiego senza canvas) */
-export function summaryAlt(summary: TournamentSummary): string {
-  const results = summary.matches.map(m => `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst} contro ${m.opponentName}`).join(', ');
-  return `${summary.placementLabel}: ${summary.teamName}, ${summary.tournamentName} ${listoneLabel(summary.seasonId)}. ${results}.`;
+export function summaryAlt(summary: TournamentSummary, tr: TFunction = defaultT): string {
+  const results = summary.matches
+    .map(m => tr('tournament.summary.cardAltMatch', { round: m.roundShort, goalsFor: m.goalsFor, goalsAgainst: m.goalsAgainst, opponent: m.opponentName }))
+    .join(', ');
+  return tr('tournament.summary.cardAlt', {
+    placement: tr(PLACEMENT_KEY[summary.placement]),
+    team: summary.teamName,
+    tournament: summary.tournamentName,
+    listone: listoneLabel(summary.seasonId, tr),
+    results,
+  });
 }

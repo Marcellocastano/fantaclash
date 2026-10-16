@@ -1,71 +1,28 @@
+import { CatalogKey, t } from '../i18n/translate';
+
 /**
  * Domande frequenti sulla home di FantaClash: il testo di /faq/ e i dati
  * strutturati FAQPage condividono questa lista (routes.ts, FaqPage.tsx).
+ * Le coppie q/a risolvono le chiavi del catalogo nella lingua di default.
  */
 export interface FaqItem {
   question: string;
   answer: string;
 }
 
-export const FAQ_ITEMS: FaqItem[] = [
-  {
-    question: 'FantaClash è gratis?',
-    answer:
-      'Sì. FantaClash è un gioco gratuito, senza pubblicità e senza acquisti in app. Non serve creare un account: apri la pagina e giochi.',
-  },
-  {
-    question: 'Serve registrarsi o scaricare qualcosa?',
-    answer:
-      'No. FantaClash funziona nel browser, da computer, tablet e telefono. Il gioco viene salvato sul dispositivo che stai usando: niente account e niente dati raccolti.',
-  },
-  {
-    question: 'Con quali stagioni si gioca?',
-    answer:
-      "Con 23 annate della Serie A, dalla 2003-04 alla 2025-26. Ogni stagione ha il suo listone di 96 giocatori reali, con le statistiche di quell'anno.",
-  },
-  {
-    question: "Cos'è la modalità Legends?",
-    answer:
-      "Un listone speciale con i 96 giocatori più forti delle 23 annate disponibili: una card per giocatore, nella stagione della sua carriera migliore, con overall riscritti da 84 a 99. Si sceglie invece dell'annata nel form iniziale, anche nelle stanze multiplayer.",
-  },
-  {
-    question: "Cos'è l'overall?",
-    answer:
-      "Un punteggio da 70 a 99 che riassume quanto un giocatore ha reso in quella stagione: rendimento in campo (media voto, gol, assist, presenze) più la reputazione nel fantacalcio dell'epoca.",
-  },
-  {
-    question: "Come funziona l'asta?",
-    answer:
-      "Otto squadre con 100 crediti ciascuna si contendono i giocatori, reparto per reparto: portieri, difensori, centrocampisti e attaccanti. Chi chiama il giocatore parte da un credito, gli altri rilanciano; il cronometro torna a 5 secondi a ogni rilancio. Vince chi offre di più.",
-  },
-  {
-    question: 'Quanti giocatori compra ogni squadra?',
-    answer:
-      'Otto, con modulo fisso 1-2-3-2: un portiere, due difensori, tre centrocampisti e due attaccanti. Niente panchina.',
-  },
-  {
-    question: 'Cosa succede dopo l\u2019asta?',
-    answer:
-      "Le otto squadre giocano una coppa a eliminazione diretta: quarti, semifinali e finale, con sorteggio e rigori in caso di pareggio. La tua partita la guardi e la guidi scegliendo lo stile di gioco; se si va ai rigori scegli anche l'ordine dei rigoristi.",
-  },
-  {
-    question: 'Si può giocare la coppa con andata e ritorno?',
-    answer:
-      "Sì: nel form iniziale scegli il formato. Con 'Andata e ritorno' quarti e semifinali si giocano su due partite (finché tutte le andate del turno sono giocate, poi i ritorni) e passa chi ha l'aggregato migliore; a parità si va ai rigori. La finale resta sempre secca. In alternativa c'è la classica gara secca.",
-  },
-  {
-    question: 'Posso giocare contro i miei amici?',
-    answer:
-      "Non ancora: gli avversari sono bot con personalità diverse. Il multiplayer è tra le idee per il futuro, insieme alle partite personalizzate.",
-  },
-  {
-    question: 'La partita si salva se chiudo la pagina?',
-    answer:
-      'Sì, il gioco salva l\u2019asta e il torneo nel browser del dispositivo. Se ricarichi riprendi da dove eri rimasto; una partita del torneo interrotta riparte dal calcio d\u2019inizio.',
-  },
-  {
-    question: 'FantaClash è collegato alla Lega Serie A o a Fantacalcio?',
-    answer:
-      'No. FantaClash è un progetto amatoriale indipendente, senza scopo di lucro. Fantacalcio® e Serie A sono marchi dei rispettivi titolari.',
-  },
+const KEY_PAIRS: [CatalogKey, CatalogKey][] = [
+  ['site.faq.q1', 'site.faq.a1'],
+  ['site.faq.q2', 'site.faq.a2'],
+  ['site.faq.q3', 'site.faq.a3'],
+  ['site.faq.q4', 'site.faq.a4'],
+  ['site.faq.q5', 'site.faq.a5'],
+  ['site.faq.q6', 'site.faq.a6'],
+  ['site.faq.q7', 'site.faq.a7'],
+  ['site.faq.q8', 'site.faq.a8'],
+  ['site.faq.q9', 'site.faq.a9'],
+  ['site.faq.q10', 'site.faq.a10'],
+  ['site.faq.q11', 'site.faq.a11'],
+  ['site.faq.q12', 'site.faq.a12'],
 ];
+
+export const FAQ_ITEMS: FaqItem[] = KEY_PAIRS.map(([q, a]) => ({ question: t(q), answer: t(a) }));

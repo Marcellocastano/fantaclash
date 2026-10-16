@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useT } from '../i18n/I18nProvider';
 import { GameConfig, DifficultyLevel } from '../types';
 import { LEGENDS_ID, loadSeasonIndex, SeasonInfo } from '../services/seasons';
 import { LEAGUE_SIZE, INITIAL_CREDITS } from '../services/auction';
@@ -25,6 +26,7 @@ interface SetupFormProps {
  * `?modalita=legends` preseleziona Legends, `?annata=` l'annata.
  */
 export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
+  const t = useT();
   // Valori casuali solo dopo il montaggio: il primo disegno coincide con l'HTML pre-renderizzato
   const [teamName, setTeamName] = useState('');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('normale');
@@ -61,13 +63,13 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
         if (cancelled) return;
         setSeasons([]);
         setSeasonsError(
-          err instanceof Error ? err.message : 'Impossibile caricare l\'elenco delle stagioni'
+          err instanceof Error ? err.message : t('setup.error.indexLoad')
         );
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   // L'album di destra segue il listone scelto (Legends ha il suo documento)
   const listoneId = mode === 'legends' ? LEGENDS_ID : season;
@@ -82,20 +84,20 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     const newErrors: Record<string, string> = {};
 
     if (!teamName.trim()) {
-      newErrors.teamName = 'Il nome della squadra è obbligatorio';
+      newErrors.teamName = t('setup.error.nameRequired');
     } else if (teamName.trim().length < 3) {
-      newErrors.teamName = 'Il nome deve avere almeno 3 caratteri';
+      newErrors.teamName = t('setup.error.nameShort');
     } else if (teamName.trim().length > MAX_TEAM_NAME_LENGTH) {
-      newErrors.teamName = `Il nome non può superare i ${MAX_TEAM_NAME_LENGTH} caratteri`;
+      newErrors.teamName = t('setup.error.nameLong', { max: MAX_TEAM_NAME_LENGTH });
     }
 
     if (mode === 'classic' && !season) {
-      newErrors.season = 'Seleziona una stagione';
+      newErrors.season = t('setup.error.seasonRequired');
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [teamName, season, mode]);
+  }, [teamName, season, mode, t]);
 
   /**
    * Gestisce l'invio del form
@@ -116,20 +118,20 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
     } catch (err) {
       setErrors(prev => ({
         ...prev,
-        submit: err instanceof Error ? err.message : 'Errore nel caricamento dei dati',
+        submit: err instanceof Error ? err.message : t('setup.error.dataLoad'),
       }));
     } finally {
       setSubmitting(false);
     }
-  }, [teamName, difficulty, listoneId, format, submitting, validateForm, onSubmit]);
+  }, [teamName, difficulty, listoneId, format, submitting, validateForm, onSubmit, t]);
 
   const seasonsReady = mode === 'legends' || (seasons !== null && seasons.length > 0 && !seasonsError);
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" aria-label="Inizia a giocare">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6" aria-label={t('setup.formLabel')}>
       {/* Nome squadra con generatore */}
       <div>
         <label htmlFor="teamName" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">
-          La tua squadra
+          {t('setup.teamLabel')}
         </label>
         <div className="relative">
           <input
@@ -138,15 +140,15 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
             value={teamName}
             maxLength={MAX_TEAM_NAME_LENGTH + 10}
             onChange={(e) => setTeamName(e.target.value)}
-            placeholder="Es. FC Campioni"
+            placeholder={t('setup.teamPlaceholder')}
             className={`input-field pr-10 sm:pr-12 py-2 sm:py-3 font-display text-xl sm:text-2xl font-extrabold ${errors.teamName ? 'input-error' : ''}`}
           />
           {/* Generatore discreto dentro il campo: il dado giallo resta solo per l'annata */}
           <button
             type="button"
             onClick={() => setTeamName(current => randomTeamName(current))}
-            title="Genera un nome"
-            aria-label="Genera un nome"
+            title={t('setup.generateName')}
+            aria-label={t('setup.generateName')}
             className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 text-ink-muted hover:text-ink transition-colors duration-150 focus-visible:outline outline-2 outline-pitch"
           >
             <Icon name="reset" className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -157,7 +159,7 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
 
       {/* Listone: Classica o Legends */}
       <div>
-        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Listone</p>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">{t('setup.listone')}</p>
         <ListoneModePicker value={mode} onChange={setMode} disabled={submitting} />
       </div>
 
@@ -165,12 +167,12 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
       <div>
         {mode === 'classic' ? (
           <>
-            <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Annata del listone</p>
+            <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">{t('setup.seasonLabel')}</p>
             {seasons !== null && seasons.length > 0 && !seasonsError ? (
               <SeasonPicker seasons={seasons} value={season} onChange={setSeason} disabled={submitting} />
             ) : (
               <p className="border-2 border-ink px-4 py-5 text-ink-muted">
-                {seasonsError ?? 'Caricamento stagioni…'}
+                {seasonsError ?? t('setup.loadingSeasons')}
               </p>
             )}
             {seasonsError && <p className="mt-2 text-sm text-danger">{seasonsError}</p>}
@@ -182,9 +184,9 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
             <div className="relative flex items-center gap-3">
               <Icon name="trophy" className="w-9 h-9 sm:w-11 sm:h-11 text-highlight shrink-0" />
               <div className="min-w-0">
-                <p className="font-display text-2xl sm:text-3xl font-black text-highlight leading-none">HALL OF FAME</p>
+                <p className="font-display text-2xl sm:text-3xl font-black text-highlight leading-none">{t('setup.hallOfFame')}</p>
                 <p className="mt-1 text-xs sm:text-sm text-canvas/75 leading-snug">
-                  96 leggende delle 23 annate · una card per giocatore, nella sua stagione migliore · overall fino a 99
+                  {t('setup.hallOfFameSub')}
                 </p>
               </div>
             </div>
@@ -194,13 +196,13 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
 
       {/* Formato della coppa */}
       <div>
-        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Coppa</p>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">{t('setup.cupLabel')}</p>
         <CupFormatPicker value={format} onChange={setFormat} disabled={submitting} />
       </div>
 
       {/* Difficoltà */}
       <div>
-        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">Bot avversari</p>
+        <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5 sm:mb-2">{t('setup.botsLabel')}</p>
         <DifficultyPicker value={difficulty} onChange={setDifficulty} disabled={submitting} />
       </div>
 
@@ -210,16 +212,16 @@ export function SetupForm({ onSubmit, onSeasonChange }: SetupFormProps) {
           disabled={submitting || !seasonsReady}
           className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5"
         >
-          {submitting ? 'Caricamento…' : (
+          {submitting ? t('common.loading') : (
             <>
-              Gioca
+              {t('common.play')}
               <Icon name="arrow" className="w-5 h-5 sm:w-7 sm:h-7" />
             </>
           )}
         </button>
         {errors.submit && <p className="mt-2 text-sm text-danger">{errors.submit}</p>}
         <p className="mt-3 text-xs sm:text-sm text-ink-muted leading-relaxed">
-          {LEAGUE_SIZE} squadre (tu + {LEAGUE_SIZE - 1} bot) · {INITIAL_CREDITS} crediti · rosa da 8, modulo 1-2-3-2
+          {t('setup.hint', { teams: LEAGUE_SIZE, bots: LEAGUE_SIZE - 1, credits: INITIAL_CREDITS })}
         </p>
       </div>
     </form>

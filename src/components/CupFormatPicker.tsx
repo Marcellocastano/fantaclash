@@ -1,16 +1,10 @@
 import { TournamentFormat } from '../domain/tournament';
+import { useT } from '../i18n/I18nProvider';
+import { CatalogKey } from '../i18n/translate';
 
-const FORMAT_OPTIONS: { value: TournamentFormat; label: string; description: string }[] = [
-  {
-    value: 'double',
-    label: 'Andata e ritorno',
-    description: 'Quarti e semifinali su due partite, finale secca: fino a 5 partite. A parità di gol complessivi, rigori.',
-  },
-  {
-    value: 'single',
-    label: 'Gara secca',
-    description: 'Una partita per turno: dentro o fuori, come le coppe di una volta.',
-  },
+const FORMAT_OPTIONS: { value: TournamentFormat; label: CatalogKey; description: CatalogKey }[] = [
+  { value: 'double', label: 'setup.format.double.label', description: 'setup.format.double.desc' },
+  { value: 'single', label: 'setup.format.single.label', description: 'setup.format.single.desc' },
 ];
 
 interface CupFormatPickerProps {
@@ -21,10 +15,11 @@ interface CupFormatPickerProps {
 
 /** Selettore del formato della coppa, stile DifficultyPicker */
 export function CupFormatPicker({ value, onChange, disabled }: CupFormatPickerProps) {
+  const t = useT();
   const selected = FORMAT_OPTIONS.find(o => o.value === value);
   return (
     <div>
-      <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label="Formato della coppa">
+      <div className="grid grid-cols-2 border-2 border-ink" role="radiogroup" aria-label={t('setup.format.group')}>
         {FORMAT_OPTIONS.map((option, i) => (
           <button
             key={option.value}
@@ -37,11 +32,11 @@ export function CupFormatPicker({ value, onChange, disabled }: CupFormatPickerPr
               i > 0 ? 'border-l-2 border-ink' : ''
             } ${value === option.value ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
           >
-            {option.label}
+            {t(option.label)}
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selected?.description}</p>
+      <p className="mt-2 text-xs sm:text-sm text-ink-soft">{selected && t(selected.description)}</p>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { ReactNode, useState } from 'react';
+import { useT } from '../i18n/I18nProvider';
+import { CatalogKey } from '../i18n/translate';
 import { MULTIPLAYER_ENABLED } from '../config';
 import { GameConfig, Player } from '../types';
 import { Icon } from './Icon';
@@ -30,22 +32,22 @@ const SAMPLE_PLAYER: Player = {
 };
 
 /** Il regolamento in cifre, come su un tabellone */
-const NUMBERS: { value: string; label: string }[] = [
-  { value: '8', label: 'squadre' },
-  { value: '100', label: 'crediti a testa' },
-  { value: '8', label: 'giocatori in rosa' },
-  { value: '5"', label: 'per rilanciare' },
-  { value: '1-2-3-2', label: 'il modulo' },
+const NUMBERS: { value: string; label: CatalogKey }[] = [
+  { value: '8', label: 'landing.numbers.teams' },
+  { value: '100', label: 'landing.numbers.credits' },
+  { value: '8', label: 'landing.numbers.roster' },
+  { value: '5"', label: 'landing.numbers.bid' },
+  { value: '1-2-3-2', label: 'landing.numbers.module' },
 ];
 
 /** Regole come figurine: il numero grande sta al posto dell'overall, il colore è quello di una fascia */
 const TILTS = ['-rotate-1', 'rotate-1', '-rotate-2', 'rotate-2'];
 
-const RULES: { value: string; unit: string; term: string; text: string; tier: Tier; tilt: string }[] = [
-  { value: '5"', unit: 'per rilancio', term: 'Asta', text: 'Per reparti, dai portieri agli attaccanti. Si parte da 1 credito e ogni rilancio riporta il timer a 5 secondi. Tieni almeno 1 credito per ogni posto libero.', tier: 'bronze', tilt: '-rotate-1' },
-  { value: '96', unit: 'giocatori', term: 'Listone', text: "I giocatori veri dell'annata scelta — oppure i 96 più forti di sempre in modalità Legends.", tier: 'silver', tilt: 'rotate-1' },
-  { value: '7', unit: 'avversari', term: 'Bot', text: "Ognuno ha una personalità d'asta: c'è chi punta ai big e chi aspetta l'affare.", tier: 'gold', tilt: '-rotate-1' },
-  { value: "90'", unit: 'più i rigori', term: 'Partita', text: "Contano qualità, forma del giorno, reparti e stile scelto. A gara secca il pari va ai rigori; su andata e ritorno conta l'aggregato.", tier: 'elite', tilt: 'rotate-1' },
+const RULES: { value: string; unit: CatalogKey; term: CatalogKey; text: CatalogKey; tier: Tier; tilt: string }[] = [
+  { value: '5"', unit: 'landing.rules.auction.unit', term: 'landing.rules.auction.term', text: 'landing.rules.auction.text', tier: 'bronze', tilt: '-rotate-1' },
+  { value: '96', unit: 'landing.rules.listone.unit', term: 'landing.rules.listone.term', text: 'landing.rules.listone.text', tier: 'silver', tilt: 'rotate-1' },
+  { value: '7', unit: 'landing.rules.bots.unit', term: 'landing.rules.bots.term', text: 'landing.rules.bots.text', tier: 'gold', tilt: '-rotate-1' },
+  { value: "90'", unit: 'landing.rules.match.unit', term: 'landing.rules.match.term', text: 'landing.rules.match.text', tier: 'elite', tilt: 'rotate-1' },
 ];
 
 /**
@@ -53,6 +55,7 @@ const RULES: { value: string; unit: string; term: string; text: string; tier: Ti
  * integra il form per iniziare a giocare.
  */
 export function Landing({ onSubmit }: LandingProps) {
+  const t = useT();
   const [season, setSeason] = useState<string | null>(null);
   return (
     <div className="flex-1 flex flex-col">
@@ -68,17 +71,17 @@ export function Landing({ onSubmit }: LandingProps) {
               </span>
 
               <div className="p-5 sm:p-8 lg:pr-12">
-                <p className="font-semibold text-ink-soft">Serie A · 23 annate, dal 2003-04 al 2025-26</p>
+                <p className="font-semibold text-ink-soft">{t('landing.kicker')}</p>
                 <h1 className="mt-3">
                   <span className="block font-display text-2xl md:text-3xl font-extrabold text-ink leading-tight">
-                    L'asta del fantacalcio nostalgico
+                    {t('landing.titleSmall')}
                   </span>
                   <span className="block font-display text-5xl sm:text-7xl md:text-8xl font-black leading-[0.85] mt-2 break-words">
                     FANTA<span className="text-pitch">CLASH</span>
                   </span>
                 </h1>
                 <p className="text-lg text-ink-soft mt-5">
-                  Sfida 7 bot per i campioni della stagione che scegli, costruisci il tuo 1-2-3-2 e portalo fino alla finale.
+                  {t('landing.heroSub')}
                 </p>
 
                 {/* Etichetta dell'album: il form */}
@@ -90,14 +93,14 @@ export function Landing({ onSubmit }: LandingProps) {
 
                 {MULTIPLAYER_ENABLED && (
                   <div className="mt-4 border-2 border-ink bg-canvas p-3 sm:p-4">
-                    <p className="font-display font-extrabold text-ink">Multiplayer — gioca con gli amici</p>
-                    <p className="text-sm text-ink-soft mt-1">Una stanza, un link, l’asta in diretta.</p>
+                    <p className="font-display font-extrabold text-ink">{t('landing.mp.title')}</p>
+                    <p className="text-sm text-ink-soft mt-1">{t('landing.mp.sub')}</p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <a href="/multiplayer/?vista=crea" className="btn-primary text-center text-sm sm:text-base py-2">
-                        Crea stanza
+                        {t('landing.mp.create')}
                       </a>
                       <a href="/multiplayer/?vista=entra" className="btn-ghost text-center text-sm sm:text-base py-2">
-                        Entra con codice
+                        {t('landing.mp.join')}
                       </a>
                     </div>
                   </div>
@@ -114,15 +117,15 @@ export function Landing({ onSubmit }: LandingProps) {
         {/* Come si gioca: anteprime vere delle tre fasi */}
         <section id="come-si-gioca" className="scroll-mt-20">
           <div className="max-w-[1250px] mx-auto px-4 py-20">
-            <h2 className="font-display text-6xl font-black text-ink leading-none">Come si gioca</h2>
+            <h2 className="font-display text-6xl font-black text-ink leading-none">{t('landing.howTo.title')}</h2>
             <div className="grid grid-cols-12 gap-x-0 gap-y-8 sm:gap-x-8 mt-12">
-              <Preview className="col-span-12 lg:col-span-7 lg:row-span-2" n="1" title="Asta" text="A turno si chiama un giocatore. Rilancia, resisti allo scadere e prenditi i migliori.">
+              <Preview className="col-span-12 lg:col-span-7 lg:row-span-2" n="1" title={t('landing.howTo.auction.title')} text={t('landing.howTo.auction.text')}>
                 <AuctionPreview />
               </Preview>
-              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="2" title="Sorteggio" text="Le 8 rose finiscono nella boccia: quarti, semifinali e finale. Secca, o andata e ritorno come in Champions.">
+              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="2" title={t('landing.howTo.draw.title')} text={t('landing.howTo.draw.text')}>
                 <DrawPreview />
               </Preview>
-              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title="Partita" text="Scegli lo stile, guarda la partita e, se serve, vinci ai rigori.">
+              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title={t('landing.howTo.match.title')} text={t('landing.howTo.match.text')}>
                 <MatchPreview />
               </Preview>
             </div>
@@ -135,7 +138,7 @@ export function Landing({ onSubmit }: LandingProps) {
             <dl className="max-w-[1250px] mx-auto px-4 grid grid-cols-2 sm:grid-cols-5">
               {NUMBERS.map((n, i) => (
                 <div key={n.label} className={`py-8 px-4 text-center border-canvas/15 ${i ? 'sm:border-l-2' : ''}`}>
-                  <dt className="sr-only">{n.label}</dt>
+                  <dt className="sr-only">{t(n.label)}</dt>
                   {/* Altezza fissa e cifre allineate in basso: le etichette stanno sulla stessa riga */}
                   <dd
                     className={`h-14 flex items-end justify-center font-display font-black text-highlight leading-none tabular-nums whitespace-nowrap ${
@@ -144,28 +147,28 @@ export function Landing({ onSubmit }: LandingProps) {
                   >
                     {n.value}
                   </dd>
-                  <dd className="text-sm font-semibold text-canvas/75 mt-2">{n.label}</dd>
+                  <dd className="text-sm font-semibold text-canvas/75 mt-2">{t(n.label)}</dd>
                 </div>
               ))}
             </dl>
           </div>
           <div className="max-w-[1250px] mx-auto px-4 py-20">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="font-display text-6xl font-black text-ink leading-none">Le regole in breve</h2>
+              <h2 className="font-display text-6xl font-black text-ink leading-none">{t('landing.rules.title')}</h2>
             </div>
             <ul className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
               {RULES.map(r => {
-                const t = TIER_CLASSES[r.tier];
+                const tier = TIER_CLASSES[r.tier];
                 const elite = r.tier === 'elite';
                 return (
-                  <li key={r.term} className={`relative ${t.bg} ${t.ink} border-2 border-ink shadow-block p-5 ${r.tilt}`}>
+                  <li key={r.term} className={`relative ${tier.bg} ${tier.ink} border-2 border-ink shadow-block p-5 ${r.tilt}`}>
                     {elite && <span className="absolute inset-1.5 border border-tier-elite-ink/60 pointer-events-none" aria-hidden="true" />}
                     <p className="flex items-baseline gap-2">
                       <span className="font-display text-5xl sm:text-6xl font-black leading-none tabular-nums">{r.value}</span>
-                      <span className={`text-sm font-bold ${t.muted}`}>{r.unit}</span>
+                      <span className={`text-sm font-bold ${tier.muted}`}>{t(r.unit)}</span>
                     </p>
-                    <h3 className={`font-display text-3xl sm:text-4xl font-black leading-none mt-5 ${elite ? 'text-canvas' : ''}`}>{r.term}</h3>
-                    <p className={`mt-3 pt-3 border-t-2 ${elite ? 'border-canvas/25 text-canvas/85' : 'border-ink/20 text-ink'}`}>{r.text}</p>
+                    <h3 className={`font-display text-3xl sm:text-4xl font-black leading-none mt-5 ${elite ? 'text-canvas' : ''}`}>{t(r.term)}</h3>
+                    <p className={`mt-3 pt-3 border-t-2 ${elite ? 'border-canvas/25 text-canvas/85' : 'border-ink/20 text-ink'}`}>{t(r.text)}</p>
                   </li>
                 );
               })}
@@ -176,8 +179,8 @@ export function Landing({ onSubmit }: LandingProps) {
         {/* Guide: i contenuti pubblicati sul sito, nel linguaggio dell'album */}
         <section className="max-w-[1250px] mx-auto px-4 py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="font-display text-6xl font-black text-ink leading-none">Guide al fantacalcio</h2>
-            <p className="font-semibold text-ink-muted">Per arrivare all'asta già allenato.</p>
+            <h2 className="font-display text-6xl font-black text-ink leading-none">{t('landing.guides.title')}</h2>
+            <p className="font-semibold text-ink-muted">{t('landing.guides.sub')}</p>
           </div>
           <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
             {GUIDES.map((g, i) => (
@@ -186,11 +189,11 @@ export function Landing({ onSubmit }: LandingProps) {
                   href={`/guida/${g.slug}/`}
                   className={`block bg-surface border-2 border-ink shadow-block p-5 h-full ${TILTS[i % TILTS.length]} transition-transform duration-150 motion-safe:hover:-translate-y-1 motion-safe:hover:rotate-0`}
                 >
-                  <span className="block font-display text-sm font-extrabold tracking-wide text-whistle-deep">GUIDA</span>
+                  <span className="block font-display text-sm font-extrabold tracking-wide text-whistle-deep">{t('landing.guides.badge')}</span>
                   <span className="block font-display text-3xl font-black text-ink leading-tight mt-2">{g.title}</span>
                   <span className="block text-ink-soft mt-3 pt-3 border-t-2 border-ink/15">{g.description}</span>
                   <span className="mt-4 inline-flex items-center gap-2 font-bold text-pitch-deep underline underline-offset-4 decoration-2 decoration-pitch/40">
-                    Leggi la guida
+                    {t('landing.guides.read')}
                     <Icon name="arrow" className="w-4 h-4" />
                   </span>
                 </a>
@@ -203,13 +206,13 @@ export function Landing({ onSubmit }: LandingProps) {
               >
                 <span className="block font-display text-sm font-extrabold tracking-wide text-highlight">TOP 11</span>
                 <span className="block font-display text-3xl font-black text-canvas leading-tight mt-2">
-                  La formazione ideale di ogni Serie A, anno dopo anno
+                  {t('landing.top11.title')}
                 </span>
                 <span className="block text-canvas/80 mt-3 pt-3 border-t-2 border-canvas/20">
-                  I migliori giocatori di ciascuna delle 23 stagioni, schierati in campo. E se ti viene voglia, rigiochi quell'asta.
+                  {t('landing.top11.sub')}
                 </span>
                 <span className="mt-4 inline-flex items-center gap-2 font-bold text-highlight underline underline-offset-4 decoration-2 decoration-highlight/40">
-                  Sfoglia le annate
+                  {t('landing.top11.cta')}
                   <Icon name="arrow" className="w-4 h-4" />
                 </span>
               </a>
@@ -250,13 +253,14 @@ function Preview({ n, title, text, className, children }: PreviewProps) {
 }
 
 function AuctionPreview() {
+  const t = useT();
   return (
     <div className="w-full max-w-2xl pointer-events-none space-y-3 sm:space-y-4">
       {/* Intestazione del lotto: reparto, numero e timer che si svuota */}
       <div className="flex items-center justify-between gap-3">
-        <span className="font-display text-sm sm:text-base font-extrabold text-ink-muted uppercase tracking-wide">Centrocampisti · lotto 38</span>
+        <span className="font-display text-sm sm:text-base font-extrabold text-ink-muted uppercase tracking-wide">{t('landing.preview.auctionHead')}</span>
         <span className="flex items-center gap-2">
-          <span className="hidden sm:inline text-xs font-bold text-ink-muted">Scade tra</span>
+          <span className="hidden sm:inline text-xs font-bold text-ink-muted">{t('landing.preview.expiresIn')}</span>
           <span className="block w-16 sm:w-28 h-3 border-2 border-ink bg-canvas">
             <span className="block h-full w-2/5 bg-whistle" />
           </span>
@@ -273,7 +277,7 @@ function AuctionPreview() {
         </div>
         <div className="w-36 sm:w-48 space-y-2 sm:space-y-3">
           <div className="bg-highlight border-2 border-ink px-3 sm:px-4 py-2 sm:py-3 shadow-block-sm">
-            <span className="block text-xs sm:text-sm font-bold">Sei in testa</span>
+            <span className="block text-xs sm:text-sm font-bold">{t('landing.preview.leading')}</span>
             <span className="font-display text-5xl sm:text-7xl font-black leading-none tabular-nums">23</span>
             <span className="font-display text-lg sm:text-xl font-extrabold"> Cr</span>
           </div>
@@ -339,9 +343,10 @@ function DrawPreview() {
 }
 
 function MatchPreview() {
+  const t = useT();
   return (
     <div className="w-full max-w-xs bg-pitch-deep text-canvas border-2 border-ink p-4 text-center">
-      <p className="text-xs font-bold text-canvas/80">Finale · rigori</p>
+      <p className="text-xs font-bold text-canvas/80">{t('landing.preview.finalShootout')}</p>
       <p className="font-display text-6xl font-black leading-none tabular-nums mt-1">
         <span className="text-highlight">1</span>
         <span className="text-canvas/40 px-2">-</span>1

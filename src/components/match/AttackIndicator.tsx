@@ -1,3 +1,5 @@
+import { useT } from '../../i18n/I18nProvider';
+
 interface AttackIndicatorProps {
   /** Posizione del pallone dal motore (MatchTick.ball): -1 porta di casa, +1 porta ospite */
   ball: number;
@@ -13,6 +15,7 @@ interface AttackIndicatorProps {
  * poco più di un minuto di riproduzione, così il pallone scorre senza salti.
  */
 export function AttackIndicator({ ball, transitionMs, homeIsUser }: AttackIndicatorProps) {
+  const t = useT();
   const b = Math.max(-1, Math.min(1, ball));
   const pos = 50 + b * 50;
   const attacking = b > 0.05 ? 'home' : b < -0.05 ? 'away' : null;
@@ -25,7 +28,7 @@ export function AttackIndicator({ ball, transitionMs, homeIsUser }: AttackIndica
   const transition = { transitionDuration: `${Math.round(transitionMs * 1.4)}ms`, transitionTimingFunction: 'linear' };
 
   return (
-    <div className="relative h-2 bg-canvas/15" role="img" aria-label={attacking ? `Attacca ${attacking === 'home' ? 'la squadra di casa' : 'la squadra ospite'}` : 'Gioco a centrocampo'}>
+    <div className="relative h-2 bg-canvas/15" role="img" aria-label={attacking ? t(attacking === 'home' ? 'match.indicator.homeAttack' : 'match.indicator.awayAttack') : t('match.indicator.midfield')}>
       {/* Porte e centrocampo */}
       <span className={`absolute left-0 -top-1.5 -bottom-1.5 w-1.5 ${goal && b < 0 ? color : 'bg-canvas/40'}`} />
       <span className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-canvas/40" />

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { formatMinute, LineupPlayer, MatchPlayerPerformance, MatchResult, shortName } from '../../domain/match';
 import { TournamentRound } from '../../domain/tournament';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
 import { OvrBadge } from '../player/OvrBadge';
@@ -19,10 +21,10 @@ interface MatchEndProps {
   exitLabel?: string;
 }
 
-const NEXT_LABEL: Record<TournamentRound, string> = {
-  quarterfinals: 'Avanti: semifinale',
-  semifinals: 'Avanti: finale',
-  final: 'Alla premiazione',
+const NEXT_KEY: Record<TournamentRound, CatalogKey> = {
+  quarterfinals: 'match.end.next.quarterfinals',
+  semifinals: 'match.end.next.semifinals',
+  final: 'match.end.next.final',
 };
 
 const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
@@ -33,26 +35,34 @@ const signed = (x: number) => (x > 0 ? `+${x}` : `${x}`);
  * hai perso.
  */
 export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue, onConclude, exitLabel }: MatchEndProps) {
+  const t = useT();
   // All'andata non c'è un vincitore del confronto: conta solo chi è avanti
   const firstLegDone = leg === 1;
   const won = result.winnerId === userTeamId;
   const champion = !firstLegDone && won && round === 'final';
   const ahead = firstLegDone && result.winnerId === userTeamId;
   const behind = firstLegDone && result.winnerId !== null && result.winnerId !== userTeamId;
-  const headline = firstLegDone ? 'FINE ANDATA' : champion ? 'CAMPIONE!' : won ? 'PASSI IL TURNO' : 'ELIMINATO';
+  const headline = firstLegDone
+    ? t('match.end.firstLeg')
+    : champion
+      ? t('match.end.champion')
+      : won
+        ? t('match.end.advance')
+        : t('match.end.out');
   const subtitle = firstLegDone
-    ? ahead
-      ? 'Vantaggio tuo: il ritorno decide'
-      : behind
-        ? 'Sei sotto: serve rimonta al ritorno'
-        : 'Tutto aperto: si riparte alla pari'
+    ? t(ahead ? 'match.end.aheadSub' : behind ? 'match.end.behindSub' : 'match.end.evenSub')
     : null;
   // Al ritorno: le due gare e l'aggregato sotto il punteggio
   const tieLine =
     leg === 2 && firstLeg
-      ? `Andata ${firstLeg.homeScore}-${firstLeg.awayScore} · Ritorno ${result.homeScore}-${result.awayScore} · Agg. ${
-          firstLeg.homeScore + result.awayScore
-        }-${firstLeg.awayScore + result.homeScore}`
+      ? t('match.end.tieLine', {
+          l1h: firstLeg.homeScore,
+          l1a: firstLeg.awayScore,
+          l2h: result.homeScore,
+          l2a: result.awayScore,
+          ah: firstLeg.homeScore + result.awayScore,
+          aa: firstLeg.awayScore + result.homeScore,
+        })
       : null;
   const userSide = result.homeTeamId === userTeamId ? 'home' : 'away';
   const lineup = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, p]));
@@ -75,7 +85,11 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
         {subtitle && <p className="mt-2 font-bold text-lg opacity-80">{subtitle}</p>}
         <p className="font-display text-2xl sm:text-3xl font-extrabold mt-3 tabular-nums break-words">
           {result.homeName} {result.homeScore}-{result.awayScore} {result.awayName}
-          {result.shootout && <span className="block text-xl">rigori {result.shootout.home}-{result.shootout.away}</span>}
+          {result.shootout && (
+            <span className="block text-xl">
+              {t('match.end.shootoutScore', { home: result.shootout.home, away: result.shootout.away })}
+            </span>
+          )}
         </p>
         {tieLine && <p className="mt-1 text-sm font-semibold tabular-nums opacity-80">{tieLine}</p>}
       </div>
@@ -83,9 +97,9 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
       <div className="grid md:grid-cols-12 gap-10 mt-10">
         {/* Marcatori */}
         <section className="md:col-span-4">
-          <h3 className="section-heading mb-3">Marcatori</h3>
+          <h3 className="section-heading mb-3">{t('match.end.scorers')}</h3>
           <ul className="space-y-2">
-            {goals.length === 0 && <li className="text-ink-muted">Nessun gol nei regolamentari.</li>}
+            {goals.length === 0 && <li className="text-ink-muted">{t('match.end.noGoals')}</li>}
             {goals.map(g => {
               const assist = result.events.find(e => e.type === 'assist' && e.tick === g.tick && e.relatedPlayerId === g.playerId);
               return (
@@ -93,9 +107,9 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
                   <span className="w-12 font-display text-xl font-black tabular-nums text-ink-soft">{formatMinute(g.minute, g.extra)}</span>
                   <span className={`flex-1 ${g.side === userSide ? 'font-bold text-pitch' : 'text-ink'}`}>
                     {name(g.playerId)}
-                    {g.type === 'own_goal' && ' (autogol)'}
-                    {g.isPenalty && ' (rigore)'}
-                    {assist && <span className="block text-sm text-ink-muted font-normal">assist {name(assist.playerId)}</span>}
+                    {g.type === 'own_goal' && ` ${t('match.end.ownGoal')}`}
+                    {g.isPenalty && ` ${t('match.end.pen')}`}
+                    {assist && <span className="block text-sm text-ink-muted font-normal">{t('match.end.assist', { name: name(assist.playerId) })}</span>}
                   </span>
                   <span className="font-display text-xl font-extrabold tabular-nums">
                     {g.score?.home}-{g.score?.away}
@@ -108,13 +122,13 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
 
         {/* MVP */}
         <section className="md:col-span-3">
-          <h3 className="section-heading mb-3">MVP</h3>
+          <h3 className="section-heading mb-3">{t('match.end.mvp')}</h3>
           {mvp && <MvpCard perf={mvp} player={lineup.get(mvp.playerId)} />}
         </section>
 
         {/* Pagella */}
         <section className="md:col-span-5">
-          <h3 className="section-heading mb-3">La tua pagella</h3>
+          <h3 className="section-heading mb-3">{t('match.end.reportCard')}</h3>
           <ul className="divide-y-2 divide-line">
             {userPerf.map(p => (
               <li key={p.playerId} className="flex items-center gap-3 py-1.5">
@@ -128,15 +142,15 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
             ))}
           </ul>
           <p className="flex justify-between text-sm text-ink-muted mt-2">
-            <span>Voto · bonus · fantavoto</span>
-            <span className="tabular-nums">Totale {result.teamPerformance[userSide].toFixed(1)}</span>
+            <span>{t('match.end.cols')}</span>
+            <span className="tabular-nums">{t('match.end.total', { score: result.teamPerformance[userSide].toFixed(1) })}</span>
           </p>
         </section>
       </div>
 
       <div className="mt-12 text-center">
         <button onClick={firstLegDone || won ? onContinue : onConclude} className="btn-cta">
-          {exitLabel ?? (firstLegDone ? 'Avanti: ritorno' : won ? NEXT_LABEL[round] : 'Concludi torneo')}
+          {exitLabel ?? (firstLegDone ? t('match.end.nextLeg') : won ? t(NEXT_KEY[round]) : t('match.end.endTournament'))}
           <Icon name="arrow" className="w-7 h-7" />
         </button>
       </div>
@@ -145,6 +159,7 @@ export function MatchEnd({ result, userTeamId, round, leg, firstLeg, onContinue,
 }
 
 function MvpCard({ perf, player }: { perf: MatchPlayerPerformance; player: LineupPlayer | undefined }) {
+  const t = useT();
   return (
     <div className="panel shadow-block p-4">
       <div className="flex items-center gap-3">
@@ -152,13 +167,13 @@ function MvpCard({ perf, player }: { perf: MatchPlayerPerformance; player: Lineu
         <div className="min-w-0">
           <p className="font-display text-2xl sm:text-3xl font-black leading-none truncate">{shortName(perf.name)}</p>
           <p className="text-sm text-ink-muted mt-1">
-            {perf.goals > 0 && `${perf.goals} gol `}
-            {perf.assists > 0 && `${perf.assists} assist`}
+            {perf.goals > 0 && `${t('match.end.mvpGoals', { n: perf.goals })} `}
+            {perf.assists > 0 && t('match.end.mvpAssists', { n: perf.assists })}
           </p>
         </div>
       </div>
       <p className="mt-4 flex items-baseline justify-between border-t-2 border-line pt-3">
-        <span className="text-sm font-semibold text-ink-muted">Fantavoto</span>
+        <span className="text-sm font-semibold text-ink-muted">{t('match.end.fantasy')}</span>
         <span className="font-display text-5xl font-black tabular-nums leading-none text-pitch">{perf.fantasyScore.toFixed(1)}</span>
       </p>
     </div>

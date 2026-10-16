@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useT } from '../../i18n/I18nProvider';
 import { useRoom } from './RoomProvider';
 
 /** Descrizione del dialogo di uscita dalla stanza (host chiude, altri escono) */
@@ -8,21 +9,22 @@ export function useRoomExit(): {
   confirmLabel: string;
   action: () => void;
 } {
+  const t = useT();
   const room = useRoom();
   return useMemo(() => {
     if (!room.isHost) {
       return {
-        title: 'Uscire dalla stanza?',
-        message: 'Tornerai alla pagina multiplayer. Se la stanza continua potrai rientrare con il codice.',
-        confirmLabel: 'Esci dalla stanza',
+        title: t('room.exit.leaveTitle'),
+        message: t('room.exit.leaveMsg'),
+        confirmLabel: t('room.exit.leaveConfirm'),
         action: () => void room.leave(),
       };
     }
     return {
-      title: 'Chiudere la stanza per tutti?',
-      message: 'La stanza si chiude per ogni partecipante e non sarà possibile riprenderla.',
-      confirmLabel: 'Chiudi la stanza',
+      title: t('room.exit.closeTitle'),
+      message: t('room.exit.closeMsg'),
+      confirmLabel: t('room.exit.closeConfirm'),
       action: () => void room.closeRoom(),
     };
-  }, [room]);
+  }, [room, t]);
 }

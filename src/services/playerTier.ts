@@ -1,3 +1,5 @@
+import type { CatalogKey } from '../i18n/translate';
+
 /**
  * Fasce dell'overall delle card (dati storici: 73-95, mediana 82).
  * Logica condivisa tra UI e card condivisibile.
@@ -13,11 +15,12 @@ export function tierOf(overall: number): Tier {
   return 'bronze';
 }
 
-export const TIER_LABEL: Record<Tier, string> = {
-  bronze: 'Bronzo',
-  silver: 'Argento',
-  gold: 'Oro',
-  elite: 'Fuoriclasse',
+/** Chiavi di catalogo per l'etichetta della fascia */
+export const TIER_KEY: Record<Tier, CatalogKey> = {
+  bronze: 'ui.tiers.bronze',
+  silver: 'ui.tiers.silver',
+  gold: 'ui.tiers.gold',
+  elite: 'ui.tiers.elite',
 };
 
 /** Colori fissi delle fasce (fondo, testo), uguali a tailwind `tier-*` */

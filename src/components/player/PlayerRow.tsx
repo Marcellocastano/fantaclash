@@ -1,4 +1,5 @@
 import { Player } from '../../types';
+import { useT } from '../../i18n/I18nProvider';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { seasonShort } from '../../services/seasons';
 import { splitName } from '../../utils/playerName';
@@ -18,8 +19,9 @@ interface PlayerRowProps {
 
 /** Riga "figurina" del listone: overall per fascia, nome, club, numeri */
 export function PlayerRow({ player, soldTo, selectable, scanning = false, locked = false, onSelect }: PlayerRowProps) {
+  const t = useT();
   const { surname, firstName } = splitName(player.name);
-  const goalLabel = player.role === 'P' ? 'Inv' : 'Gol';
+  const goalLabel = player.role === 'P' ? t('ui.stats.inv') : t('ui.stats.gol');
   const goalValue = player.role === 'P' ? player.cleanSheetProbability ?? 0 : player.goalProbability;
   const body = (
     <>
@@ -39,18 +41,18 @@ export function PlayerRow({ player, soldTo, selectable, scanning = false, locked
           ) : (
             <>
               {player.team}
-              {player.legend && ` ${seasonShort(player.season)}`} · MV {player.avgRating.toFixed(1)} · {goalLabel} {Math.round(goalValue * 100)}%
+              {player.legend && ` ${seasonShort(player.season)}`} · {t('ui.stats.mv')} {player.avgRating.toFixed(1)} · {goalLabel} {Math.round(goalValue * 100)}%
             </>
           )}
         </span>
       </span>
       <span className="text-right shrink-0 leading-none">
         <span className="block font-display text-2xl font-extrabold tabular-nums text-ink">{player.baseValue}</span>
-        <span className="text-xs font-semibold text-ink-muted">valore</span>
+        <span className="text-xs font-semibold text-ink-muted">{t('ui.stats.value')}</span>
       </span>
       {selectable && (
         <span className="hidden group-hover:inline-flex group-focus-visible:inline-flex items-center px-3 py-2 bg-pitch text-on-pitch font-display font-extrabold text-lg leading-none border-2 border-ink">
-          Chiama
+          {t('auction.call')}
         </span>
       )}
     </>

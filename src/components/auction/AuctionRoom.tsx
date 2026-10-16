@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuctionController } from '../../hooks/auctionController';
+import { useT } from '../../i18n/I18nProvider';
+import { CatalogKey, tParts } from '../../i18n/translate';
 import { Player, PlayerRole } from '../../types';
 import { Icon } from '../Icon';
 import { BotThinking } from './BotThinking';
@@ -17,18 +19,18 @@ interface AuctionRoomProps {
   onComplete: () => void;
 }
 
-const ROLE_PLURAL: Record<PlayerRole, string> = {
-  P: 'portieri',
-  D: 'difensori',
-  C: 'centrocampisti',
-  A: 'attaccanti',
+const ROLE_PLURAL: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.pluralLower.P',
+  D: 'ui.roles.pluralLower.D',
+  C: 'ui.roles.pluralLower.C',
+  A: 'ui.roles.pluralLower.A',
 };
 
-const ROLE_SINGULAR: Record<PlayerRole, string> = {
-  P: 'portiere',
-  D: 'difensore',
-  C: 'centrocampista',
-  A: 'attaccante',
+const ROLE_SINGULAR: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.singular.P',
+  D: 'ui.roles.singular.D',
+  C: 'ui.roles.singular.C',
+  A: 'ui.roles.singular.A',
 };
 
 /**
@@ -36,6 +38,7 @@ const ROLE_SINGULAR: Record<PlayerRole, string> = {
  * squadre. Il banco cambia aspetto con lo stato del lotto.
  */
 export function AuctionRoom({ onComplete }: AuctionRoomProps) {
+  const t = useT();
   const a = useAuctionController();
   const { roundState, currentRole, currentPlayer, currentBidderId } = a;
   const [showTeams, setShowTeams] = useState(false);
@@ -89,20 +92,20 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
   const stageTitle =
     roundState === 'idle'
-      ? 'Pronti?'
+      ? t('auction.stage.idle')
       : roundState === 'calling'
-        ? 'Tocca a te'
+        ? t('auction.stage.yourCall')
         : roundState === 'bot_calling'
           ? callerIsHuman
-            ? 'Attendi la chiamata'
-            : 'Chiama un bot'
+            ? t('auction.stage.humanCall')
+            : t('auction.stage.botCall')
           : roundState === 'role_complete'
-            ? 'Reparto chiuso'
+            ? t('auction.stage.roleDone')
             : roundState === 'sold'
               ? isUserWinning
-                ? 'Colpo tuo!'
-                : 'Aggiudicato'
-              : 'All\'asta';
+                ? t('auction.stage.yours')
+                : t('auction.stage.sold')
+              : t('auction.stage.active');
 
   return (
     <div className="flex-1 min-h-0 lg:h-[calc(100vh-4rem)] w-full max-w-[1600px] mx-auto px-4">
@@ -130,18 +133,26 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
               {a.allowSimulation ? (
                 <>
                   <p className="text-xl text-ink-soft">
-                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>. Chiami tu per primo.
+                    {tParts(t, 'auction.startFrom', { role: '' }, 'role').map((part, i) => (
+                      i === 1
+                        ? <span key="role" className="font-bold text-ink">{t(ROLE_PLURAL[currentRole])}</span>
+                        : <span key="pre">{part}</span>
+                    ))}
                   </p>
                   <button onClick={a.startAuction} className="btn-cta mt-10">
-                    Inizia l'asta
+                    {t('auction.start')}
                   </button>
                 </>
               ) : (
                 <>
                   <p className="text-xl text-ink-soft">
-                    Si parte dai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
+                    {tParts(t, 'auction.startFromWait', { role: '' }, 'role').map((part, i) => (
+                      i === 1
+                        ? <span key="role" className="font-bold text-ink">{t(ROLE_PLURAL[currentRole])}</span>
+                        : <span key="pre">{part}</span>
+                    ))}
                   </p>
-                  <p className="text-sm text-ink-muted mt-4">In attesa che l'asta cominci…</p>
+                  <p className="text-sm text-ink-muted mt-4">{t('auction.waitStart')}</p>
                 </>
               )}
             </div>
@@ -150,15 +161,19 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
           {roundState === 'calling' && a.isUserCallingTurn && (
             <div className="py-6">
               <p className="text-2xl text-ink leading-snug">
-                Scegli un <span className="font-bold text-pitch">{ROLE_SINGULAR[currentRole]}</span> dal listone e chiamalo all'asta.
+                {tParts(t, 'auction.pickRole', { role: '' }, 'role').map((part, i) => (
+                  i === 1
+                    ? <span key="role" className="font-bold text-pitch">{t(ROLE_SINGULAR[currentRole])}</span>
+                    : <span key="pre">{part}</span>
+                ))}
               </p>
               <p className="flex items-center gap-2 text-ink-muted mt-4">
                 <Icon name="arrow" className="w-5 h-5 text-pitch" />
-                Clicca su una riga: parte da 1 credito.
+                {t('auction.clickRow')}
               </p>
               {callSeconds != null && (
                 <p className="font-display text-2xl font-extrabold text-ink mt-4">
-                  Hai {callSeconds}s per scegliere
+                  {t('auction.timeToCall', { seconds: callSeconds })}
                 </p>
               )}
             </div>
@@ -168,11 +183,11 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
             (callerIsHuman ? (
               <div className="py-6" aria-live="polite">
                 <p className="font-display text-3xl font-extrabold text-ink leading-snug">
-                  {callerMeta?.nickname ?? caller.name} sta scegliendo…
+                  {t('auction.humanCalling', { name: callerMeta?.nickname ?? caller.name })}
                   {callSeconds != null && ` ${callSeconds}s`}
                 </p>
                 <p className="text-ink-soft mt-2">
-                  Sta chiamando un {ROLE_SINGULAR[currentRole]} all'asta.
+                  {t('auction.humanCallingRole', { role: t(ROLE_SINGULAR[currentRole]) })}
                 </p>
               </div>
             ) : (
@@ -182,15 +197,19 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
           {roundState === 'role_complete' && (
             <div className="py-10 text-center">
               <p className="text-xl text-ink-soft">
-                Ora tocca ai <span className="font-bold text-ink">{ROLE_PLURAL[currentRole]}</span>.
+                {tParts(t, 'auction.nextRole', { role: '' }, 'role').map((part, i) => (
+                  i === 1
+                    ? <span key="role" className="font-bold text-ink">{t(ROLE_PLURAL[currentRole])}</span>
+                    : <span key="pre">{part}</span>
+                ))}
               </p>
               {a.allowSimulation ? (
                 <AdvanceButton auto={autoAdvance} onClick={a.continueToNextRole} className="btn-cta mt-10">
-                  Avanti
+                  {t('auction.next')}
                   <Icon name="arrow" className="w-7 h-7" />
                 </AdvanceButton>
               ) : (
-                <p className="text-sm text-ink-muted mt-10">Si passa al reparto successivo da soli…</p>
+                <p className="text-sm text-ink-muted mt-10">{t('auction.autoNextRole')}</p>
               )}
             </div>
           )}
@@ -236,7 +255,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
           {streamer && <StreamerCamZone inline />}
           <button onClick={() => setShowTeams(s => !s)} className="lg:hidden btn-ghost w-full mb-4">
             <Icon name="teams" className="w-5 h-5" />
-            {showTeams ? 'Nascondi squadre' : 'Mostra squadre'}
+            {showTeams ? t('auction.hideTeams') : t('auction.showTeams')}
           </button>
           <div className={`${showTeams ? '' : 'hidden'} lg:block lg:h-full`}>
             <TeamsRecap

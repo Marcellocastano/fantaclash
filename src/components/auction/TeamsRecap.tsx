@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../../i18n/I18nProvider';
 import type { TeamMeta } from '../../hooks/auctionController';
 import { Team, PlayerRole, ROSTER_REQUIREMENTS } from '../../types';
 import { shortName } from '../../utils/playerName';
@@ -27,12 +28,13 @@ const ROLE_FILL: Record<PlayerRole, string> = {
 
 /** Rose delle 8 squadre: crediti e 8 caselle colorate per ruolo */
 export function TeamsRecap({ teams, userTeamId, currentBidderId, callerId, teamMeta }: TeamsRecapProps) {
+  const t = useT();
   const [expanded, setExpanded] = useState<string | null>(userTeamId);
   const sorted = [...teams].sort((a, b) => (a.isUserTeam ? -1 : b.isUserTeam ? 1 : a.name.localeCompare(b.name)));
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="font-display text-3xl font-extrabold text-ink leading-none pb-3 border-b-2 border-ink">Squadre</h2>
+      <h2 className="font-display text-3xl font-extrabold text-ink leading-none pb-3 border-b-2 border-ink">{t('auction.recap.title')}</h2>
       <ul className="flex-1 overflow-y-auto divide-y-2 divide-line">
         {sorted.map(team => (
           <TeamRow
@@ -62,8 +64,9 @@ interface TeamRowProps {
 }
 
 function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle }: TeamRowProps) {
+  const t = useT();
   const byRole = (role: PlayerRole) => team.roster.filter(o => o.player.role === role);
-  const status = isBidding ? (isUser ? 'in testa' : 'rilancia') : isCalling ? 'chiama' : null;
+  const status = isBidding ? (isUser ? t('auction.recap.leading') : t('auction.recap.bidding')) : isCalling ? t('auction.recap.calling') : null;
   const tone = isBidding ? (isUser ? 'bg-highlight' : 'bg-whistle/15') : isCalling ? 'bg-surface' : '';
 
   return (
@@ -77,7 +80,7 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
           <TeamBadge team={team} size="md" />
           <span className="flex-1 min-w-0">
             <span className={`block font-semibold truncate ${isUser ? 'text-pitch' : 'text-ink'}`} title={team.name}>
-              {isUser ? 'La tua squadra' : team.name}
+              {isUser ? t('auction.recap.yourTeam') : team.name}
             </span>
             {status ? (
               <span className={`text-xs font-bold ${isBidding && !isUser ? 'text-whistle-deep' : 'text-ink'}`}>{status}</span>
@@ -105,13 +108,13 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
           </span>
           <span className="text-right leading-none shrink-0">
             <span className="block font-display text-2xl font-extrabold tabular-nums text-ink">{team.credits}</span>
-            <span className="text-[11px] font-semibold text-ink-muted">crediti</span>
+            <span className="text-[11px] font-semibold text-ink-muted">{t('auction.recap.credits')}</span>
           </span>
           <Icon name="chevron" className={`w-4 h-4 text-ink-muted transition-transform duration-150 ${expanded ? 'rotate-180' : ''}`} />
         </span>
 
         {/* Una casella per ogni posto in rosa */}
-        <span className="flex gap-1 mt-2.5" aria-label={`${team.roster.length} giocatori su 8`}>
+        <span className="flex gap-1 mt-2.5" aria-label={t('auction.recap.rosterCount', { count: team.roster.length, total: 8 })}>
           {ROLE_ORDER.flatMap(role =>
             Array.from({ length: ROSTER_REQUIREMENTS[role].total }, (_, i) => (
               <span
@@ -126,7 +129,7 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
 
       {expanded && (
         <div className="px-2 pb-3 space-y-1 motion-safe:animate-reveal">
-          {team.roster.length === 0 && <p className="text-sm text-ink-muted">Ancora nessun giocatore.</p>}
+          {team.roster.length === 0 && <p className="text-sm text-ink-muted">{t('auction.recap.empty')}</p>}
           {ROLE_ORDER.flatMap(role =>
             byRole(role).map(o => (
               <div key={o.player.id} className="flex items-center gap-2 text-sm">
@@ -138,7 +141,7 @@ function TeamRow({ team, isUser, isBidding, isCalling, meta, expanded, onToggle 
           )}
           {team.roster.length > 0 && (
             <p className="flex justify-between text-xs text-ink-muted pt-1 border-t border-line">
-              <span>Spesi</span>
+              <span>{t('auction.recap.spent')}</span>
               <span className="font-semibold tabular-nums">{team.initialCredits - team.credits} Cr</span>
             </p>
           )}

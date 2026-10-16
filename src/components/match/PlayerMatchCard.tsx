@@ -1,4 +1,5 @@
 import { LineupPlayer, MatchPlayerPerformance, shortName } from '../../domain/match';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { OvrBadge } from '../player/OvrBadge';
 
@@ -20,6 +21,7 @@ interface PlayerMatchCardProps {
  * eventi.
  */
 export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, showRating, compact = false }: PlayerMatchCardProps) {
+  const t = useT();
   const ratingTone = !p ? 'text-ink' : p.rating >= 7 ? 'text-pitch' : p.rating <= 5.5 ? 'text-danger' : 'text-ink';
   return (
     <div
@@ -42,7 +44,7 @@ export function PlayerMatchCard({ player, performance: p, highlighted, sentOff, 
           {p && p.redCards > 0 && <Icon name="card" className="w-3 h-3 text-card-red" />}
           {p && p.injured && <Icon name="injury" className="w-3 h-3 text-ink-muted" />}
           {showRating && p && (
-            <span className={`ml-auto font-display font-black ${compact ? 'text-sm' : 'text-base'} tabular-nums leading-none ${ratingTone}`} title="Voto live">
+            <span className={`ml-auto font-display font-black ${compact ? 'text-sm' : 'text-base'} tabular-nums leading-none ${ratingTone}`} title={t('match.end.liveRating')}>
               {p.rating.toFixed(1)}
             </span>
           )}

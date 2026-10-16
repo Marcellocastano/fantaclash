@@ -1,85 +1,67 @@
 import { buildRoutes } from '../routes';
 import { ContentLayout } from '../ContentLayout';
 import { H2, PageTitle, Prose, Ul, Li } from '../blocks';
+import { useT } from '../../i18n/I18nProvider';
 
 const route = buildRoutes().find(r => r.kind === 'privacy')!;
 
 /** Privacy policy: nessun account, salvataggio nel browser, analytics anonime */
 export function PrivacyPage() {
+  const t = useT();
   return (
     <ContentLayout breadcrumbs={route.breadcrumbs}>
       <article>
-        <PageTitle kicker="Privacy">Privacy e dati</PageTitle>
+        <PageTitle kicker={t('site.privacy.kicker')}>{t('site.privacy.title')}</PageTitle>
         <Prose>
-          <p>
-            FantaClash è un gioco che gira interamente nel browser, senza account e senza raccolta di dati personali.
-            Questa pagina spiega cosa viene salvato e dove.
-          </p>
+          <p>{t('site.privacy.intro')}</p>
 
-          <H2>Dati di gioco</H2>
+          <H2>{t('site.privacy.hData')}</H2>
           <p>
-            Il nome della squadra, la stagione scelta, lo stato dell'asta e il tabellone del torneo vengono salvati
-            nel <strong>localStorage</strong> del tuo browser, sul dispositivo che stai usando. Il gioco non invia
-            questi dati a nessun server: servono solo per riprendere la partita da dove eri rimasto quando chiudi e
-            riapri la pagina.
+            {t('site.privacy.d1a')}<strong>{t('site.privacy.d1b')}</strong>{t('site.privacy.d1c')}
           </p>
           <Ul>
             <Li>
-              <strong>Salvataggio automatico</strong>: a ogni turno il gioco scrive lo stato nel browser. Puoi
-              cancellarlo ricominciando da capo con "Nuova partita" dal menu.
+              <strong>{t('site.privacy.d2b')}</strong>{t('site.privacy.d2t')}
             </Li>
             <Li>
-              <strong>Nessun account</strong>: non serve registrarsi e non viene chiesta la email.
+              <strong>{t('site.privacy.d3b')}</strong>{t('site.privacy.d3t')}
             </Li>
             <Li>
-              <strong>Nessun cookie di profilazione</strong>: non ci sono banner, non ci sono tracker di terze parti.
+              <strong>{t('site.privacy.d4b')}</strong>{t('site.privacy.d4t')}
             </Li>
           </Ul>
 
-          <H2>Multiplayer</H2>
+          <H2>{t('site.privacy.hMp')}</H2>
           <p>
-            Le stanze multiplayer usano <strong>Supabase Realtime</strong> (<a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">informativa di Supabase</a>)
-            per far passare in tempo reale i messaggi tra i browser dei partecipanti a una stanza.
+            {t('site.privacy.m1a')}<strong>{t('site.privacy.m1b')}</strong> (
+            <a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">{t('site.privacy.m1link')}</a>
+            {t('site.privacy.m1c')}
           </p>
           <Ul>
             <Li>
-              <strong>Cosa passa</strong>: nickname, nome squadra, un identificativo casuale generato nel browser e
-              le azioni di gioco (chiamate, rilanci, scelte tattiche).
+              <strong>{t('site.privacy.m2b')}</strong>{t('site.privacy.m2t')}
             </Li>
             <Li>
-              <strong>Nessun database</strong>: FantaClash non salva queste informazioni in nessun database. Lo stato
-              della stanza vive nel browser dell'host (con un salvataggio locale per riprendere la stanza dopo una
-              ricarica, cancellato quando la chiude) e ogni partecipante conserva nel proprio browser un
-              identificativo per rientrare.
+              <strong>{t('site.privacy.m3b')}</strong>{t('site.privacy.m3t')}
             </Li>
             <Li>
-              <strong>Dati tecnici</strong>: come per ogni connessione internet, Supabase può trattare dati tecnici
-              come l'indirizzo IP secondo la propria informativa.
+              <strong>{t('site.privacy.m4b')}</strong>{t('site.privacy.m4t')}
             </Li>
             <Li>
-              <strong>Nessun account</strong>: non serve registrarsi e non viene chiesto nessun dato di contatto.
+              <strong>{t('site.privacy.m5b')}</strong>{t('site.privacy.m5t')}
             </Li>
           </Ul>
 
-          <H2>Analytics</H2>
+          <H2>{t('site.privacy.hAnalytics')}</H2>
           <p>
-            Per capire come viene usato il sito misuriamo le visite con <strong>GoatCounter</strong>, uno strumento
-            senza cookie: conta le pagine visitate e gli eventi del gioco (inizio asta, torneo completato), senza
-            identificare l'utente e senza profilazione. Le statistiche sono pubbliche solo a noi.
+            {t('site.privacy.an1a')}<strong>{t('site.privacy.an1b')}</strong>{t('site.privacy.an1c')}
           </p>
 
-          <H2>Font esterne e contenuti</H2>
-          <p>
-            Il sito non carica font, script o immagini da servizi di terze parti durante la navigazione. Le icone e i
-            contenuti sono ospitati su questo stesso dominio. L'unico collegamento esterno, se attivo, è il pulsante
-            di supporto che rimanda alla pagina di donazione del progetto.
-          </p>
+          <H2>{t('site.privacy.hExt')}</H2>
+          <p>{t('site.privacy.e1')}</p>
 
-          <H2>Contatti</H2>
-          <p>
-            Per segnalare un problema o chiedere la cancellazione di un contenuto pubblicato su FantaClash puoi
-            scrivere tramite il pulsante di supporto nel footer della pagina.
-          </p>
+          <H2>{t('site.privacy.hContact')}</H2>
+          <p>{t('site.privacy.c1')}</p>
         </Prose>
       </article>
     </ContentLayout>

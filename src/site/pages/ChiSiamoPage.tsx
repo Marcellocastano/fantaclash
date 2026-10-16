@@ -1,6 +1,7 @@
 import { buildRoutes } from '../routes';
 import { ContentLayout } from '../ContentLayout';
 import { GameCta, H2, PageTitle, Prose } from '../blocks';
+import { useT } from '../../i18n/I18nProvider';
 
 const route = buildRoutes().find(r => r.kind === 'about')!;
 
@@ -9,26 +10,16 @@ const route = buildRoutes().find(r => r.kind === 'about')!;
  * organizzazione).
  */
 export function ChiSiamoPage() {
+  const t = useT();
   return (
     <ContentLayout breadcrumbs={route.breadcrumbs}>
       <article>
-        <PageTitle kicker="Chi siamo">FantaClash</PageTitle>
+        <PageTitle kicker={t('site.about.kicker')}>FantaClash</PageTitle>
         <Prose>
-          <p>
-            FantaClash è un progetto amatoriale costruito da appassionati del fantacalcio ad asta. L'idea è semplice:
-            le stagioni storiche della Serie A come campo da gioco, e un'asta contro il computer per mettere alla
-            prova la propria strategia senza aspettare agosto.
-          </p>
-          <H2>Com'è fatto</H2>
-          <p>
-            Il gioco gira interamente nel browser: niente account, niente pubblicità, nessun dato personale raccolto.
-            Le stagioni usano listoni ricostruiti dalle statistiche storiche, con un punteggio di overall che riassume
-            rendimento in campo e reputazione nel fantacalcio di quell'anno.
-          </p>
-          <p>
-            Il codice è open source e il sito non ha scopo di lucro. Se ti va di dare una mano con un suggerimento o
-            una segnalazione, il pulsante di supporto è nel piè di pagina.
-          </p>
+          <p>{t('site.about.p1')}</p>
+          <H2>{t('site.about.h1')}</H2>
+          <p>{t('site.about.p2')}</p>
+          <p>{t('site.about.p3')}</p>
           <GameCta />
         </Prose>
       </article>

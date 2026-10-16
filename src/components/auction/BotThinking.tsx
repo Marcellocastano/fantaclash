@@ -1,19 +1,21 @@
 import { BotArchetype, PlayerRole, Team } from '../../types';
+import { useT } from '../../i18n/I18nProvider';
+import { CatalogKey } from '../../i18n/translate';
 import { TeamBadge } from '../tournament/TeamBadge';
 
-const ARCHETYPE: Record<BotArchetype, { name: string; line: string }> = {
-  aggressivo: { name: "L'Aggressivo", line: 'punta dritto ai big' },
-  parsimonioso: { name: 'Il Parsimonioso', line: 'cerca un affare' },
-  stratega: { name: 'Lo Stratega', line: 'fa due conti sui crediti' },
-  cacciatore: { name: 'Il Cacciatore', line: 'ha già in mente il suo pupillo' },
-  equilibrato: { name: "L'Equilibrato", line: 'valuta con calma' },
+const ARCHETYPE: Record<BotArchetype, { name: CatalogKey; line: CatalogKey }> = {
+  aggressivo: { name: 'auction.bot.archetype.aggressivo.name', line: 'auction.bot.archetype.aggressivo.line' },
+  parsimonioso: { name: 'auction.bot.archetype.parsimonioso.name', line: 'auction.bot.archetype.parsimonioso.line' },
+  stratega: { name: 'auction.bot.archetype.stratega.name', line: 'auction.bot.archetype.stratega.line' },
+  cacciatore: { name: 'auction.bot.archetype.cacciatore.name', line: 'auction.bot.archetype.cacciatore.line' },
+  equilibrato: { name: 'auction.bot.archetype.equilibrato.name', line: 'auction.bot.archetype.equilibrato.line' },
 };
 
-const ROLE_SINGULAR: Record<PlayerRole, string> = {
-  P: 'portiere',
-  D: 'difensore',
-  C: 'centrocampista',
-  A: 'attaccante',
+const ROLE_SINGULAR: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.singular.P',
+  D: 'ui.roles.singular.D',
+  C: 'ui.roles.singular.C',
+  A: 'ui.roles.singular.A',
 };
 
 /**
@@ -22,6 +24,7 @@ const ROLE_SINGULAR: Record<PlayerRole, string> = {
  * l'evidenziatore scorre sui candidati (vedi useBotScanner).
  */
 export function BotThinking({ team, role }: { team: Team | undefined; role: PlayerRole }) {
+  const t = useT();
   const archetype = ARCHETYPE[team?.botConfig?.archetype ?? 'equilibrato'];
   return (
     <div className="py-6" aria-live="polite">
@@ -35,7 +38,7 @@ export function BotThinking({ team, role }: { team: Team | undefined; role: Play
         <div className="min-w-0">
           <p className="font-display text-4xl font-extrabold text-ink leading-none truncate">{team?.name}</p>
           <p className="text-ink-soft mt-2">
-            <span className="font-semibold text-ink">{archetype.name}</span> {archetype.line}
+            <span className="font-semibold text-ink">{t(archetype.name)}</span> {t(archetype.line)}
           </p>
         </div>
       </div>
@@ -55,7 +58,7 @@ export function BotThinking({ team, role }: { team: Team | undefined; role: Play
           </span>
         ))}
       </div>
-      <p className="text-center font-display text-2xl font-extrabold text-ink-soft mt-4">Sta scegliendo un {ROLE_SINGULAR[role]}…</p>
+      <p className="text-center font-display text-2xl font-extrabold text-ink-soft mt-4">{t('auction.bot.choosing', { role: t(ROLE_SINGULAR[role]) })}</p>
     </div>
   );
 }

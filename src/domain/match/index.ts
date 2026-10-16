@@ -11,7 +11,7 @@ export {
   simulateMatch,
 } from './matchEngine';
 export type { MatchSchedule, SimulateMatchInput } from './matchEngine';
-export { shortName, formatMinute, formatTick, TACTIC_LABELS } from './matchEvents';
+export { shortName, formatMinute, formatTick, TACTIC_KEY } from './matchEvents';
 export { computePerformances, pickMvpAndWorst } from './matchRatings';
 export type { PlaybackPhase, PlaybackState, LiveTeamStats } from './matchPlayback';
 export {

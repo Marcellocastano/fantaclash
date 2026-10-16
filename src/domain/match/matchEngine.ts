@@ -11,7 +11,7 @@ import {
   rosterRating,
   weightedRating,
 } from '../teams/teamStrength';
-import { shortName, text } from './matchEvents';
+import { EventDesc, shortName, text } from './matchEvents';
 import { computePerformances, pickMvpAndWorst } from './matchRatings';
 import { computeBallPath } from './matchBall';
 import {
@@ -294,7 +294,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
   const emit = (
     type: MatchEventType,
     side: MatchSide,
-    description: string,
+    desc: EventDesc,
     impact: number,
     extra: Partial<MatchEvent> = {}
   ) => {
@@ -307,7 +307,9 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       teamId: sides[side].id,
       side,
       impact,
-      description,
+      descKey: desc.key,
+      descParams: desc.params,
+      descVariant: desc.variant,
       ...extra,
     });
   };
@@ -526,7 +528,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
     const rng = createRng(hashSeed(seed, 'tick', t));
     const discipline = createRng(hashSeed(seed, 'discipline', t));
     const textRng = createRng(hashSeed(seed, 'text', t));
-    if (t === 1) emit('kickoff', 'home', "Calcio d'inizio!", 0);
+    if (t === 1) emit('kickoff', 'home', { key: 'match.event.kickoff' }, 0);
     applyTactics(t);
 
     for (const s of [sides.home, sides.away]) {
@@ -565,7 +567,7 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
 
     if (t === schedule.halfTimeTick) {
       const sc = score();
-      emit('half_time', 'home', `Fine primo tempo: ${home.name} ${sc.home} - ${sc.away} ${away.name}.`, 2);
+      emit('half_time', 'home', { key: 'match.event.halfTime', params: { home: home.name, away: away.name, hs: sc.home, as: sc.away } }, 2);
     }
     snapshot(homeControl);
   }
@@ -586,8 +588,11 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
       'shootout_start',
       'home',
       aggregate
-        ? `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}, aggregato ${aggregate.home} - ${aggregate.away}. Si va ai rigori!`
-        : `Fine dei tempi regolamentari: ${fullTime.home} - ${fullTime.away}. Si va ai rigori!`,
+        ? {
+            key: 'match.event.shootout.startAgg',
+            params: { hs: fullTime.home, as: fullTime.away, aggHome: aggregate.home, aggAway: aggregate.away },
+          }
+        : { key: 'match.event.shootout.start', params: { hs: fullTime.home, as: fullTime.away } },
       2
     );
     shootout = runShootout();
@@ -600,14 +605,18 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
         ? 'home'
         : 'away';
   const winnerName = winnerSide ? sides[winnerSide].name : home.name;
-  const fullTimeText = shootout
-    ? `Fischio finale. ${winnerName} vince ai rigori ${Math.max(shootout.home, shootout.away)} - ${Math.min(shootout.home, shootout.away)}.`
+  const scoreParams = { home: home.name, away: away.name, hs: fullTime.home, as: fullTime.away };
+  const fullTimeDesc: EventDesc = shootout
+    ? {
+        key: 'match.event.fullTime.shootout',
+        params: { winner: winnerName, soHome: Math.max(shootout.home, shootout.away), soAway: Math.min(shootout.home, shootout.away) },
+      }
     : leg === 1
-      ? `Fine dell'andata: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`
+      ? { key: 'match.event.fullTime.firstLeg', params: scoreParams }
       : aggregate
-        ? `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}. Passa ${winnerName} (${aggregate.home} - ${aggregate.away} nell'insieme delle due gare).`
-        : `Fischio finale: ${home.name} ${fullTime.home} - ${fullTime.away} ${away.name}.`;
-  emit('full_time', winnerSide ?? 'home', fullTimeText, 3);
+        ? { key: 'match.event.fullTime.aggregate', params: { ...scoreParams, winner: winnerName, aggHome: aggregate.home, aggAway: aggregate.away } }
+        : { key: 'match.event.fullTime.single', params: scoreParams };
+  emit('full_time', winnerSide ?? 'home', fullTimeDesc, 3);
 
   function runShootout(): ShootoutResult {
     const rng = createRng(hashSeed(seed, 'shootout'));
@@ -649,11 +658,11 @@ export function simulateMatch({ home, away, seed, options = {} }: SimulateMatchI
         const gk = keeper(sides[opp(side)]);
         const gkPen = gk ? penaltySaveSkill(gk.player) : 0.05;
         let scored: boolean;
-        let line: string;
+        let line: EventDesc;
         if (!kicker) {
           // Squadra senza rigoristi: il calcio è sempre un errore
           scored = false;
-          line = 'Nessun rigorista disponibile.';
+          line = { key: 'match.event.shootout.noKicker' };
         } else {
           const p =
             round >= SHOOTOUT_MAX_ROUNDS

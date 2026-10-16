@@ -1,4 +1,6 @@
 import { formatMinute, MatchEvent } from '../../domain/match';
+import { eventDescription } from '../../i18n/eventText';
+import { useT } from '../../i18n/I18nProvider';
 import { EventIcon } from './EventIcon';
 
 interface MatchFeedProps {
@@ -10,6 +12,7 @@ interface MatchFeedProps {
 
 /** Cronaca: eventi dal più recente, i momenti forti in evidenza */
 export function MatchFeed({ events, userSide, hiddenId }: MatchFeedProps) {
+  const t = useT();
   const visible = events
     .filter(e => (e.type !== 'miss' || e.impact > 0) && e.id !== hiddenId && !(hiddenId && e.type === 'full_time'))
     .reverse();
@@ -17,7 +20,7 @@ export function MatchFeed({ events, userSide, hiddenId }: MatchFeedProps) {
     // px-2 compensa il -mx-2 delle righe evidenziate: lo sfondo arriva al
     // bordo senza creare uno scorrimento orizzontale nella lista
     <ul className="divide-y-2 divide-line max-h-[560px] overflow-y-auto px-2" aria-live="polite">
-      {visible.length === 0 && <li className="py-4 text-ink-muted">La partita sta per iniziare.</li>}
+      {visible.length === 0 && <li className="py-4 text-ink-muted">{t('match.event.feedEmpty')}</li>}
       {visible.map(e => {
         const strong = e.impact >= 3;
         return (
@@ -27,7 +30,7 @@ export function MatchFeed({ events, userSide, hiddenId }: MatchFeedProps) {
             </span>
             <EventIcon event={e} className="w-5 h-5 mt-0.5" />
             <span className={`min-w-0 break-words ${strong ? 'font-bold' : 'text-ink-soft'} ${strong && e.side === userSide ? 'text-pitch' : strong ? 'text-ink' : ''}`}>
-              {e.description}
+              {eventDescription(e, t)}
             </span>
           </li>
         );

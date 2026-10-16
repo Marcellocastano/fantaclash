@@ -1,8 +1,9 @@
 import { PlayerRole, Team } from '../../types';
 import { SITE_URL } from '../../config';
 import { playerOverall } from '../../services/auction/teamStrength';
+import { CatalogKey, t } from '../../i18n/translate';
 import { shortName } from '../match/matchEvents';
-import { legResult, matchLegs, ROUND_SHORT, userPath } from './bracket';
+import { legResult, matchLegs, ROUND_SHORT_KEY, userPath } from './bracket';
 import { TournamentRound, TournamentState } from './tournamentTypes';
 
 /**
@@ -12,11 +13,11 @@ import { TournamentRound, TournamentState } from './tournamentTypes';
 
 export type Placement = 'campione' | 'finalista' | 'semifinalista' | 'quarti';
 
-export const PLACEMENT_LABELS: Record<Placement, string> = {
-  campione: 'Campione',
-  finalista: 'Finalista',
-  semifinalista: 'Semifinalista',
-  quarti: 'Eliminato ai quarti',
+export const PLACEMENT_KEY: Record<Placement, CatalogKey> = {
+  campione: 'tournament.placement.campione',
+  finalista: 'tournament.placement.finalista',
+  semifinalista: 'tournament.placement.semifinalista',
+  quarti: 'tournament.placement.quarti',
 };
 
 export interface SummaryMatch {
@@ -71,7 +72,7 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
     matches.push({
       matchId: m.id,
       round: m.round,
-      roundShort: ROUND_SHORT[m.round],
+      roundShort: t(ROUND_SHORT_KEY[m.round]),
       opponentName: lastHome ? last.awayName : last.homeName,
       goalsFor: results.reduce((s, r) => s + userFor(r), 0),
       goalsAgainst: results.reduce((s, r) => s + userAgainst(r), 0),
@@ -119,7 +120,7 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
     seasonId: state.seasonId,
     teamName: user?.name ?? '',
     placement,
-    placementLabel: PLACEMENT_LABELS[placement],
+    placementLabel: t(PLACEMENT_KEY[placement]),
     matches,
     scorers: [...goals.entries()]
       .map(([playerId, n]) => ({ playerId, name: playerName(playerId), goals: n }))
@@ -149,11 +150,25 @@ export function buildTournamentSummary(state: TournamentState, teams: Team[]): T
 export function shareText(summary: TournamentSummary): string {
   const results = summary.matches
     .map(m => {
-      const so = m.shootout ? ` (${m.shootout.for}-${m.shootout.against} rig.)` : '';
+      const so = m.shootout ? t('tournament.summary.shareShootout', { for: m.shootout.for, against: m.shootout.against }) : '';
       const legs = m.legs ? ` (${m.legs.map(l => `${l.for}-${l.against}`).join(', ')})` : '';
-      return `${m.roundShort} ${m.goalsFor}-${m.goalsAgainst}${legs}${so} vs ${m.opponentName}`;
+      return t('tournament.summary.shareMatch', {
+        round: m.roundShort,
+        goalsFor: m.goalsFor,
+        goalsAgainst: m.goalsAgainst,
+        legs,
+        shootout: so,
+        opponent: m.opponentName,
+      });
     })
     .join(', ');
   const cup = summary.seasonId === 'legends' ? 'Serie A Legends' : `Serie A ${summary.seasonId}`;
-  return `${summary.teamName}: ${summary.placementLabel.toLowerCase()} della ${summary.tournamentName} (${cup}). ${results}. #FantaClash ${SITE_URL}/`;
+  return t('tournament.summary.shareText', {
+    team: summary.teamName,
+    placement: summary.placementLabel.toLowerCase(),
+    tournament: summary.tournamentName,
+    cup,
+    results,
+    url: SITE_URL,
+  });
 }

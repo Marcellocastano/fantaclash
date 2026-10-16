@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { SUPPORT_URL } from '../../config';
 import { useSoundMuted } from '../../hooks/useSound';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { LogoMark } from '../Logo';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -33,6 +34,7 @@ export interface AppNavbarProps {
  * (nuova partita con conferma, supporto).
  */
 export function AppNavbar({ step = null, context, links, onNewGame, sessionExit }: AppNavbarProps) {
+  const t = useT();
   const [muted, setMuted] = useSoundMuted();
   const [streamer, setStreamer] = useStreamerMode();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,9 +45,9 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
   // dalla stanza; fuori sessione resta un link alla home.
   const logoSession = sessionExit ?? (onNewGame
     ? {
-        title: 'Nuova partita?',
-        message: 'La partita in corso verrà cancellata: asta, rose e torneo ripartono da zero.',
-        confirmLabel: 'Cancella e ricomincia',
+        title: t('ui.nav.newGameTitle'),
+        message: t('ui.nav.newGameMessage'),
+        confirmLabel: t('ui.nav.newGameConfirm'),
         action: onNewGame,
       }
     : undefined);
@@ -83,7 +85,7 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
 
         {step !== null && <JourneyTrail step={step} />}
         {links && (
-          <nav aria-label="Sezioni" className="hidden md:flex items-center gap-6 ml-4">
+          <nav aria-label={t('ui.nav.sections')} className="hidden md:flex items-center gap-6 ml-4">
             {links.map(l => (
               <a key={l.href} href={l.href} className="font-semibold text-canvas/80 hover:text-highlight transition-colors duration-150">
                 {l.label}
@@ -99,17 +101,17 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
               href={SUPPORT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Supporta FantaClash su Ko-fi"
+              aria-label={t('ui.nav.supportAria')}
               className="flex items-center gap-2 px-3 py-1.5 bg-highlight text-on-highlight font-display font-extrabold text-lg leading-none border-2 border-ink shadow-block-sm hover:brightness-110 transition-all duration-150"
             >
               <Icon name="heart" className="w-5 h-5 text-whistle motion-safe:animate-heartbeat" />
-              <span className="hidden sm:inline">Supporta</span>
+              <span className="hidden sm:inline">{t('ui.nav.support')}</span>
             </a>
           )}
           <button
             onClick={() => setMuted(!muted)}
-            aria-label={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
-            title={muted ? 'Attiva i suoni' : 'Disattiva i suoni'}
+            aria-label={muted ? t('ui.nav.soundOn') : t('ui.nav.soundOff')}
+            title={muted ? t('ui.nav.soundOn') : t('ui.nav.soundOff')}
             className="p-2 text-canvas hover:text-highlight transition-colors duration-150 focus-visible:outline outline-2 outline-highlight"
           >
             <Icon name={muted ? 'mute' : 'sound'} className="w-6 h-6" />
@@ -117,7 +119,7 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setMenuOpen(o => !o)}
-              aria-label="Menu"
+              aria-label={t('ui.nav.menu')}
               aria-expanded={menuOpen}
               className="p-2 text-canvas hover:text-highlight transition-colors duration-150 focus-visible:outline outline-2 outline-highlight"
             >
@@ -135,12 +137,12 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
                     className="w-full flex items-center gap-3 px-4 py-3 font-semibold text-left hover:bg-surface"
                   >
                     <Icon name="reset" className="w-5 h-5" />
-                    Nuova partita
+                    {t('ui.nav.newGame')}
                   </button>
                 )}
-                <div className="px-4 py-3 border-t-2 border-line" role="group" aria-label="Modalità streamer">
+                <div className="px-4 py-3 border-t-2 border-line" role="group" aria-label={t('ui.nav.streamerMode')}>
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold">Modalità streamer</span>
+                    <span className="font-semibold">{t('ui.nav.streamerMode')}</span>
                     <span className="flex gap-1">
                       {([true, false] as const).map(v => (
                         <button
@@ -152,13 +154,13 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
                             streamer === v ? 'bg-ink text-canvas' : 'text-ink-soft hover:text-ink'
                           }`}
                         >
-                          {v ? 'Sì' : 'No'}
+                          {v ? t('common.yes') : t('common.no')}
                         </button>
                       ))}
                     </span>
                   </div>
                   <p className="text-xs text-ink-muted mt-1.5">
-                    Libera l'angolo in alto a destra per la webcam (solo su schermi larghi).
+                    {t('ui.nav.streamerHint')}
                   </p>
                 </div>
               </div>
@@ -185,13 +187,14 @@ export function AppNavbar({ step = null, context, links, onNewGame, sessionExit 
 
 /** Asta › Sorteggio › Quarti › Semifinale › Finale */
 function JourneyTrail({ step }: { step: number }) {
+  const t = useT();
   return (
-    <ol aria-label="Percorso di gioco" className="hidden lg:flex items-center gap-1 font-display text-lg font-bold">
-      {JOURNEY_STEPS.map((label, i) => {
+    <ol aria-label={t('ui.nav.gameJourney')} className="hidden lg:flex items-center gap-1 font-display text-lg font-bold">
+      {JOURNEY_STEPS.map((labelKey, i) => {
         const done = i < step;
         const current = i === step;
         return (
-          <li key={label} className="flex items-center gap-1">
+          <li key={labelKey} className="flex items-center gap-1">
             {i > 0 && <span className={`w-5 h-0.5 ${done || current ? 'bg-highlight' : 'bg-canvas/25'}`} aria-hidden="true" />}
             <span
               aria-current={current ? 'step' : undefined}
@@ -200,7 +203,7 @@ function JourneyTrail({ step }: { step: number }) {
               }`}
             >
               {done && <Icon name="check" className="w-3.5 h-3.5" />}
-              {label}
+              {t(labelKey)}
             </span>
           </li>
         );

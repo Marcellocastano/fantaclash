@@ -1,6 +1,7 @@
 import { TournamentSummary, shareText } from '../domain/tournament';
 import type { Placement, SummaryMatch } from '../domain/tournament';
 import { PlayerRole } from '../types';
+import { CatalogKey, t } from '../i18n/translate';
 import { isLegends } from './seasons';
 import { TIER_COLORS, tierOf } from './playerTier';
 
@@ -38,10 +39,10 @@ const PLACEMENT_COLOR: Record<Placement, string> = {
   quarti: CREAM,
 };
 
-const ROUND_NAME: Record<SummaryMatch['round'], string> = {
-  quarterfinals: 'Quarti',
-  semifinals: 'Semifinale',
-  final: 'Finale',
+const ROUND_NAME: Record<SummaryMatch['round'], CatalogKey> = {
+  quarterfinals: 'tournament.summary.cardRound.quarterfinals',
+  semifinals: 'tournament.summary.cardRound.semifinals',
+  final: 'tournament.summary.cardRound.final',
 };
 
 /** Colonne della formazione sul mini campo (attacco verso destra), in % */
@@ -189,23 +190,23 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
     ctx.setLineDash([]);
     ctx.fillStyle = MUTED;
     ctx.font = `700 28px ${DISPLAY}`;
-    ctx.fillText(ROUND_NAME[round], x + 22, y + 44);
+    ctx.fillText(t(ROUND_NAME[round]), x + 22, y + 44);
     ctx.font = `400 24px ${SANS}`;
-    ctx.fillText('Non giocata', x + 22, y + h - 30);
+    ctx.fillText(t('tournament.summary.cardNotPlayed'), x + 22, y + h - 30);
     return;
   }
   block(ctx, x, y, w, h, CREAM);
   ctx.fillStyle = MUTED;
   ctx.font = `800 28px ${DISPLAY}`;
-  ctx.fillText(ROUND_NAME[round], x + 22, y + 44);
+  ctx.fillText(t(ROUND_NAME[round]), x + 22, y + 44);
   ctx.fillStyle = INK;
-  ctx.fillText(fitFont(ctx, `vs ${m.opponentName}`, w - 44, 600, SANS, 24, 16), x + 22, y + 80);
+  ctx.fillText(fitFont(ctx, t('tournament.summary.cardVs', { opponent: m.opponentName }), w - 44, 600, SANS, 24, 16), x + 22, y + 80);
   if (m.legs) {
     // Confronto a due gare: il punteggio in grande è l'aggregato
     ctx.fillStyle = MUTED;
     ctx.font = `600 20px ${SANS}`;
     const [a, r] = m.legs;
-    ctx.fillText(`And. ${a.for}-${a.against} · Rit. ${r ? `${r.for}-${r.against}` : '—'}`, x + 22, y + 112);
+    ctx.fillText(t('tournament.summary.cardLegs', { l1f: a.for, l1a: a.against, l2f: r?.for ?? '—', l2a: r?.against ?? '—' }), x + 22, y + 112);
     ctx.fillStyle = INK;
   }
   ctx.font = `900 92px ${DISPLAY}`;
@@ -214,7 +215,7 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
     ctx.fillStyle = MUTED;
     ctx.font = `700 22px ${SANS}`;
     ctx.textAlign = 'right';
-    ctx.fillText(`rig. ${m.shootout.for}-${m.shootout.against}`, x + w - 22, y + 44);
+    ctx.fillText(t('tournament.summary.cardShootout', { for: m.shootout.for, against: m.shootout.against }), x + w - 22, y + 44);
     ctx.textAlign = 'left';
   }
   // Timbro V/P
@@ -232,7 +233,7 @@ function drawTicket(ctx: Ctx, x: number, y: number, w: number, h: number, round:
   ctx.font = `900 48px ${DISPLAY}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(m.won ? 'V' : 'P', 0, 3);
+  ctx.fillText(t(m.won ? 'tournament.summary.cardWon' : 'tournament.summary.cardLost'), 0, 3);
   ctx.restore();
 }
 
@@ -300,7 +301,7 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas non disponibile');
+  if (!ctx) throw new Error(t('errors.canvasUnavailable'));
 
   const champion = summary.placement === 'campione';
   const accent = PLACEMENT_COLOR[summary.placement];
@@ -364,12 +365,12 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
     ctx.fillText(fitFont(ctx, value, maxW, 900, DISPLAY, 60, 36), x, footY + 60);
   };
   stat(M, 'MVP', summary.mvp?.name ?? '-', 400);
-  stat(M + 440, 'Gol fatti / subiti', `${summary.stats.goalsFor} / ${summary.stats.goalsAgainst}`, 260);
-  stat(M + 720, 'Vittorie', `${summary.stats.wins} su ${summary.stats.played}`, 240);
+  stat(M + 440, t('tournament.summary.cardGoals'), `${summary.stats.goalsFor} / ${summary.stats.goalsAgainst}`, 260);
+  stat(M + 720, t('tournament.summary.cardWins'), t('tournament.summary.cardWinsValue', { wins: summary.stats.wins, played: summary.stats.played }), 240);
   if (summary.scorers.length) {
     ctx.fillStyle = INK;
     ctx.fillText(
-      fitFont(ctx, `Marcatori: ${summary.scorers.slice(0, 4).map(s => `${s.name} ${s.goals}`).join(' · ')}`, W - 2 * M - 260, 600, SANS, 26, 18),
+      fitFont(ctx, t('tournament.summary.cardScorers', { list: summary.scorers.slice(0, 4).map(s => `${s.name} ${s.goals}`).join(' · ') }), W - 2 * M - 260, 600, SANS, 26, 18),
       M,
       footY + 120
     );
@@ -386,7 +387,7 @@ export async function renderSummaryCard(summary: TournamentSummary): Promise<Blo
   ctx.strokeRect(8, 8, W - 16, H - 16);
 
   return new Promise((resolve, reject) =>
-    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('Esportazione fallita'))), 'image/png')
+    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error(t('errors.exportFailed')))), 'image/png')
   );
 }
 

@@ -1,3 +1,4 @@
+import { useT } from '../i18n/I18nProvider';
 import { Icon } from './Icon';
 
 export type ListoneMode = 'classic' | 'legends';
@@ -14,6 +15,7 @@ interface ListoneModePickerProps {
  * landing e la creazione/impostazioni della stanza.
  */
 export function ListoneModePicker({ value, onChange, disabled }: ListoneModePickerProps) {
+  const t = useT();
   const tile = (mode: ListoneMode, title: string, subtitle: string) => {
     const selected = value === mode;
     return (
@@ -38,9 +40,9 @@ export function ListoneModePicker({ value, onChange, disabled }: ListoneModePick
   };
 
   return (
-    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Listone">
-      {tile('classic', 'Classica', "Un'annata a scelta, 96 giocatori veri")}
-      {tile('legends', 'Legends', 'I più forti di 23 annate, overall fino a 99')}
+    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label={t('setup.mode.group')}>
+      {tile('classic', t('setup.mode.classic.title'), t('setup.mode.classic.sub'))}
+      {tile('legends', t('setup.mode.legends.title'), t('setup.mode.legends.sub'))}
     </div>
   );
 }

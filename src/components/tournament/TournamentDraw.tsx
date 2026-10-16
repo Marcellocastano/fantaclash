@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { drawOrder, TournamentState, TournamentTeam } from '../../domain/tournament';
 import { playSound } from '../../services/sound';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { useT } from '../../i18n/I18nProvider';
 import { TeamBadge } from './TeamBadge';
 
 interface TournamentDrawProps {
@@ -38,6 +39,7 @@ type Stage = 'intro' | 'rise' | 'show' | 'user' | 'outro';
  * L'ordine è deciso al montaggio e registrato nello stato solo alla fine.
  */
 export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone }: TournamentDrawProps) {
+  const t = useT();
   const [order] = useState(() => fixedOrder ?? drawOrder(tournament, Math.random));
   const [placed, setPlaced] = useState(0);
   const [stage, setStage] = useState<Stage>('intro');
@@ -98,11 +100,9 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
       <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
         <div>
           <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
-          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">Il sorteggio</h1>
+          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">{t('tournament.draw.title')}</h1>
           <p className="text-lg text-ink-soft mt-3">
-            {tournament.format === 'double'
-              ? '8 squadre, eliminazione diretta: quarti e semifinali andata e ritorno, finale secca. Aggregato pari? Rigori.'
-              : '8 squadre, eliminazione diretta. Pareggio? Si va ai rigori.'}
+            {t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
           </p>
         </div>
       </div>
@@ -146,18 +146,18 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
             )}
           </div>
           <p className="text-center font-display text-lg sm:text-2xl font-extrabold text-ink-soft mt-4 sm:mt-6 min-h-[2rem]" aria-live="polite">
-            {stage === 'intro' ? 'Si mescola…' : stage === 'outro' ? 'Sorteggio completato' : `Estrazione ${Math.min(placed + 1, 8)} di 8`}
+            {stage === 'intro' ? t('tournament.draw.mixing') : stage === 'outro' ? t('tournament.draw.done') : t('tournament.draw.pick', { n: Math.min(placed + 1, 8), total: 8 })}
           </p>
         </div>
 
         {/* Quarti */}
         {/* Streamer: i quarti scendono sotto il riquadro della webcam */}
         <div className={`col-span-12 md:col-span-7 ${streamer ? 'lg:pt-16 2xl:pt-24' : ''}`}>
-          <h2 className="section-heading mb-6">Quarti di finale</h2>
+          <h2 className="section-heading mb-6">{t('tournament.bracket.quartersFull')}</h2>
           <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
             {[0, 1, 2, 3].map(i => (
               <div key={i} className={`border-2 ${i === userPair && placed > i * 2 + 1 ? 'border-pitch shadow-block-sm' : 'border-ink'}`}>
-                <p className="px-3 py-1.5 text-sm font-bold text-ink-muted border-b-2 border-line">Quarto {i + 1}</p>
+                <p className="px-3 py-1.5 text-sm font-bold text-ink-muted border-b-2 border-line">{t('tournament.draw.quarter', { n: i + 1 })}</p>
                 <Slot team={placed > i * 2 ? team(order[i * 2]) : undefined} />
                 <Slot team={placed > i * 2 + 1 ? team(order[i * 2 + 1]) : undefined} />
               </div>
@@ -169,7 +169,7 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
       {stage !== 'outro' && (
         <div className="flex justify-center mt-10">
           <button onClick={skip} className="btn-ghost">
-            Salta il sorteggio
+            {t('tournament.draw.skip')}
           </button>
         </div>
       )}
@@ -178,7 +178,7 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
       {stage === 'user' && opponent && (
         <div className="fixed inset-x-0 top-1/3 z-40 bg-highlight border-y-4 border-ink py-8 motion-safe:animate-stamp" role="status">
           <div className="max-w-[1300px] mx-auto px-4 flex flex-wrap items-center justify-center gap-6 text-on-highlight">
-            <span className="font-display text-3xl font-extrabold">Il tuo avversario:</span>
+            <span className="font-display text-3xl font-extrabold">{t('tournament.draw.yourOpponent')}</span>
             <TeamBadge team={opponent} size="lg" />
             <span className="font-display text-4xl sm:text-6xl font-black leading-none break-words">{opponent.name}</span>
           </div>
@@ -201,6 +201,7 @@ function Ball({ team, big = false }: { team: TournamentTeam | undefined; big?: b
 }
 
 function Slot({ team }: { team: TournamentTeam | undefined }) {
+  const t = useT();
   return (
     <div className="flex items-center gap-3 px-3 py-2.5 min-h-[3.75rem]">
       {team ? (
@@ -213,7 +214,7 @@ function Slot({ team }: { team: TournamentTeam | undefined }) {
       ) : (
         <>
           <TeamBadge team={undefined} size="md" />
-          <span className="text-ink-faint">Da sorteggiare</span>
+          <span className="text-ink-faint">{t('tournament.draw.toDraw')}</span>
         </>
       )}
     </div>

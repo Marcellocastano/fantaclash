@@ -1,9 +1,11 @@
 import { Player } from '../../types';
+import { useT } from '../../i18n/I18nProvider';
+import { TFunction } from '../../i18n/translate';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { seasonShort } from '../../services/seasons';
 import { splitName } from '../../utils/playerName';
 import { Icon } from '../Icon';
-import { ROLE_NAME, ROLE_TAG, TIER_CLASSES, TIER_LABEL, tierOf } from './tier';
+import { ROLE_KEY, ROLE_TAG, TIER_CLASSES, TIER_KEY, tierOf } from './tier';
 
 type CardSize = 'sm' | 'lg';
 
@@ -19,12 +21,12 @@ interface PlayerCardProps {
 
 const pct = (x: number | undefined) => (x === undefined ? '-' : `${Math.round(x * 100)}%`);
 
-function stats(player: Player, publicStats: boolean): { label: string; value: string }[] {
-  const mv = publicStats ? { label: 'Val', value: String(player.baseValue) } : { label: 'MV', value: player.avgRating.toFixed(1) };
+function stats(player: Player, publicStats: boolean, t: TFunction): { label: string; value: string }[] {
+  const mv = publicStats ? { label: t('ui.stats.val'), value: String(player.baseValue) } : { label: t('ui.stats.mv'), value: player.avgRating.toFixed(1) };
   if (player.role === 'P') {
-    return [mv, { label: 'Inv', value: pct(player.cleanSheetProbability) }, { label: 'Rig', value: pct(player.penaltySaveProbability) }];
+    return [mv, { label: t('ui.stats.inv'), value: pct(player.cleanSheetProbability) }, { label: t('ui.stats.rig'), value: pct(player.penaltySaveProbability) }];
   }
-  return [mv, { label: 'Gol', value: pct(player.goalProbability) }, { label: 'Ass', value: pct(player.assistProbability) }];
+  return [mv, { label: t('ui.stats.gol'), value: pct(player.goalProbability) }, { label: t('ui.stats.ass'), value: pct(player.assistProbability) }];
 }
 
 /**
@@ -33,6 +35,7 @@ function stats(player: Player, publicStats: boolean): { label: string; value: st
  * fuoriclasse).
  */
 export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = false, className = '' }: PlayerCardProps) {
+  const tr = useT();
   const overall = playerOverall(player);
   const tier = tierOf(overall);
   const t = TIER_CLASSES[tier];
@@ -59,8 +62,8 @@ export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = 
           </p>
           <p className={`${t.muted} ${lg ? 'text-sm mt-1' : 'text-[11px]'}`}>
             {player.legend
-              ? lg ? `${ROLE_NAME[player.role]} · ${player.season}` : seasonShort(player.season)
-              : lg ? `${ROLE_NAME[player.role]} · ${TIER_LABEL[tier]}` : TIER_LABEL[tier]}
+              ? lg ? `${tr(ROLE_KEY[player.role])} · ${player.season}` : seasonShort(player.season)
+              : lg ? `${tr(ROLE_KEY[player.role])} · ${tr(TIER_KEY[tier])}` : tr(TIER_KEY[tier])}
           </p>
         </div>
       </div>
@@ -76,7 +79,7 @@ export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = 
       </div>
 
       <div className={`relative grid grid-cols-3 border-t-2 ${tier === 'elite' ? 'border-canvas/25' : 'border-ink/20'} ${lg ? 'mt-5 pt-3' : 'mt-3 pt-2'}`}>
-        {stats(player, publicStats).map(s => (
+        {stats(player, publicStats, tr).map(s => (
           <div key={s.label} className="text-center leading-none">
             <span className={`block font-display font-extrabold tabular-nums ${lg ? 'text-3xl' : 'text-lg'} ${tier === 'elite' ? 'text-canvas' : ''}`}>
               {s.value}

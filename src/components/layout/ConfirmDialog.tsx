@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useT } from '../../i18n/I18nProvider';
 
 interface ConfirmDialogProps {
   title: string;
@@ -10,6 +11,7 @@ interface ConfirmDialogProps {
 
 /** Conferma per le azioni distruttive (es. cancellare la partita in corso) */
 export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: ConfirmDialogProps) {
+  const t = useT();
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCance
         <p className="text-ink-soft mt-4">{message}</p>
         <div className="flex flex-wrap justify-end gap-3 mt-8">
           <button ref={cancelRef} onClick={onCancel} className="btn-ghost">
-            Annulla
+            {t('ui.confirm.cancel')}
           </button>
           <button onClick={onConfirm} className="btn-primary bg-danger hover:bg-ink">
             {confirmLabel}

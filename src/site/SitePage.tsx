@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { MULTIPLAYER_ENABLED } from '../config';
+import { I18nProvider } from '../i18n/I18nProvider';
 import { Icon } from '../components/Icon';
 import { ContentLayout } from './ContentLayout';
 import App from '../App';
@@ -14,6 +15,7 @@ import { Top11IndexPage } from './pages/Top11IndexPage';
 import { Top11Page } from './pages/Top11Page';
 import { Top11IndexEntry, Top11SeasonData } from './top11';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { useT } from '../i18n/I18nProvider';
 
 // Multiplayer è interattivo e fuori dal gioco singolo: chunk dedicato
 const MultiplayerPage = lazy(() =>
@@ -22,13 +24,14 @@ const MultiplayerPage = lazy(() =>
 
 /** Messaggio prerenderizzato quando il flag multiplayer è spento */
 function MultiplayerUnavailable() {
+  const t = useT();
   return (
-    <ContentLayout breadcrumbs={[{ name: 'Multiplayer', path: '/multiplayer/' }]}>
+    <ContentLayout breadcrumbs={[{ name: t('site.common.multiplayer'), path: '/multiplayer/' }]}>
       <div className="py-16 text-center">
-        <h1 className="font-display text-4xl sm:text-6xl font-black text-ink">Multiplayer non ancora disponibile</h1>
-        <p className="text-lg text-ink-soft mt-5">Le stanze online stanno arrivando. Intanto puoi giocare contro i bot.</p>
+        <h1 className="font-display text-4xl sm:text-6xl font-black text-ink">{t('site.mpOff.title')}</h1>
+        <p className="text-lg text-ink-soft mt-5">{t('site.mpOff.text')}</p>
         <a href="/" className="btn-cta mt-10">
-          Torna alla home
+          {t('site.common.backHome')}
           <Icon name="arrow" className="w-7 h-7" />
         </a>
       </div>
@@ -43,7 +46,7 @@ interface SitePageProps {
 }
 
 /** Pagina da mostrare per un indirizzo: stessa scelta lato build e nel browser */
-export function SitePage({ match, data }: SitePageProps) {
+function RoutedPage({ match, data }: SitePageProps) {
   switch (match.kind) {
     case 'home':
       return <App />;
@@ -75,4 +78,13 @@ export function SitePage({ match, data }: SitePageProps) {
     default:
       return <NotFoundPage />;
   }
+}
+
+/** Contesto i18n attorno a tutto il sito e al gioco (client e prerender) */
+export function SitePage(props: SitePageProps) {
+  return (
+    <I18nProvider>
+      <RoutedPage {...props} />
+    </I18nProvider>
+  );
 }

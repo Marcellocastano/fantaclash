@@ -3,6 +3,7 @@ import { Footer } from '../components/Footer';
 import { AppNavbar, AppNavbarProps } from '../components/layout/AppNavbar';
 import { Breadcrumb } from './routes';
 import { NAV_LINKS } from './navigation';
+import { useT } from '../i18n/I18nProvider';
 
 interface ContentLayoutProps {
   breadcrumbs?: Breadcrumb[];
@@ -15,12 +16,13 @@ interface ContentLayoutProps {
 
 /** Pagine di contenuto: navbar con i link del sito, breadcrumb visibili, testo a larghezza di lettura, footer */
 export function ContentLayout({ breadcrumbs = [], sessionExit, wide = false, children }: ContentLayoutProps) {
+  const t = useT();
   return (
     <div className="min-h-screen flex flex-col">
       <AppNavbar links={NAV_LINKS} sessionExit={sessionExit} />
       <main className={`flex-1 w-full mx-auto px-4 py-12 ${wide ? 'max-w-[1300px]' : 'max-w-[1100px]'}`}>
         {breadcrumbs.length > 0 && (
-          <nav aria-label="Percorso" className="mb-8 text-sm font-semibold text-ink-muted">
+          <nav aria-label={t('site.common.breadcrumb')} className="mb-8 text-sm font-semibold text-ink-muted">
             <ol className="flex flex-wrap items-center gap-2">
               {breadcrumbs.map((b, i) => (
                 <li key={b.path} className="flex items-center gap-2">

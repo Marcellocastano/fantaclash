@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useT } from '../../i18n/I18nProvider';
+import { CatalogKey } from '../../i18n/translate';
 import { PlayerRole } from '../../types';
 import { Icon } from '../Icon';
 import { AutoAdvanceToggle } from './AutoAdvance';
@@ -14,11 +16,11 @@ interface FastForwardMenuProps {
   onAutoAdvanceChange: (on: boolean) => void;
 }
 
-const ROLE_NAMES: Record<PlayerRole, string> = {
-  P: 'portieri',
-  D: 'difensori',
-  C: 'centrocampisti',
-  A: 'attaccanti',
+const ROLE_NAMES: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.pluralLower.P',
+  D: 'ui.roles.pluralLower.D',
+  C: 'ui.roles.pluralLower.C',
+  A: 'ui.roles.pluralLower.A',
 };
 
 /**
@@ -38,6 +40,7 @@ export function FastForwardMenu({
   autoAdvance,
   onAutoAdvanceChange,
 }: FastForwardMenuProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -56,9 +59,9 @@ export function FastForwardMenu({
   };
 
   const items = [
-    { label: 'Simula questo giocatore', hint: "I bot chiudono l'asta senza di te", enabled: canSimulateLot, run: onSimulateLot },
-    { label: `Simula i ${ROLE_NAMES[currentRole]}`, hint: 'Hai già completato il reparto', enabled: canSimulateRole, run: onSimulateRole },
-    { label: "Simula tutta l'asta", hint: 'Anche la tua squadra, si va al torneo', enabled: true, run: onSimulateAll },
+    { label: t('auction.ff.simLot'), hint: t('auction.ff.simLotHint'), enabled: canSimulateLot, run: onSimulateLot },
+    { label: t('auction.ff.simRole', { role: t(ROLE_NAMES[currentRole]) }), hint: t('auction.ff.simRoleHint'), enabled: canSimulateRole, run: onSimulateRole },
+    { label: t('auction.ff.simAll'), hint: t('auction.ff.simAllHint'), enabled: true, run: onSimulateAll },
   ];
 
   return (
@@ -66,11 +69,11 @@ export function FastForwardMenu({
       <button
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        title={autoAdvance ? 'Avanti automatico attivo' : undefined}
+        title={autoAdvance ? t('auction.ff.autoOn') : undefined}
         className="btn-ghost relative px-3 py-2 text-base"
       >
         <Icon name="forward" className="w-4 h-4" />
-        Avanti veloce
+        {t('auction.ff.button')}
         {autoAdvance && (
           <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 w-3 h-3 border-2 border-ink bg-pitch" />
         )}

@@ -1,4 +1,5 @@
 import { SUPPORT_URL } from '../config';
+import { useT } from '../i18n/I18nProvider';
 import { Icon } from './Icon';
 import { LogoMark } from './Logo';
 import { FOOTER_LINK_GROUPS } from '../site/navigation';
@@ -9,6 +10,7 @@ import { FOOTER_LINK_GROUPS } from '../site/navigation';
  * apre): supporto, link utili e note sui dati.
  */
 export function Footer({ linkGroups = FOOTER_LINK_GROUPS }: { linkGroups?: { title: string; links: { label: string; href: string }[] }[] }) {
+  const t = useT();
   return (
     <footer className="bg-pitch-deep text-canvas border-t-4 border-ink mt-20">
       <div className="max-w-[1250px] mx-auto px-4 py-12 grid gap-10 md:grid-cols-[1.2fr_auto_auto_auto] items-start">
@@ -18,7 +20,7 @@ export function Footer({ linkGroups = FOOTER_LINK_GROUPS }: { linkGroups?: { tit
             FantaClash
           </p>
           <p className="text-canvas/70 mt-4 max-w-xl">
-            Asta e torneo con i giocatori della Serie A, dal 2003-04 al 2025-26. Rivivi il brio di poter fare asta per le leggende del passato e prova a vincere il torneo.
+            {t('ui.footer.tagline')}
           </p>
         </div>
         {linkGroups.map(g => (
@@ -46,19 +48,20 @@ export function Footer({ linkGroups = FOOTER_LINK_GROUPS }: { linkGroups?: { tit
 
 /** Bottone "Supporta": attivo solo se SUPPORT_URL è configurato */
 export function SupportButton() {
+  const t = useT();
   const base = 'btn-primary bg-whistle text-on-whistle hover:bg-highlight hover:text-on-highlight text-xl sm:text-2xl px-4 sm:px-6 py-3 sm:py-4';
   if (!SUPPORT_URL) {
     return (
-      <span className={`${base} opacity-60 cursor-not-allowed hover:bg-whistle hover:text-on-whistle`} aria-disabled="true" title="Link di supporto in arrivo">
+      <span className={`${base} opacity-60 cursor-not-allowed hover:bg-whistle hover:text-on-whistle`} aria-disabled="true" title={t('ui.footer.supportPending')}>
         <Icon name="heart" className="w-5 h-5" />
-        Supporta FantaClash
+        {t('ui.footer.supportUs')}
       </span>
     );
   }
   return (
     <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className={base}>
       <Icon name="heart" className="w-5 h-5" />
-      Supporta FantaClash
+      {t('ui.footer.supportUs')}
     </a>
   );
 }

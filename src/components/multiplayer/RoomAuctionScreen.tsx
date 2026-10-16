@@ -13,6 +13,7 @@ import { listoneLabel } from '../../services/seasons';
 import { shortName } from '../../utils/playerName';
 import { buildStartTournament } from '../../multiplayer/hostTournament';
 import { auctionHighlights } from './auctionHighlights';
+import { useT } from '../../i18n/I18nProvider';
 import { useRoom } from './RoomProvider';
 import { useRoomAuction } from './useRoomAuction';
 import { useRoomHostDriver } from './useRoomHostDriver';
@@ -105,6 +106,7 @@ function PowerCard({
   mine: boolean;
   index: number;
 }) {
+  const t = useT();
   const owner = team.ownerId ? state.players.find(p => p.id === team.ownerId) : undefined;
   const spent = team.initialCredits - team.credits;
   return (
@@ -127,7 +129,7 @@ function PowerCard({
               {team.name}
             </span>
             {mine && (
-              <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">Tu</span>
+              <span className="shrink-0 text-[10px] font-black bg-highlight text-on-highlight border border-ink px-1 py-px">{t('room.game.you')}</span>
             )}
           </span>
           <span className={`block text-xs truncate ${mine ? 'text-on-pitch/70' : 'text-ink-muted'}`}>
@@ -142,7 +144,7 @@ function PowerCard({
         <MiniFormation team={team} />
       </div>
       <p className="px-3 pb-2.5 text-xs font-semibold text-ink-muted tabular-nums">
-        Spesi {spent} Cr · Residui {team.credits} Cr
+        {t('room.game.spent', { spent, left: team.credits })}
       </p>
     </li>
   );
@@ -166,6 +168,7 @@ function HighlightTile({
 
 /** Schermata di fine asta: eroe + classifica di forza; l'host avvia il torneo */
 function AuctionDoneScreen({ state }: { state: RoomState }) {
+  const t = useT();
   const room = useRoom();
   const { top, bargain, strongest } = auctionHighlights(state.teams);
   const ranked = [...state.teams].sort((a, b) => teamStrength(b) - teamStrength(a));
@@ -175,21 +178,21 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
       <div className="w-full max-w-[1600px] mx-auto px-4 py-6 space-y-10">
         {/* Eroe */}
         <section className="relative bg-pitch-deep text-canvas border-2 border-ink shadow-block p-5 sm:p-8 overflow-hidden">
-          <p className="label !text-canvas/70">{listoneLabel(state.settings.season)} · Asta chiusa</p>
+          <p className="label !text-canvas/70">{listoneLabel(state.settings.season, t)} · {t('room.game.doneKicker')}</p>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <h1 className="font-display font-black text-5xl sm:text-7xl leading-none text-canvas">
-              Le rose sono fatte
+              {t('room.game.doneTitle')}
             </h1>
             {/* timbro: posizione e animazione su elementi separati */}
             <div className="rotate-[-8deg]">
               <span className="inline-block border-4 border-highlight text-highlight font-display font-black text-2xl sm:text-3xl px-4 py-1 motion-safe:animate-stamp-tilt">
-                ASTA CHIUSA
+                {t('room.game.doneStamp')}
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-            <HighlightTile label="Colpo dell'asta">
+            <HighlightTile label={t('room.game.topDeal')}>
               {top ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="min-w-0">
@@ -206,7 +209,7 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
                 <p className="text-ink-muted text-sm">—</p>
               )}
             </HighlightTile>
-            <HighlightTile label="L'affare">
+            <HighlightTile label={t('room.game.bargain')}>
               {bargain ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <OvrBadge overall={playerOverall(bargain.entry.player)} size="xs" />
@@ -224,7 +227,7 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
                 <p className="text-ink-muted text-sm">—</p>
               )}
             </HighlightTile>
-            <HighlightTile label="Rosa più forte">
+            <HighlightTile label={t('room.game.strongest')}>
               {strongest ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <TeamBadge team={strongest.team} size="sm" />
@@ -250,12 +253,12 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
                 onClick={() => room.dispatchRoomAction(buildStartTournament())}
                 className="btn-cta px-6 py-3 text-xl"
               >
-                Avvia il torneo
+                {t('room.game.startTournament')}
               </button>
             ) : (
               <p className="inline-flex items-center gap-2 font-semibold text-canvas/80">
                 <span className="w-2 h-2 rounded-full bg-highlight motion-safe:animate-pulse" aria-hidden="true" />
-                In attesa che l'host avvii il torneo…
+                {t('room.game.waitingTournament')}
               </p>
             )}
           </div>
@@ -264,8 +267,8 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
         {/* Classifica di forza */}
         <section>
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="section-heading">Classifica di forza</h2>
-            <p className="text-sm text-ink-muted">media overall delle rose</p>
+            <h2 className="section-heading">{t('room.game.standings')}</h2>
+            <p className="text-sm text-ink-muted">{t('room.game.standingsSub')}</p>
           </div>
           <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mt-4">
             {ranked.map((t, i) => (
@@ -291,6 +294,7 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
  * sull'host (dentro useRoomHostDriver).
  */
 export function RoomAuctionScreen() {
+  const t = useT();
   const room = useRoom();
   const state = room.state;
   const [flashing, setFlashing] = useState(false);
@@ -331,7 +335,7 @@ export function RoomAuctionScreen() {
               onClick={() => setFlashing(f => !f)}
               className="fixed bottom-4 left-4 z-40 btn-ghost !py-1 text-xs"
             >
-              {flashing ? 'Ferma asta lampo' : 'Asta lampo (dev)'}
+              {flashing ? t('room.game.flashStop') : t('room.game.flashStart')}
             </button>
           )}
           <AuctionControllerProvider value={controller}>

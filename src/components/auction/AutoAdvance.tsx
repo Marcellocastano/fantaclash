@@ -1,8 +1,10 @@
 import { ReactNode } from 'react';
+import { useT } from '../../i18n/I18nProvider';
 import { AUTO_ADVANCE_MS } from './useAuctionFx';
 
 /** Interruttore "Avanti automatico", come riga del menu "Avanti veloce" */
 export function AutoAdvanceToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const t = useT();
   return (
     <button
       role="switch"
@@ -11,8 +13,8 @@ export function AutoAdvanceToggle({ on, onChange }: { on: boolean; onChange: (on
       className="w-full flex items-center gap-3 text-left px-4 py-3 hover:bg-surface focus-visible:outline outline-2 -outline-offset-4 outline-ink"
     >
       <span className="flex-1 min-w-0">
-        <span className="block font-display text-xl font-extrabold text-ink leading-none">Avanti automatico</span>
-        <span className="block text-sm text-ink-muted mt-1">Dopo ogni aggiudicazione si passa da soli al successivo</span>
+        <span className="block font-display text-xl font-extrabold text-ink leading-none">{t('auction.autoAdvance.label')}</span>
+        <span className="block text-sm text-ink-muted mt-1">{t('auction.autoAdvance.hint')}</span>
       </span>
       <span className={`relative shrink-0 w-10 h-6 border-2 border-ink transition-colors duration-150 ${on ? 'bg-pitch' : 'bg-canvas'}`}>
         <span className={`absolute top-0.5 w-4 h-4 transition-[left] duration-150 ${on ? 'left-[18px] bg-canvas' : 'left-0.5 bg-ink'}`} />

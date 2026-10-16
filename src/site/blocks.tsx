@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { useT } from '../i18n/I18nProvider';
 import { Icon } from '../components/Icon';
 
 /**
@@ -74,16 +75,17 @@ export function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
 }
 
 /** Invito a giocare alla fine di una pagina di contenuto */
-export function GameCta({ title = "Metti in pratica con FantaClash", text, season }: { title?: string; text?: ReactNode; season?: string }) {
+export function GameCta({ title, text, season }: { title?: string; text?: ReactNode; season?: string }) {
+  const t = useT();
   return (
     <aside className="mt-14 bg-pitch-deep border-2 border-ink shadow-block p-6 sm:p-8 flex flex-wrap items-center justify-between gap-6">
       <div className="max-w-lg">
-        <p className="font-display text-sm font-extrabold tracking-wide text-highlight">GIOCA</p>
-        <p className="font-display text-3xl font-black text-canvas leading-tight mt-2">{title}</p>
+        <p className="font-display text-sm font-extrabold tracking-wide text-highlight">{t('site.blocks.kicker')}</p>
+        <p className="font-display text-3xl font-black text-canvas leading-tight mt-2">{title ?? t('site.blocks.ctaTitle')}</p>
         {text && <p className="text-canvas/80 mt-2">{text}</p>}
       </div>
       <a href={season ? `/?annata=${season}` : '/'} className="btn-cta">
-        Gioca gratis
+        {t('site.blocks.cta')}
         <Icon name="arrow" className="w-7 h-7" />
       </a>
     </aside>

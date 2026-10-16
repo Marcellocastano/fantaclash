@@ -1,4 +1,5 @@
 import { hashSeed } from '../../services/auction/rng';
+import { CatalogKey } from '../../i18n/translate';
 import { MatchResult } from '../match/matchTypes';
 import {
   BracketMatch,
@@ -20,16 +21,16 @@ import {
 export const TOURNAMENT_SIZE = 8;
 export const ROUNDS: TournamentRound[] = ['quarterfinals', 'semifinals', 'final'];
 
-export const ROUND_LABELS: Record<TournamentRound, string> = {
-  quarterfinals: 'Quarti di finale',
-  semifinals: 'Semifinali',
-  final: 'Finale',
+export const ROUND_KEY: Record<TournamentRound, CatalogKey> = {
+  quarterfinals: 'tournament.round.quarterfinals',
+  semifinals: 'tournament.round.semifinals',
+  final: 'tournament.round.final',
 };
 
-export const ROUND_SHORT: Record<TournamentRound, string> = {
-  quarterfinals: 'QF',
-  semifinals: 'SF',
-  final: 'F',
+export const ROUND_SHORT_KEY: Record<TournamentRound, CatalogKey> = {
+  quarterfinals: 'tournament.roundShort.quarterfinals',
+  semifinals: 'tournament.roundShort.semifinals',
+  final: 'tournament.roundShort.final',
 };
 
 /**

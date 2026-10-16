@@ -5,8 +5,8 @@ export type * from './tournamentTypes';
 export {
   TOURNAMENT_SIZE,
   ROUNDS,
-  ROUND_LABELS,
-  ROUND_SHORT,
+  ROUND_KEY,
+  ROUND_SHORT_KEY,
   createBracket,
   fillQuarterfinals,
   roundMatches,
@@ -45,4 +45,4 @@ export {
 } from './tournamentEngine';
 export type { CreateTournamentInput } from './tournamentEngine';
 export type { Placement, SummaryMatch, TournamentSummary } from './tournamentSummary';
-export { PLACEMENT_LABELS, buildTournamentSummary, shareText } from './tournamentSummary';
+export { PLACEMENT_KEY, buildTournamentSummary, shareText } from './tournamentSummary';

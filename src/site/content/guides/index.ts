@@ -1,9 +1,9 @@
 import { GuideBody } from './types';
-import { body as comeFunziona } from './come-funziona';
-import { body as strategie } from './strategie';
-import { body as simulatore } from './simulatore';
-import { body as stagioni } from './stagioni';
-import { body as bonusMalus } from './bonus-malus';
+import { Body as comeFunziona } from './come-funziona';
+import { Body as strategie } from './strategie';
+import { Body as simulatore } from './simulatore';
+import { Body as stagioni } from './stagioni';
+import { Body as bonusMalus } from './bonus-malus';
 
 /**
  * Registro dei corpi delle guide: ogni slug ha il suo file di testo in

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../i18n/I18nProvider';
 import { Player, PlayerRole } from '../types';
 import { playerOverall } from '../services/auction/teamStrength';
 import { isLegends, listoneLabel, loadSeasonPlayers, seasonShort } from '../services/seasons';
@@ -28,6 +29,7 @@ function albumStars(players: Player[]): Player[] {
  * all'asta. Cambia con l'annata selezionata nel form.
  */
 export function StickerAlbum({ season }: { season: string | null }) {
+  const t = useT();
   const [stars, setStars] = useState<{ season: string; players: Player[] } | null>(null);
 
   useEffect(() => {
@@ -53,17 +55,17 @@ export function StickerAlbum({ season }: { season: string | null }) {
           <p className="relative flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 font-display text-2xl sm:text-3xl font-black text-highlight leading-none">
               <Icon name="star" className="w-6 h-6 sm:w-7 sm:h-7" />
-              Legends · Hall of Fame
+              {t('ui.album.legendsTitle')}
             </span>
-            <span className="hidden sm:inline text-xs font-bold text-canvas/70 uppercase tracking-wider">23 annate · overall fino a 99</span>
+            <span className="hidden sm:inline text-xs font-bold text-canvas/70 uppercase tracking-wider">{t('ui.album.legendsSub')}</span>
           </p>
         </div>
       ) : (
         <div className="flex items-baseline justify-between gap-4 border-b-2 border-ink pb-3">
-          <p className="font-display text-2xl sm:text-3xl font-black text-ink leading-none">{listoneLabel(season)}</p>
+          <p className="font-display text-2xl sm:text-3xl font-black text-ink leading-none">{listoneLabel(season, t)}</p>
         </div>
       )}
-      <ul key={season ?? 'vuoto'} className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-5 pt-6 motion-safe:animate-pop" aria-label={`Figurine ${listoneLabel(season)}`}>
+      <ul key={season ?? 'vuoto'} className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-5 pt-6 motion-safe:animate-pop" aria-label={t('ui.album.stickers', { listone: listoneLabel(season, t) })}>
         {Array.from({ length: SLOTS }, (_, i) => {
           const player = EMPTY_SLOTS.includes(i) ? undefined : players[next++];
           return (
@@ -73,7 +75,7 @@ export function StickerAlbum({ season }: { season: string | null }) {
               ) : (
                 <span className="flex-1 min-h-[10rem] border-2 border-dashed border-line-strong flex items-center justify-center text-center px-2">
                   <span className="font-display text-base sm:text-xl font-extrabold text-ink-muted leading-tight">
-                    {EMPTY_SLOTS.includes(i) ? 'Compralo all\'asta' : ''}
+                    {EMPTY_SLOTS.includes(i) ? t('ui.album.buy') : ''}
                   </span>
                 </span>
               )}

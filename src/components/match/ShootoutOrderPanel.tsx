@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LineupPlayer, shortName } from '../../domain/match';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { OvrBadge } from '../player/OvrBadge';
 
@@ -32,15 +33,16 @@ function move<T>(list: T[], from: number, to: number): T[] {
  * I primi 5 tirano la serie regolare, gli altri ad oltranza.
  */
 export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sentLabel }: ShootoutOrderPanelProps) {
+  const t = useT();
   const [order, setOrder] = useState(players);
   const [dragging, setDragging] = useState<number | null>(null);
 
   return (
-    <div className="absolute inset-0 z-20 bg-pitch-deep/95 flex overflow-y-auto px-8 py-10 motion-safe:animate-pop" role="dialog" aria-label="Ordine dei rigoristi">
+    <div className="absolute inset-0 z-20 bg-pitch-deep/95 flex overflow-y-auto px-8 py-10 motion-safe:animate-pop" role="dialog" aria-label={t('match.shootout.order.aria')}>
       <div className="m-auto w-full max-w-xl text-canvas">
         <div className="text-center">
-          <p className="font-display text-4xl font-black leading-none">Si va ai rigori</p>
-          <p className="text-canvas/70 mt-2">Scegli l'ordine dei tuoi rigoristi: trascina le righe o usa le frecce.</p>
+          <p className="font-display text-4xl font-black leading-none">{t('match.shootout.order.title')}</p>
+          <p className="text-canvas/70 mt-2">{t('match.shootout.order.sub')}</p>
           {deadlineSec !== undefined && !sent && (
             <p className="mt-3 font-display text-2xl font-black tabular-nums text-whistle" role="timer">
               {deadlineSec}s
@@ -50,7 +52,7 @@ export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sent
 
         {sent ? (
           <p className="mt-8 text-center font-display text-2xl font-extrabold text-canvas">
-            {sentLabel ?? "Scelta inviata, in attesa dell'avversario…"}
+            {sentLabel ?? t('match.shootout.order.sent')}
           </p>
         ) : (
           <>
@@ -78,12 +80,12 @@ export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sent
               <Icon name="menu" className="w-4 h-4 text-ink-faint" />
               <OvrBadge overall={p.overall} role={p.role} size="xs" />
               <span className="flex-1 min-w-0 font-bold truncate">{shortName(p.name)}</span>
-              {i === REGULAR_KICKS && <span className="text-xs font-bold text-ink-muted">ad oltranza</span>}
+              {i === REGULAR_KICKS && <span className="text-xs font-bold text-ink-muted">{t('match.shootout.order.sudden')}</span>}
               <span className="flex">
                 <button
                   onClick={() => setOrder(o => move(o, i, i - 1))}
                   disabled={i === 0}
-                  aria-label={`Sposta ${shortName(p.name)} su`}
+                  aria-label={t('match.shootout.order.moveUp', { name: shortName(p.name) })}
                   className="p-1.5 text-ink hover:bg-surface disabled:opacity-25"
                 >
                   <Icon name="chevron" className="w-4 h-4 rotate-180" />
@@ -91,7 +93,7 @@ export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sent
                 <button
                   onClick={() => setOrder(o => move(o, i, i + 1))}
                   disabled={i === order.length - 1}
-                  aria-label={`Sposta ${shortName(p.name)} giù`}
+                  aria-label={t('match.shootout.order.moveDown', { name: shortName(p.name) })}
                   className="p-1.5 text-ink hover:bg-surface disabled:opacity-25"
                 >
                   <Icon name="chevron" className="w-4 h-4" />
@@ -103,7 +105,7 @@ export function ShootoutOrderPanel({ players, onConfirm, deadlineSec, sent, sent
 
         <div className="mt-6 text-center">
           <button onClick={() => onConfirm(order.map(p => p.playerId))} className="btn-cta px-6 sm:px-8 py-3 sm:py-4 text-2xl sm:text-3xl bg-highlight text-on-highlight hover:bg-canvas">
-            Conferma e si tira
+            {t('match.shootout.order.confirm')}
           </button>
         </div>
           </>

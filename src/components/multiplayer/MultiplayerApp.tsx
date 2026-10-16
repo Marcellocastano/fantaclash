@@ -15,23 +15,26 @@ import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
 import { useRoom } from './RoomProvider';
 import { useRoomExit } from './useRoomExit';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 
 
 /** Inclinazioni alternate delle tessere del codice (classi letterali) */
 const RESUME_TILTS = ['-rotate-2', 'rotate-1', '-rotate-1', 'rotate-2', '-rotate-2'];
 
-const REJECT_TEXT: Record<RejectReason, string> = {
-  protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
-  full: 'La stanza è piena.',
-  started: 'La partita è già iniziata.',
-  kicked: 'Sei stato espulso dalla stanza.',
-  bad_token: 'Rientro non riconosciuto: questo browser ha già un’altra identità per la stanza.',
-  invalid: 'Nome non consentito: scegline un altro.',
-  name_taken: 'Nella stanza c’è già una squadra con questo nome: scegline un altro.',
+const REJECT_KEY: Record<RejectReason, CatalogKey> = {
+  protocol: 'room.reject.protocol',
+  full: 'room.reject.full',
+  started: 'room.reject.started',
+  kicked: 'room.reject.kicked',
+  bad_token: 'room.reject.badTokenLong',
+  invalid: 'room.reject.invalid',
+  name_taken: 'room.reject.nameTaken',
 };
 
 /** Contenuto interattivo di /multiplayer/: ingresso, connessione, lobby */
 export function MultiplayerApp() {
+  const t = useT();
   const room = useRoom();
   const [starting, setStarting] = useState(false);
   useScrollToTop(`${room.status}:${room.state?.phase ?? ''}`);
@@ -63,7 +66,7 @@ export function MultiplayerApp() {
       const players = await loadSeasonPlayers(room.state.settings.season);
       room.startAuction(buildAuctionPool(players));
     } catch {
-      setStartError('Impossibile caricare il listone, riprova');
+      setStartError(t('room.app.startFail'));
     } finally {
       setStarting(false);
     }
@@ -78,16 +81,16 @@ export function MultiplayerApp() {
       return (
         <ContentLayout>
           <div className="py-16 text-center max-w-md mx-auto">
-            <h1 className="font-display text-4xl font-black text-ink">Non sei entrato</h1>
+            <h1 className="font-display text-4xl font-black text-ink">{t('room.app.rejectedTitle')}</h1>
             <p className="text-lg text-ink-soft mt-4">
               {room.rejectReason === 'full' && room.role === 'spectator'
-              ? 'Troppi spettatori in questa stanza'
+              ? t('room.app.rejectedSpectators')
               : room.rejectReason
-                ? REJECT_TEXT[room.rejectReason]
-                : 'Richiesta rifiutata.'}
+                ? t(REJECT_KEY[room.rejectReason])
+                : t('room.app.rejectedGeneric')}
             </p>
             <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
-              Torna indietro
+              {t('room.app.back')}
             </button>
           </div>
         </ContentLayout>
@@ -98,10 +101,10 @@ export function MultiplayerApp() {
         return (
           <ContentLayout>
             <div className="py-16 text-center max-w-md mx-auto">
-              <h1 className="font-display text-4xl font-black text-ink">Stanza chiusa</h1>
-              <p className="text-lg text-ink-soft mt-4">La stanza è stata chiusa dall'host.</p>
+              <h1 className="font-display text-4xl font-black text-ink">{t('room.app.closedTitle')}</h1>
+              <p className="text-lg text-ink-soft mt-4">{t('room.app.closedText')}</p>
               <a href="/multiplayer/" className="btn-primary mt-8 inline-block px-6 py-3">
-                Torna al multiplayer
+                {t('room.app.backToMultiplayer')}
               </a>
             </div>
           </ContentLayout>
@@ -110,12 +113,12 @@ export function MultiplayerApp() {
       return (
         <ContentLayout>
           <div className="py-16 text-center max-w-md mx-auto">
-            <h1 className="font-display text-4xl font-black text-ink">Stanza non trovata</h1>
+            <h1 className="font-display text-4xl font-black text-ink">{t('room.app.notFoundTitle')}</h1>
             <p className="text-lg text-ink-soft mt-4">
-              Stanza non trovata o host non raggiungibile. Controlla il codice e riprova.
+              {t('room.app.notFoundText')}
             </p>
             <button type="button" onClick={() => void leaveAndReset()} className="btn-primary mt-8 px-6 py-3">
-              Riprova
+              {t('room.app.retry')}
             </button>
           </div>
         </ContentLayout>
@@ -136,7 +139,7 @@ export function MultiplayerApp() {
         <>
           {!room.isHost && !room.hostOnline && (
             <div role="alert" className="fixed top-20 inset-x-4 sm:inset-x-auto sm:right-6 z-40 panel shadow-block px-4 py-3 font-semibold text-ink">
-              L'host si è disconnesso: in attesa che rientri…
+              {t('room.app.hostOffline')}
             </div>
           )}
           {state.phase === 'auction' && <RoomGameShell><RoomAuctionScreen /></RoomGameShell>}
@@ -153,7 +156,7 @@ export function MultiplayerApp() {
         <ContentLayout wide>
           {hostSave && codeParam && (
             <section className="mb-8 bg-pitch-deep text-canvas border-4 border-ink shadow-block-lg p-5 sm:p-6 flex flex-col md:flex-row md:items-center gap-5 md:gap-8">
-              <div className="flex gap-1.5 shrink-0" aria-label={`Codice ${codeParam}`}>
+              <div className="flex gap-1.5 shrink-0" aria-label={t('room.lobby.codeAria', { code: codeParam })}>
                 {codeParam.split('').map((ch, i) => (
                   <span
                     key={i}
@@ -165,11 +168,11 @@ export function MultiplayerApp() {
                 ))}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-display text-2xl sm:text-3xl font-black leading-none">La tua stanza è ancora aperta</p>
-                <p className="text-canvas/80 mt-2">Eri l'host: riprendi la partita da dove eravate rimasti.</p>
+                <p className="font-display text-2xl sm:text-3xl font-black leading-none">{t('room.app.resumeTitle')}</p>
+                <p className="text-canvas/80 mt-2">{t('room.app.resumeText')}</p>
               </div>
               <button type="button" onClick={() => void room.resumeRoom(codeParam)} className="btn-cta shrink-0">
-                Riprendi la stanza
+                {t('room.app.resume')}
                 <Icon name="arrow" className="w-6 h-6" />
               </button>
             </section>

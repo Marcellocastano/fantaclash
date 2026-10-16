@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { TournamentController } from '../../hooks/tournamentController';
 import { projectForViewer } from '../../multiplayer/view';
+import { useT } from '../../i18n/I18nProvider';
 import { useRoom } from './RoomProvider';
 
 const noop = () => {};
@@ -11,6 +12,7 @@ const noop = () => {};
  * dell'host (START_TOURNAMENT / TOURNAMENT / MATCH_RECORD / FINISH).
  */
 export function useRoomTournament(): TournamentController {
+  const t = useT();
   const { state, me, leave } = useRoom();
   const projection = useMemo(
     () => (state ? projectForViewer(state, me) : null),
@@ -26,6 +28,6 @@ export function useRoomTournament(): TournamentController {
     finishTournament: noop,
     resetGame: () => void leave(),
     inRoom: true,
-    finalLabel: 'Esci dalla stanza',
+    finalLabel: t('room.exit.leaveConfirm'),
   };
 }

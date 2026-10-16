@@ -10,6 +10,7 @@ import { createSupabaseTransport } from '../../multiplayer/transport/supabase';
 import { RoomTransport, TransportOptions } from '../../multiplayer/transport/types';
 import { ClientIntent, RejectReason, RoomAction, RoomSettings, RoomState } from '../../multiplayer/protocol';
 import { isCapacityError } from '../../multiplayer/errors';
+import { t } from '../../i18n/translate';
 import { HOST_SILENT_LEFT_MS, HOST_SILENT_MS } from '../../multiplayer/constants';
 import { RoomKeyPair } from '../../multiplayer/crypto';
 import { Player } from '../../types';
@@ -258,13 +259,13 @@ export function RoomProvider({
       window.history.replaceState(null, '', `/multiplayer/?codice=${code}`);
       return;
     }
-    throw new Error('Nessun codice libero trovato');
+    throw new Error(t('room.errors.noFreeCode'));
   }, [transportFactory, notify, watchPresence]);
 
   const resumeRoom = useCallback(async (code: string) => {
     const identity = await ensureRoomIdentity(code);
     const save = loadHostSave(code, identity.participantId);
-    if (!save) throw new Error('Nessun salvataggio valido per questa stanza');
+    if (!save) throw new Error(t('room.errors.noSave'));
     const elapsed = Date.now() - save.savedAt;
     await startHostSession(code, save.state, save.hostKey, deserializeBook(save.book), elapsed);
   }, [startHostSession]);

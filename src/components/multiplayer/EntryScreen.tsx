@@ -11,19 +11,22 @@ import { CreateRoomInput, JoinOutcome, JoinRoomInput } from './RoomProvider';
 import { RejectReason } from '../../multiplayer/protocol';
 import { isCapacityError } from '../../multiplayer/errors';
 import { TeamBadge } from '../tournament/TeamBadge';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 
 /** Motivi di rifiuto mostrati come toast (name_taken e not_found restano sui campi) */
-const JOIN_TOAST: Partial<Record<RejectReason | 'not_found' | 'unavailable', string>> = {
-  full: 'La stanza è piena.',
-  started: 'La partita è già iniziata.',
-  kicked: 'Sei stato espulso da questa stanza.',
-  protocol: 'La stanza usa una versione diversa: ricarica la pagina.',
-  bad_token: "Questo browser ha già un'altra identità per la stanza.",
-  unavailable: 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.',
+const JOIN_TOAST: Partial<Record<RejectReason | 'not_found' | 'unavailable', CatalogKey>> = {
+  full: 'room.reject.full',
+  started: 'room.reject.started',
+  kicked: 'room.reject.kicked',
+  protocol: 'room.reject.protocol',
+  bad_token: 'room.reject.badToken',
+  unavailable: 'room.entry.toastUnavailable',
 };
 
 /** Toast di form: fisso in basso, si chiude da solo */
 function JoinToast({ text, onClose }: { text: string; onClose: () => void }) {
+  const t = useT();
   useEffect(() => {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
@@ -36,7 +39,7 @@ function JoinToast({ text, onClose }: { text: string; onClose: () => void }) {
       >
         <span className="w-1.5 self-stretch bg-danger" aria-hidden="true" />
         {text}
-        <button type="button" aria-label="Chiudi" onClick={onClose} className="ml-2 shrink-0">
+        <button type="button" aria-label={t('room.entry.closeToast')} onClick={onClose} className="ml-2 shrink-0">
           <Icon name="cross" className="w-4 h-4" />
         </button>
       </div>
@@ -60,6 +63,7 @@ export function EntryScreen({
   onCreate: (input: CreateRoomInput) => Promise<void>;
   onJoin: (input: JoinRoomInput) => Promise<JoinOutcome>;
 }) {
+  const t = useT();
   const [view, setView] = useState<'crea' | 'entra'>(initialView);
   const [nickname, setNickname] = useState(loadSavedNickname);
   const [teamName, setTeamName] = useState(() => loadSavedTeamName() || randomTeamName());
@@ -81,19 +85,19 @@ export function EntryScreen({
         // Annata iniziale a caso: quella vera si sceglie nella lobby
         setSeason(s => s || list[Math.floor(Math.random() * list.length)].season);
       })
-      .catch(() => setError('Impossibile caricare le stagioni'));
-  }, []);
+      .catch(() => setError(t('room.entry.seasonsFail')));
+  }, [t]);
 
   const codeOk = normalizeRoomCode(code) !== null;
 
   const submitCreate = async () => {
     const listone = mode === 'legends' ? LEGENDS_ID : season;
     if (!nickname.trim() || !teamName.trim() || !listone) {
-      setError('Servono nickname, nome squadra e listone');
+      setError(t('room.entry.needAll'));
       return;
     }
     if (cupName.trim() && isOffensiveName(cupName)) {
-      setError('Nome della coppa non consentito: scegline un altro');
+      setError(t('room.entry.cupOffensive'));
       return;
     }
     setBusy(true);
@@ -108,8 +112,8 @@ export function EntryScreen({
     } catch (e) {
       setError(
         isCapacityError(e)
-          ? 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.'
-          : e instanceof Error ? e.message : 'Errore nella creazione della stanza'
+          ? t('room.entry.toastUnavailable')
+          : e instanceof Error ? e.message : t('room.entry.createFail')
       );
       setBusy(false);
     }
@@ -121,12 +125,12 @@ export function EntryScreen({
       setTeamError(true);
       teamRef.current?.focus();
     } else if (reason === 'invalid') {
-      setError('Nome non consentito: scegline un altro.');
+      setError(t('room.reject.invalid'));
     } else if (reason === 'not_found') {
       setCodeError(true);
-      setToast('Codice non corretto: nessuna stanza attiva con questo codice.');
+      setToast(t('room.entry.toastNotFound'));
     } else {
-      setToast(reason === 'full' && asSpectator ? 'Troppi spettatori in questa stanza.' : JOIN_TOAST[reason] ?? 'Non sei entrato nella stanza.');
+      setToast(t(reason === 'full' && asSpectator ? 'room.entry.toastTooManySpectators' : JOIN_TOAST[reason] ?? 'room.entry.toastGeneric'));
     }
   };
 
@@ -140,8 +144,8 @@ export function EntryScreen({
     } catch (e) {
       setError(
         isCapacityError(e)
-          ? 'I server del multiplayer sono al completo in questo momento. Riprova tra poco.'
-          : e instanceof Error ? e.message : 'Errore di connessione'
+          ? t('room.entry.toastUnavailable')
+          : e instanceof Error ? e.message : t('room.entry.connectFail')
       );
     }
     setBusy(false);
@@ -150,17 +154,17 @@ export function EntryScreen({
   const submitJoin = async () => {
     const normalized = normalizeRoomCode(code);
     if (!normalized) {
-      setError('Codice non valido: 5 lettere/cifre (es. ABCDE)');
+      setError(t('room.entry.codeInvalidFull'));
       return;
     }
     if (!asSpectator && (!nickname.trim() || !teamName.trim())) {
-      setError('Servono nickname e nome squadra');
+      setError(t('room.entry.needJoin'));
       return;
     }
     saveRoomProfile(nickname.trim(), teamName.trim());
     await tryJoin({
       code: normalized,
-      nickname: nickname.trim() || 'Spettatore',
+      nickname: nickname.trim() || t('room.entry.spectatorNick'),
       teamName: teamName.trim(),
       role: asSpectator ? 'spectator' : 'player',
     });
@@ -185,22 +189,22 @@ export function EntryScreen({
       </span>
 
       <div className="p-5 sm:p-8 lg:pr-12">
-        <p className="font-semibold text-ink-soft">Fino a {MAX_PLAYERS} giocatori · asta e torneo in diretta</p>
+        <p className="font-semibold text-ink-soft">{t('room.entry.subtitle', { max: MAX_PLAYERS })}</p>
         <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-[0.85] mt-2 break-words">
           MULTI<span className="text-pitch">PLAYER</span>
         </h1>
         <p className="text-lg text-ink-soft mt-5">
-          Crea una stanza, manda il link agli amici e sfidatevi all'asta in diretta. I posti liberi vanno ai bot.
+          {t('room.entry.intro')}
         </p>
 
         <div className="grid grid-cols-2 gap-3 mt-6">
-          <button type="button" aria-label="Crea stanza" onClick={() => setView('crea')} className={ticketCls('crea')}>
-            Crea stanza
-            <span className="block text-sm font-semibold opacity-80 font-sans">Sei l'host</span>
+          <button type="button" aria-label={t('room.entry.createTab')} onClick={() => setView('crea')} className={ticketCls('crea')}>
+            {t('room.entry.createTab')}
+            <span className="block text-sm font-semibold opacity-80 font-sans">{t('room.entry.createHint')}</span>
           </button>
-          <button type="button" aria-label="Entra con codice" onClick={() => setView('entra')} className={ticketCls('entra')}>
-            Entra con codice
-            <span className="block text-sm font-semibold opacity-80 font-sans">Hai un codice</span>
+          <button type="button" aria-label={t('room.entry.joinTab')} onClick={() => setView('entra')} className={ticketCls('entra')}>
+            {t('room.entry.joinTab')}
+            <span className="block text-sm font-semibold opacity-80 font-sans">{t('room.entry.joinHint')}</span>
           </button>
         </div>
 
@@ -209,7 +213,7 @@ export function EntryScreen({
           <div className="border-2 border-dashed border-line-strong p-3 sm:p-5 space-y-4 sm:space-y-6">
             <div>
               <label htmlFor="mp-nick" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
-                Nickname{asSpectator && <span className="font-semibold text-sm text-ink-muted"> (facoltativo)</span>}
+                {t('room.entry.nickname')}{asSpectator && <span className="font-semibold text-sm text-ink-muted"> {t('room.entry.optional')}</span>}
               </label>
               <input
                 id="mp-nick"
@@ -218,7 +222,7 @@ export function EntryScreen({
                 maxLength={NICKNAME_MAX}
                 disabled={busy}
                 onChange={e => setNickname(e.target.value)}
-                placeholder={asSpectator ? 'Spettatore' : 'Es. Marco'}
+                placeholder={asSpectator ? t('room.entry.spectatorNick') : t('room.entry.nickPlaceholder')}
                 className="input-field"
               />
             </div>
@@ -226,7 +230,7 @@ export function EntryScreen({
             {!asSpectator && (
               <div>
                 <label htmlFor="mp-team" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
-                  {view === 'crea' ? 'La tua squadra' : 'Nome squadra'}
+                  {t(view === 'crea' ? 'room.entry.yourTeam' : 'room.entry.teamName')}
                 </label>
                 <div className="relative">
                   <input
@@ -246,14 +250,14 @@ export function EntryScreen({
                   <button
                     type="button"
                     onClick={() => setTeamName(c => randomTeamName(c))}
-                    title="Genera un nome"
-                    aria-label="Genera un nome"
+                    title={t('room.entry.genName')}
+                    aria-label={t('room.entry.genName')}
                     className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-ink-muted hover:text-ink transition-colors duration-150"
                   >
                     <Icon name="reset" className="w-4 h-4" />
                   </button>
                 </div>
-                {teamError && <p className="mt-2 text-sm text-danger">Nome già in uso da un altro utente</p>}
+                {teamError && <p className="mt-2 text-sm text-danger">{t('room.entry.teamTaken')}</p>}
               </div>
             )}
 
@@ -261,7 +265,7 @@ export function EntryScreen({
               <>
                 <div>
                   <label htmlFor="mp-cup" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
-                    Nome della coppa <span className="font-semibold text-sm text-ink-muted">(facoltativo)</span>
+                    {t('room.entry.cupName')} <span className="font-semibold text-sm text-ink-muted">{t('room.entry.optional')}</span>
                   </label>
                   <input
                     id="mp-cup"
@@ -272,15 +276,15 @@ export function EntryScreen({
                     placeholder="FantaClash Cup"
                     className="input-field"
                   />
-                  <p className="mt-1.5 text-sm text-ink-muted">Il nome del torneo: compare nel sorteggio, nel tabellone e nella card finale.</p>
+                  <p className="mt-1.5 text-sm text-ink-muted">{t('room.entry.cupHint')}</p>
                 </div>
                 <div>
-                  <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">Listone</p>
+                  <p className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">{t('room.entry.listone')}</p>
                   <ListoneModePicker value={mode} onChange={setMode} disabled={busy} />
-                  <p className="mt-1.5 text-sm text-ink-muted">L'annata si rifinisce in lobby; le stanze giocano sempre a gara secca.</p>
+                  <p className="mt-1.5 text-sm text-ink-muted">{t('room.entry.listoneHint')}</p>
                 </div>
                 <button type="button" onClick={submitCreate} disabled={busy || (mode === 'classic' && !season)} className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5">
-                  {busy ? 'Creazione…' : 'Crea stanza'}
+                  {busy ? t('room.entry.creating') : t('room.entry.create')}
                   <Icon name="arrow" className="w-5 h-5" />
                 </button>
               </>
@@ -288,7 +292,7 @@ export function EntryScreen({
               <>
                 <div>
                   <label htmlFor="mp-code" className="block font-display text-lg sm:text-xl font-extrabold text-ink mb-1.5">
-                    Codice stanza
+                    {t('room.entry.code')}
                   </label>
                   <input
                     id="mp-code"
@@ -306,7 +310,7 @@ export function EntryScreen({
                     className={`input-field font-display text-3xl tracking-[0.3em] ${(code && !codeOk) || codeError ? 'input-error' : ''}`}
                   />
                   {code && !codeOk && (
-                    <p className="mt-2 text-sm text-danger">Codice non valido</p>
+                    <p className="mt-2 text-sm text-danger">{t('room.entry.codeInvalid')}</p>
                   )}
                 </div>
                 {showRejoin && (
@@ -324,7 +328,7 @@ export function EntryScreen({
                     className="btn-cta w-full text-xl sm:text-3xl py-3 sm:py-5"
                   >
                     {busy && <Icon name="ball" className="w-5 h-5 motion-safe:animate-spin" />}
-                    {busy ? 'Entro…' : 'Rientra nella stanza'}
+                    {busy ? t('room.entry.joining') : t('room.entry.rejoin')}
                   </button>
                 )}
                 <button
@@ -338,14 +342,14 @@ export function EntryScreen({
                   ) : (
                     <Icon name="arrow" className="w-5 h-5" />
                   )}
-                  {busy ? 'Entro…' : asSpectator ? 'Guarda la stanza' : 'Entra nella stanza'}
+                  {busy ? t('room.entry.joining') : asSpectator ? t('room.entry.watch') : t('room.entry.join')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setAsSpectator(s => !s)}
                   className="w-full text-center text-sm font-semibold text-ink-soft underline underline-offset-4 hover:text-ink"
                 >
-                  {asSpectator ? 'Entra come giocatore' : 'Guarda come spettatore'}
+                  {asSpectator ? t('room.entry.asPlayer') : t('room.entry.asSpectator')}
                 </button>
               </>
             )}
@@ -357,9 +361,9 @@ export function EntryScreen({
 
       {/* Pagina destra: anteprima dei posti della stanza */}
       <div className="hidden lg:block p-8 lg:pl-12">
-        <h2 className="font-display text-3xl font-black">La tua stanza</h2>
-        <p className="text-ink-soft">8 posti: chi non arriva viene sostituito da un bot.</p>
-        <p className="text-ink-soft">Il listone (annata o Legends) si rifinisce nella stanza, prima di avviare l'asta.</p>
+        <h2 className="font-display text-3xl font-black">{t('room.entry.previewTitle')}</h2>
+        <p className="text-ink-soft">{t('room.entry.previewSeats')}</p>
+        <p className="text-ink-soft">{t('room.entry.previewListone')}</p>
         <div className="grid grid-cols-2 gap-4 mt-6">
           {TILTS.map((tilt, i) => (
             <div key={i} className={tilt}>
@@ -371,19 +375,19 @@ export function EntryScreen({
               >
                 {i === 0 ? (
                   <>
-                    <div className="flex justify-center"><TeamBadge team={{ name: teamName || 'La tua squadra', isUserTeam: true }} size="md" /></div>
-                    <p className="mt-2 font-display font-extrabold text-ink truncate" title={teamName}>{teamName || 'La tua squadra'}</p>
-                    <p className="text-sm font-semibold text-ink-muted truncate">{nickname.trim() || 'Tu'}</p>
+                    <div className="flex justify-center"><TeamBadge team={{ name: teamName || t('room.entry.yourTeamFallback'), isUserTeam: true }} size="md" /></div>
+                    <p className="mt-2 font-display font-extrabold text-ink truncate" title={teamName}>{teamName || t('room.entry.yourTeamFallback')}</p>
+                    <p className="text-sm font-semibold text-ink-muted truncate">{nickname.trim() || t('room.entry.you')}</p>
                   </>
                 ) : i < 4 ? (
                   <>
-                    <p className="font-display font-extrabold text-ink-muted">Amico</p>
-                    <p className="text-sm font-semibold text-ink-muted">posto libero</p>
+                    <p className="font-display font-extrabold text-ink-muted">{t('room.entry.friend')}</p>
+                    <p className="text-sm font-semibold text-ink-muted">{t('room.entry.freeSeat')}</p>
                   </>
                 ) : (
                   <>
-                    <p className="inline-block border-2 border-ink bg-surface px-1.5 font-display font-black text-ink-muted">BOT</p>
-                    <p className="mt-1.5 text-sm font-semibold text-ink-muted">si unisce all'avvio</p>
+                    <p className="inline-block border-2 border-ink bg-surface px-1.5 font-display font-black text-ink-muted">{t('room.entry.bot')}</p>
+                    <p className="mt-1.5 text-sm font-semibold text-ink-muted">{t('room.entry.botJoins')}</p>
                   </>
                 )}
               </div>

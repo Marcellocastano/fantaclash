@@ -7,50 +7,46 @@ import { useTop11SeasonData } from '../useTop11Data';
 import { ContentLayout } from '../ContentLayout';
 import { GameCta, PageTitle, Table } from '../blocks';
 import { NotFoundPage } from './NotFoundPage';
+import { useT } from '../../i18n/I18nProvider';
 
-const ROLE_ORDER: { role: PlayerRole; label: string }[] = [
-  { role: 'A', label: 'Attaccanti' },
-  { role: 'C', label: 'Centrocampisti' },
-  { role: 'D', label: 'Difensori' },
-  { role: 'P', label: 'Portiere' },
-];
+const ROLE_ORDER: PlayerRole[] = ['A', 'C', 'D', 'P'];
 
 /**
  * Pagina /top-11/<annata>/: la formazione ideale 4-3-3 dei migliori per
  * overall, su campo vero, con solo dati pubblici (niente media voto).
  */
 export function Top11Page({ season, data: initial }: { season: string; data: Top11SeasonData | null }) {
+  const t = useT();
   const { data: seasonData, loading, failed } = useTop11SeasonData(season, initial);
   if (failed) return <NotFoundPage />;
   if (loading || !seasonData) {
     return (
-      <ContentLayout breadcrumbs={[{ name: 'Home', path: '/' }, { name: 'Top 11', path: '/top-11/' }]}>
-        <p className="text-ink-muted">Caricamento della formazione…</p>
+      <ContentLayout breadcrumbs={[{ name: t('common.home'), path: '/' }, { name: t('site.common.top11'), path: '/top-11/' }]}>
+        <p className="text-ink-muted">{t('site.top11.pageLoading')}</p>
       </ContentLayout>
     );
   }
   const { stats } = seasonData;
   const data = seasonData;
-  const rows = ROLE_ORDER.map(r => ({ ...r, players: data.players.filter(p => p.role === r.role) }));
+  const rows = ROLE_ORDER.map(role => ({ role, players: data.players.filter(p => p.role === role) }));
 
   return (
     <ContentLayout
       breadcrumbs={[
-        { name: 'Home', path: '/' },
-        { name: 'Top 11', path: '/top-11/' },
-        { name: `Serie A ${data.season}`, path: `/top-11/${data.season}/` },
+        { name: t('common.home'), path: '/' },
+        { name: t('site.common.top11'), path: '/top-11/' },
+        { name: t('site.top11.crumbSeason', { season: data.season }), path: `/top-11/${data.season}/` },
       ]}
     >
       <article>
-        <PageTitle kicker={data.label}>Top 11 della Serie A {data.season}</PageTitle>
+        <PageTitle kicker={data.label}>{t('site.top11.title', { season: data.season })}</PageTitle>
         <p className="max-w-3xl text-lg leading-relaxed text-ink">
-          I migliori giocatori della stagione {data.season} per overall, schierati in un 4-3-3 ideale. Il migliore
-          dell'annata è <strong>{stats.topPlayer}</strong>; la squadra più rappresentata è il{' '}
-          <strong>{stats.topClub}</strong> ({stats.topClubCount}{' '}
-          {stats.topClubCount === 1 ? 'giocatore' : 'giocatori'})
+          {t('site.top11.introA', { season: data.season })}<strong>{stats.topPlayer}</strong>
+          {t('site.top11.introB')}<strong>{stats.topClub}</strong>
+          {t('site.top11.introC', { n: stats.topClubCount, unit: t(stats.topClubCount === 1 ? 'site.top11.unitOne' : 'site.top11.unitMany') })}
           {stats.elite > 0 && (
             <>
-              , e i fuoriclasse con overall 90 o più sono <strong>{stats.elite}</strong>
+              {t('site.top11.introD')}<strong>{stats.elite}</strong>
             </>
           )}
           .
@@ -74,7 +70,7 @@ export function Top11Page({ season, data: initial }: { season: string; data: Top
           {/* Tabella accessibile degli 11 */}
           <div>
             <Table
-              head={['Ruolo', 'Giocatore', 'Squadra', 'Overall']}
+              head={[t('site.top11.th1'), t('site.top11.th2'), t('site.top11.th3'), t('site.top11.th4')]}
               rows={data.players.map(p => [
                 <span key="r" className={ROLE_TAG[p.role]}>{p.role}</span>,
                 `${p.firstName} ${p.surname}`.trim(),
@@ -83,29 +79,29 @@ export function Top11Page({ season, data: initial }: { season: string; data: Top
               ])}
             />
             <GameCta
-              title={`Rifai l'asta della Serie A ${data.season}`}
-              text="Il form si apre già su questa annata: stessi giocatori, stessa asta, la tua rosa."
+              title={t('site.top11.ctaTitle', { season: data.season })}
+              text={t('site.top11.ctaText')}
               season={data.season}
             />
           </div>
         </div>
 
         {/* Navigazione tra le annate */}
-        <nav aria-label="Altre annate" className="mt-14 flex items-center justify-between gap-4 max-w-3xl">
+        <nav aria-label={t('site.top11.ariaOthers')} className="mt-14 flex items-center justify-between gap-4 max-w-3xl">
           {data.prev ? (
             <a href={`/top-11/${data.prev}/`} className="btn-ghost">
               <Icon name="chevron" className="w-4 h-4 -rotate-90" />
-              Serie A {data.prev}
+              {t('site.top11.serieA', { season: data.prev })}
             </a>
           ) : (
             <span />
           )}
           <a href="/top-11/" className="font-bold text-pitch-deep underline underline-offset-4 decoration-2 decoration-pitch/40">
-            Tutte le annate
+            {t('site.top11.allSeasons')}
           </a>
           {data.next ? (
             <a href={`/top-11/${data.next}/`} className="btn-ghost">
-              Serie A {data.next}
+              {t('site.top11.serieA', { season: data.next })}
               <Icon name="chevron" className="w-4 h-4 rotate-90" />
             </a>
           ) : (

@@ -1,4 +1,5 @@
 import { BotArchetype, Player, PlayerRole } from '../../types';
+import { t } from '../../i18n/translate';
 import { Rng, shuffle } from './rng';
 
 /**
@@ -52,7 +53,7 @@ export interface ArchetypeProfile {
  */
 export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
   aggressivo: {
-    label: 'Aggressivo',
+    label: t('auction.bot.archetype.aggressivo.name'),
     valueMultiplier: 1.12,
     pupilloMultiplier: 1,
     maxShareOfBudget: 0.70,
@@ -66,7 +67,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
     timing: { fastness: 1.0, snipeBase: 0.05, callDelayMs: [1000, 2000] },
   },
   parsimonioso: {
-    label: 'Parsimonioso',
+    label: t('auction.bot.archetype.parsimonioso.name'),
     valueMultiplier: 0.85,
     pupilloMultiplier: 1,
     maxShareOfBudget: 0.40,
@@ -80,7 +81,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
     timing: { fastness: 0.4, snipeBase: 0.10, callDelayMs: [1500, 3000] },
   },
   stratega: {
-    label: 'Stratega',
+    label: t('auction.bot.archetype.stratega.name'),
     valueMultiplier: 1.00,
     pupilloMultiplier: 1,
     maxShareOfBudget: 0.55,
@@ -94,7 +95,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
     timing: { fastness: 0.5, snipeBase: 0.30, callDelayMs: [2000, 3500] },
   },
   cacciatore: {
-    label: 'Cacciatore di pupilli',
+    label: t('auction.bot.archetype.cacciatore.name'),
     valueMultiplier: 0.97,
     pupilloMultiplier: 1.5,
     maxShareOfBudget: 0.60,
@@ -108,7 +109,7 @@ export const ARCHETYPE_PROFILES: Record<BotArchetype, ArchetypeProfile> = {
     timing: { fastness: 0.7, snipeBase: 0.10, callDelayMs: [1000, 2500] },
   },
   equilibrato: {
-    label: 'Equilibrato',
+    label: t('auction.bot.archetype.equilibrato.name'),
     valueMultiplier: 1.00,
     pupilloMultiplier: 1,
     maxShareOfBudget: 0.55,

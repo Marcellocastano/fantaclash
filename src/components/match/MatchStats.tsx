@@ -1,4 +1,6 @@
 import { LiveTeamStats, MatchSide } from '../../domain/match';
+import { CatalogKey } from '../../i18n/translate';
+import { useT } from '../../i18n/I18nProvider';
 
 interface MatchStatsProps {
   stats: Record<MatchSide, LiveTeamStats>;
@@ -6,25 +8,26 @@ interface MatchStatsProps {
   awayName: string;
 }
 
-const ROWS: { key: keyof LiveTeamStats; label: string }[] = [
-  { key: 'shots', label: 'Tiri' },
-  { key: 'shotsOnTarget', label: 'In porta' },
-  { key: 'bigChances', label: 'Grandi occasioni' },
-  { key: 'yellowCards', label: 'Gialli' },
-  { key: 'redCards', label: 'Rossi' },
+const ROWS: { key: keyof LiveTeamStats; label: CatalogKey }[] = [
+  { key: 'shots', label: 'match.stats.shots' },
+  { key: 'shotsOnTarget', label: 'match.stats.onTarget' },
+  { key: 'bigChances', label: 'match.stats.bigChances' },
+  { key: 'yellowCards', label: 'match.stats.yellow' },
+  { key: 'redCards', label: 'match.stats.red' },
 ];
 
 /** Statistiche essenziali: possesso come barra, il resto a numeri con barra di confronto */
 export function MatchStats({ stats, homeName, awayName }: MatchStatsProps) {
+  const t = useT();
   return (
     <div>
       <div className="flex justify-between gap-4 text-sm font-bold text-ink-muted mb-3">
         <span className="truncate">{homeName}</span>
         <span className="truncate text-right">{awayName}</span>
       </div>
-      <Row label="Possesso" home={stats.home.possession} away={stats.away.possession} suffix="%" />
+      <Row label={t('match.stats.possession')} home={stats.home.possession} away={stats.away.possession} suffix="%" />
       {ROWS.map(({ key, label }) => (
-        <Row key={key} label={label} home={stats.home[key]} away={stats.away[key]} />
+        <Row key={key} label={t(label)} home={stats.home[key]} away={stats.away[key]} />
       ))}
     </div>
   );

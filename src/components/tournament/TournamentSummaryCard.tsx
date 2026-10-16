@@ -1,4 +1,5 @@
-import { TournamentSummary } from '../../domain/tournament';
+import { PLACEMENT_KEY, TournamentSummary } from '../../domain/tournament';
+import { useT } from '../../i18n/I18nProvider';
 import { summaryAlt } from './useSummaryCard';
 
 interface TournamentSummaryCardProps {
@@ -13,10 +14,11 @@ interface TournamentSummaryCardProps {
  * spazio con le stesse proporzioni.
  */
 export function TournamentSummaryCard({ summary, url, failed }: TournamentSummaryCardProps) {
-  if (url) return <img src={url} alt={summaryAlt(summary)} className="block w-full h-auto border-2 border-ink shadow-block-lg" />;
+  const t = useT();
+  if (url) return <img src={url} alt={summaryAlt(summary, t)} className="block w-full h-auto border-2 border-ink shadow-block-lg" />;
   return (
-    <div className="aspect-[4/5] w-full border-2 border-ink bg-pitch-deep text-canvas flex items-center justify-center p-6 text-center" role="img" aria-label={summaryAlt(summary)}>
-      <p className="font-display text-3xl font-extrabold">{failed ? summary.placementLabel : 'Preparo la card…'}</p>
+    <div className="aspect-[4/5] w-full border-2 border-ink bg-pitch-deep text-canvas flex items-center justify-center p-6 text-center" role="img" aria-label={summaryAlt(summary, t)}>
+      <p className="font-display text-3xl font-extrabold">{failed ? t(PLACEMENT_KEY[summary.placement]) : t('tournament.summary.cardLoading')}</p>
     </div>
   );
 }

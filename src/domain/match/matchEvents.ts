@@ -1,9 +1,26 @@
+import { catalog } from '../../i18n/catalog';
+import { CatalogKey, TranslateParams } from '../../i18n/translate';
 import { Rng } from '../../services/auction/rng';
 import { ChanceKind, MatchTick, Tactic } from './matchTypes';
 
 /**
+ * Descrizione semantica di un evento: chiave di catalogo + parametri +
+ * indice della variante. Il testo vero viene composto al momento del render
+ * nella lingua del partecipante; qui non entra nessuna stringa localizzata,
+ * così risultati e hash multiplayer restano identici in ogni lingua.
+ */
+export interface EventDesc {
+  key: CatalogKey;
+  params?: TranslateParams;
+  variant?: number;
+}
+
+const ev = catalog.match.event;
+
+/**
  * Testi della cronaca e formattazione del tempo. Le frasi sono scelte con
- * l'Rng del tick, quindi la cronaca è deterministica come il resto.
+ * l'Rng del tick, quindi la cronaca è deterministica come il resto: lo stesso
+ * rng decide l'indice della variante, identico per ogni client.
  */
 
 export { shortName } from '../../utils/playerName';
@@ -18,88 +35,69 @@ export function formatTick(tick: Pick<MatchTick, 'minute' | 'extra'>): string {
   return formatMinute(tick.minute, tick.extra);
 }
 
-function pick(rng: Rng, options: string[]): string {
-  return options[Math.floor(rng() * options.length)];
+/** Indice deterministico della variante di cronaca (un draw di rng, come prima) */
+function pickVariant(rng: Rng, count: number): number {
+  return Math.floor(rng() * count);
 }
 
-export const TACTIC_LABELS: Record<Tactic, string> = {
-  attacca: 'Attacca',
-  equilibrata: 'Equilibrata',
-  difendi: 'Difendi',
+/** Chiave di catalogo dell'etichetta di una tattica */
+export const TACTIC_KEY: Record<Tactic, CatalogKey> = {
+  attacca: 'match.tacticLabel.attacca',
+  equilibrata: 'match.tacticLabel.equilibrata',
+  difendi: 'match.tacticLabel.difendi',
 };
 
 export const text = {
-  chance(rng: Rng, kind: ChanceKind, team: string, shooter: string): string {
+  chance(rng: Rng, kind: ChanceKind, team: string, shooter: string): EventDesc {
+    const params = { team, shooter };
     if (kind === 'contropiede') {
-      return pick(rng, [
-        `Contropiede ${team}! ${shooter} lanciato verso la porta.`,
-        `Ripartenza fulminea, ${shooter} se ne va in campo aperto.`,
-      ]);
+      return { key: 'match.event.chance.counter', variant: pickVariant(rng, ev.chance.counter.length), params };
     }
-    return pick(rng, [
-      `Grande occasione ${team}! ${shooter} riceve in area.`,
-      `${shooter} si libera al limite dell'area: occasione enorme!`,
-      `Palla filtrante per ${shooter}, tutto solo davanti al portiere.`,
-    ]);
+    return { key: 'match.event.chance.normal', variant: pickVariant(rng, ev.chance.normal.length), params };
   },
-  goal(rng: Rng, scorer: string, kind: ChanceKind | 'rigore', gkError: boolean): string {
-    if (kind === 'rigore') return `Rigore trasformato da ${scorer}.`;
-    if (gkError) return `Papera del portiere! ${scorer} ringrazia e segna.`;
-    if (kind === 'contropiede') return `Gol in contropiede di ${scorer}!`;
-    return pick(rng, [
-      `Gol di ${scorer}!`,
-      `${scorer} non perdona: gol!`,
-      `Rete! ${scorer} trova l'angolo giusto.`,
-    ]);
+  goal(rng: Rng, scorer: string, kind: ChanceKind | 'rigore', gkError: boolean): EventDesc {
+    if (kind === 'rigore') return { key: 'match.event.goal.penalty', params: { scorer } };
+    if (gkError) return { key: 'match.event.goal.gkError', params: { scorer } };
+    if (kind === 'contropiede') return { key: 'match.event.goal.counter', params: { scorer } };
+    return { key: 'match.event.goal.normal', variant: pickVariant(rng, ev.goal.normal.length), params: { scorer } };
   },
-  assist(passer: string, scorer: string): string {
-    return `Assist di ${passer} per ${scorer}.`;
+  assist(passer: string, scorer: string): EventDesc {
+    return { key: 'match.event.assist', params: { passer, scorer } };
   },
-  save(rng: Rng, keeper: string, shooter: string): string {
-    return pick(rng, [
-      `Parata di ${keeper} sul tiro di ${shooter}.`,
-      `${keeper} vola e respinge la conclusione di ${shooter}.`,
-      `Tiro di ${shooter}, ${keeper} blocca a terra.`,
-    ]);
+  save(rng: Rng, keeper: string, shooter: string): EventDesc {
+    return { key: 'match.event.save', variant: pickVariant(rng, ev.save.length), params: { keeper, shooter } };
   },
-  miss(rng: Rng, shooter: string, blocker: string | null): string {
-    if (blocker) return `Tiro di ${shooter} murato da ${blocker}.`;
-    return pick(rng, [
-      `${shooter} calcia alto.`,
-      `Conclusione di ${shooter} a lato.`,
-      `${shooter} ci prova da fuori, fuori misura.`,
-    ]);
+  miss(rng: Rng, shooter: string, blocker: string | null): EventDesc {
+    if (blocker) return { key: 'match.event.miss.blocked', params: { shooter, blocker } };
+    return { key: 'match.event.miss.normal', variant: pickVariant(rng, ev.miss.normal.length), params: { shooter } };
   },
-  woodwork(rng: Rng, shooter: string): string {
-    return pick(rng, [`Palo di ${shooter}!`, `Traversa piena di ${shooter}!`]);
+  woodwork(rng: Rng, shooter: string): EventDesc {
+    return { key: 'match.event.woodwork', variant: pickVariant(rng, ev.woodwork.length), params: { shooter } };
   },
-  penalty(team: string, fouled: string): string {
-    return `Rigore per ${team}! Atterrato ${fouled} in area.`;
+  penalty(team: string, fouled: string): EventDesc {
+    return { key: 'match.event.penalty', params: { team, fouled } };
   },
-  penaltyMissed(taker: string, keeper: string, saved: boolean): string {
-    return saved ? `${keeper} para il rigore di ${taker}!` : `${taker} calcia il rigore fuori!`;
+  penaltyMissed(taker: string, keeper: string, saved: boolean): EventDesc {
+    return saved
+      ? { key: 'match.event.penaltyMissed.saved', params: { keeper, taker } }
+      : { key: 'match.event.penaltyMissed.out', params: { taker } };
   },
-  ownGoal(player: string): string {
-    return `Autogol di ${player}.`;
+  ownGoal(player: string): EventDesc {
+    return { key: 'match.event.ownGoal', params: { player } };
   },
-  yellow(player: string): string {
-    return `Ammonito ${player}.`;
+  yellow(player: string): EventDesc {
+    return { key: 'match.event.yellow', params: { player } };
   },
-  red(player: string, secondYellow: boolean): string {
-    return secondYellow ? `Secondo giallo per ${player}: espulso!` : `Rosso diretto per ${player}!`;
+  red(player: string, secondYellow: boolean): EventDesc {
+    return { key: secondYellow ? 'match.event.red.second' : 'match.event.red.direct', params: { player } };
   },
-  injury(player: string): string {
-    return `${player} resta a terra: stringe i denti e rimane in campo.`;
+  injury(player: string): EventDesc {
+    return { key: 'match.event.injury', params: { player } };
   },
-  tactic(team: string, tactic: Tactic): string {
-    const verb: Record<Tactic, string> = {
-      attacca: 'si sbilancia in avanti',
-      equilibrata: 'torna su un assetto equilibrato',
-      difendi: 'abbassa il baricentro',
-    };
-    return `${team} ${verb[tactic]}.`;
+  tactic(team: string, tactic: Tactic): EventDesc {
+    return { key: `match.event.tactic.${tactic}` as CatalogKey, params: { team } };
   },
-  shootoutKick(taker: string, scored: boolean): string {
-    return scored ? `${taker} segna.` : `${taker} sbaglia!`;
+  shootoutKick(taker: string, scored: boolean): EventDesc {
+    return { key: scored ? 'match.event.shootout.kickScored' : 'match.event.shootout.kickMissed', params: { taker } };
   },
 };

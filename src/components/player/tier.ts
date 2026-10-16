@@ -1,8 +1,9 @@
 import { Player, PlayerRole } from '../../types';
+import { CatalogKey } from '../../i18n/translate';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { tierOf, Tier } from '../../services/playerTier';
 
-export { tierOf, TIER_LABEL, TIER_THRESHOLDS } from '../../services/playerTier';
+export { tierOf, TIER_KEY, TIER_THRESHOLDS } from '../../services/playerTier';
 export type { Tier } from '../../services/playerTier';
 
 export function playerTier(player: Player): Tier {
@@ -24,9 +25,10 @@ export const ROLE_TAG: Record<PlayerRole, string> = {
   A: 'role-tag role-tag-A',
 };
 
-export const ROLE_NAME: Record<PlayerRole, string> = {
-  P: 'Portiere',
-  D: 'Difensore',
-  C: 'Centrocampista',
-  A: 'Attaccante',
+/** Chiavi di catalogo per il nome del ruolo */
+export const ROLE_KEY: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.name.P',
+  D: 'ui.roles.name.D',
+  C: 'ui.roles.name.C',
+  A: 'ui.roles.name.A',
 };

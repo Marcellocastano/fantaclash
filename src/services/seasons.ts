@@ -1,3 +1,4 @@
+import { t as defaultT, TFunction } from '../i18n/translate';
 import { Player } from '../types';
 
 /**
@@ -22,13 +23,13 @@ export function isLegends(season: string | undefined | null): boolean {
 }
 
 /** Etichetta completa del listone: "Serie A 2015-16" / "Serie A Legends" */
-export function listoneLabel(season: string | undefined | null): string {
-  return isLegends(season) ? `Serie A ${LEGENDS_LABEL}` : `Serie A ${season}`;
+export function listoneLabel(season: string | undefined | null, tr: TFunction = defaultT): string {
+  return isLegends(season) ? tr('ui.listone.legends') : tr('ui.listone.serieA', { season: season ?? '' });
 }
 
 /** Etichetta corta del listone: "2015-16" / "Legends" */
-export function listoneShort(season: string | undefined | null): string {
-  return isLegends(season) ? LEGENDS_LABEL : (season ?? '');
+export function listoneShort(season: string | undefined | null, tr: TFunction = defaultT): string {
+  return isLegends(season) ? tr('ui.listone.legendsShort') : (season ?? '');
 }
 
 /** Annata corta per le card Legends: "2009-10" -> "09-10" */
@@ -61,11 +62,11 @@ function isPlayerShape(p: unknown): p is Player {
 export async function loadSeasonIndex(): Promise<SeasonInfo[]> {
   const res = await fetch('/data/seasons/index.json');
   if (!res.ok) {
-    throw new Error(`Impossibile caricare l'elenco delle stagioni (HTTP ${res.status})`);
+    throw new Error(defaultT('errors.seasonIndexLoad', { status: res.status }));
   }
   const data: unknown = await res.json();
   if (!Array.isArray(data)) {
-    throw new Error('Elenco delle stagioni malformato');
+    throw new Error(defaultT('errors.seasonIndexMalformed'));
   }
   return data.filter(
     (e): e is SeasonInfo =>
@@ -84,15 +85,15 @@ export async function loadSeasonIndex(): Promise<SeasonInfo[]> {
 export async function loadSeasonPlayers(season: string): Promise<Player[]> {
   const res = await fetch(`/data/seasons/${season}.json`);
   if (!res.ok) {
-    throw new Error(`Impossibile caricare la stagione ${season} (HTTP ${res.status})`);
+    throw new Error(defaultT('errors.seasonLoad', { season, status: res.status }));
   }
   const data: unknown = await res.json();
   if (typeof data !== 'object' || data === null || !Array.isArray((data as { players?: unknown }).players)) {
-    throw new Error(`Dati della stagione ${season} malformati`);
+    throw new Error(defaultT('errors.seasonDataMalformed', { season }));
   }
   const players = (data as { players: unknown[] }).players;
   if (!players.every(isPlayerShape)) {
-    throw new Error(`Giocatori della stagione ${season} malformati`);
+    throw new Error(defaultT('errors.seasonPlayersMalformed', { season }));
   }
   return players;
 }

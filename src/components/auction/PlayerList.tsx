@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useT } from '../../i18n/I18nProvider';
+import { CatalogKey } from '../../i18n/translate';
 import { Player, PlayerRole } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { listoneLabel } from '../../services/seasons';
@@ -33,7 +35,7 @@ type View = 'righe' | 'card';
 type Sort = 'ovr' | 'valore';
 
 const ROLES: PlayerRole[] = ['P', 'D', 'C', 'A'];
-const ROLE_LABEL: Record<PlayerRole, string> = { P: 'Portieri', D: 'Difensori', C: 'Centrocampisti', A: 'Attaccanti' };
+const ROLE_LABEL: Record<PlayerRole, CatalogKey> = { P: 'ui.roles.plural.P', D: 'ui.roles.plural.D', C: 'ui.roles.plural.C', A: 'ui.roles.plural.A' };
 const isView = (v: unknown): v is View => v === 'righe' || v === 'card';
 
 /**
@@ -42,6 +44,7 @@ const isView = (v: unknown): v is View => v === 'righe' || v === 'card';
  * l'utente non sceglie un altro filtro).
  */
 export function PlayerList({ available, sold, currentRole, season, isSelectable, onSelectPlayer, scanId, lockedId }: PlayerListProps) {
+  const t = useT();
   const [manual, setManual] = useState<{ role: RoleFilter; during: PlayerRole } | null>(null);
   const [showSold, setShowSold] = useState(false);
   const [view, setView] = usePersistentState<View>('fanta-fc-list-view', 'righe', isView);
@@ -63,17 +66,17 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
     <div className="h-full flex flex-col">
       <div className="flex items-end justify-between gap-3 pb-3">
         <h2 className="font-display text-3xl font-extrabold text-ink leading-none">
-          Listone
-          {season && <span className="text-ink-muted"> · {listoneLabel(season)}</span>}
+          {t('auction.list.title')}
+          {season && <span className="text-ink-muted"> · {listoneLabel(season, t)}</span>}
         </h2>
-        <div className="flex border-2 border-ink" role="group" aria-label="Vista">
+        <div className="flex border-2 border-ink" role="group" aria-label={t('auction.list.view')}>
           {(['righe', 'card'] as View[]).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
               aria-pressed={view === v}
-              aria-label={v === 'righe' ? 'Vista a righe' : 'Vista a card'}
-              title={v === 'righe' ? 'Righe' : 'Card'}
+              aria-label={v === 'righe' ? t('auction.list.rowsAria') : t('auction.list.cardsAria')}
+              title={v === 'righe' ? t('auction.list.rowsTitle') : t('auction.list.cardsTitle')}
               className={`p-1.5 ${view === v ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface'}`}
             >
               <Icon name={v === 'righe' ? 'list' : 'grid'} className="w-5 h-5" />
@@ -83,7 +86,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
       </div>
 
       {/* Ruolo */}
-      <div className="flex border-b-2 border-ink" role="tablist" aria-label="Ruolo">
+      <div className="flex border-b-2 border-ink" role="tablist" aria-label={t('auction.list.roleTab')}>
         {[...ROLES, 'TUTTI' as const].map(r => {
           const active = role === r;
           return (
@@ -91,14 +94,14 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
               key={r}
               role="tab"
               aria-selected={active}
-              title={r === 'TUTTI' ? 'Tutti i ruoli' : ROLE_LABEL[r]}
+              title={r === 'TUTTI' ? t('auction.list.allRoles') : t(ROLE_LABEL[r])}
               onClick={() => setManual(r === currentRole ? null : { role: r, during: currentRole })}
               className={`flex-1 py-2 font-display text-base sm:text-xl font-extrabold leading-none transition-colors duration-150 ${
                 active ? 'bg-ink text-canvas' : 'text-ink-muted hover:text-ink hover:bg-surface'
               }`}
             >
-              {r === 'TUTTI' ? 'Tutti' : r}
-              {r === currentRole && <span className={`ml-1 text-xs align-top ${active ? 'text-highlight' : 'text-pitch'}`}>in asta</span>}
+              {r === 'TUTTI' ? t('auction.list.all') : r}
+              {r === currentRole && <span className={`ml-1 text-xs align-top ${active ? 'text-highlight' : 'text-pitch'}`}>{t('auction.list.inAuction')}</span>}
             </button>
           );
         })}
@@ -109,7 +112,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
           <Icon name="search" className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
-            placeholder="Cerca nome o club"
+            placeholder={t('auction.list.search')}
             value={query}
             onChange={e => setQuery(e.target.value)}
             className="input-field py-1.5 pl-8 text-sm"
@@ -119,14 +122,14 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
           value={sort}
           onChange={e => setSort(e.target.value as Sort)}
           className="bg-canvas border-2 border-ink px-2 py-1.5 text-sm font-semibold"
-          aria-label="Ordina"
+          aria-label={t('auction.list.sort')}
         >
-          <option value="ovr">Per overall</option>
-          <option value="valore">Per valore</option>
+          <option value="ovr">{t('auction.list.byOvr')}</option>
+          <option value="valore">{t('auction.list.byValue')}</option>
         </select>
         <label className="flex items-center gap-2 text-sm font-semibold text-ink-soft cursor-pointer select-none">
           <input type="checkbox" checked={showSold} onChange={e => setShowSold(e.target.checked)} className="w-4 h-4 accent-pitch" />
-          Venduti
+          {t('auction.list.sold')}
         </label>
       </div>
 
@@ -168,7 +171,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
             })}
           </ul>
         )}
-        {rows.length === 0 && <p className="p-8 text-center text-ink-muted">Nessun giocatore trovato</p>}
+        {rows.length === 0 && <p className="p-8 text-center text-ink-muted">{t('auction.list.empty')}</p>}
       </div>
     </div>
   );

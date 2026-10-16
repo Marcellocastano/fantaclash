@@ -1,8 +1,15 @@
 import type { TournamentStatus } from '../../domain/tournament';
+import type { CatalogKey } from '../../i18n/translate';
 import type { GamePhase } from '../../types';
 
-/** Tappe del percorso di gioco mostrate nella navbar */
-export const JOURNEY_STEPS = ['Asta', 'Sorteggio', 'Quarti', 'Semifinale', 'Finale'] as const;
+/** Tappe del percorso di gioco mostrate nella navbar (chiavi di catalogo) */
+export const JOURNEY_STEPS: readonly CatalogKey[] = [
+  'ui.journey.auction',
+  'ui.journey.draw',
+  'ui.journey.quarters',
+  'ui.journey.semifinal',
+  'ui.journey.final',
+] as const;
 
 /**
  * Indice della tappa corrente (0..4); 5 = percorso completato,

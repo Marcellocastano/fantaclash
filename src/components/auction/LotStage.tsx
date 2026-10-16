@@ -1,4 +1,5 @@
 import { AuctionBid, Player, Team } from '../../types';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { PlayerCard } from '../player/PlayerCard';
 import { TeamBadge } from '../tournament/TeamBadge';
@@ -36,7 +37,8 @@ const HISTORY_SIZE = 5;
  */
 export function LotStage(props: LotStageProps) {
   const { player, currentBid, bidderId, bids, teams, userTeam, timeRemaining, active, canBid, userMaxBid, outbid, outbidKey, autoAdvance, allowSimulation = true, onBid, onNext } = props;
-  const leader = teams.find(t => t.id === bidderId);
+  const t = useT();
+  const leader = teams.find(x => x.id === bidderId);
   const userLeads = !!userTeam && bidderId === userTeam.id;
   const lowTime = active && timeRemaining < 2000;
   const seconds = Math.max(0, timeRemaining / 1000);
@@ -62,7 +64,7 @@ export function LotStage(props: LotStageProps) {
                 userLeads ? 'bg-highlight text-on-highlight border-ink' : 'bg-canvas text-whistle border-whistle'
               }`}
             >
-              {userLeads ? 'TUO!' : 'VENDUTO'}
+              {userLeads ? t('auction.lot.yours') : t('auction.lot.sold')}
             </span>
           </div>
         )}
@@ -73,12 +75,12 @@ export function LotStage(props: LotStageProps) {
         <div className="flex items-stretch">
           <div className="flex-1 px-4 py-3 min-w-0">
             <span className="block text-sm font-bold opacity-80">
-              {!active ? (userLeads ? 'Aggiudicato a te' : `Aggiudicato a ${leader?.name ?? ''}`) : outbid ? `Superato da ${leader?.name ?? ''}!` : userLeads ? 'Sei in testa' : leader ? 'In testa' : 'Base d\'asta'}
+              {!active ? (userLeads ? t('auction.lot.soldToYou') : t('auction.lot.soldTo', { team: leader?.name ?? '' })) : outbid ? t('auction.lot.outbidBy', { team: leader?.name ?? '' }) : userLeads ? t('auction.lot.leading') : leader ? t('auction.lot.leadingBy') : t('auction.lot.basePrice')}
             </span>
             <span className="flex items-center gap-3 mt-1 min-w-0">
               {leader && <TeamBadge team={leader} size="md" />}
               <span className="font-display text-2xl font-extrabold leading-none truncate">
-                {userLeads ? 'La tua squadra' : leader?.name ?? 'Nessuna offerta'}
+                {userLeads ? t('auction.lot.yourTeam') : leader?.name ?? t('auction.lot.noBids')}
               </span>
             </span>
           </div>
@@ -102,7 +104,7 @@ export function LotStage(props: LotStageProps) {
       {active ? (
         <>
           <div className="flex items-center justify-between">
-            <span className="label">Tempo</span>
+            <span className="label">{t('auction.lot.time')}</span>
             <span
               key={lowTime ? Math.ceil(seconds) : 'ok'}
               className={`font-display font-black text-3xl sm:text-4xl tabular-nums leading-none inline-block ${lowTime ? 'text-whistle motion-safe:animate-tick-pulse' : 'text-ink'}`}
@@ -119,38 +121,38 @@ export function LotStage(props: LotStageProps) {
                   return (
                     <button key={inc} onClick={() => onBid(next)} disabled={userLeads || next > userMaxBid} className="btn-bid flex-col py-3">
                       <span className="text-2xl sm:text-3xl">+{inc}</span>
-                      <span className="text-sm font-bold opacity-80">a {next}</span>
+                      <span className="text-sm font-bold opacity-80">{t('auction.lot.upTo', { amount: next })}</span>
                     </button>
                   );
                 })}
               </div>
               <p className="text-sm text-ink-muted mt-3">
-                {userLeads ? 'Sei in testa: aspetta lo scadere del tempo.' : `Puoi offrire fino a ${userMaxBid} Cr.`}
+                {userLeads ? t('auction.lot.leadingWait') : t('auction.lot.maxBid', { max: userMaxBid })}
               </p>
             </div>
           ) : (
             <p className="text-ink-soft">
               {allowSimulation
-                ? 'Hai già completato questo reparto, puoi passare al reparto successivo cliccando su Avanti veloce'
-                : 'Hai già completato questo reparto: guarda come va a finire.'}
+                ? t('auction.lot.roleDoneSim')
+                : t('auction.lot.roleDoneWatch')}
             </p>
           )}
         </>
       ) : allowSimulation ? (
         <AdvanceButton auto={autoAdvance} onClick={onNext} className="btn-primary w-full text-2xl py-4">
-          Prossimo giocatore
+          {t('auction.lot.nextPlayer')}
           <Icon name="arrow" className="w-5 h-5" />
         </AdvanceButton>
       ) : (
-        <p className="text-sm text-ink-muted">Aggiudicato: si va avanti da soli…</p>
+        <p className="text-sm text-ink-muted">{t('auction.autoNext')}</p>
       )}
 
       {bids.length > 0 && (
-        <section aria-label="Ultimi rilanci">
+        <section aria-label={t('auction.lot.bidsTitle')}>
           <div className="flex items-baseline justify-between pb-2 border-b-2 border-ink">
-            <h3 className="font-display font-extrabold text-xl text-ink leading-none">Ultimi rilanci</h3>
+            <h3 className="font-display font-extrabold text-xl text-ink leading-none">{t('auction.lot.bidsTitle')}</h3>
             <span className="text-sm font-semibold text-ink-muted tabular-nums">
-              {bids.length} {bids.length === 1 ? 'offerta' : 'offerte'}
+              {bids.length} {t(bids.length === 1 ? 'auction.lot.bidOne' : 'auction.lot.bidMany')}
             </span>
           </div>
           <ol className="divide-y-2 divide-line">
@@ -159,9 +161,9 @@ export function LotStage(props: LotStageProps) {
               .slice(-HISTORY_SIZE)
               .reverse()
               .map((b, i) => {
-                const t = teams.find(x => x.id === b.teamId);
+                const bidTeam = teams.find(x => x.id === b.teamId);
                 const top = i === 0;
-                const mine = !!t?.isUserTeam;
+                const mine = !!bidTeam?.isUserTeam;
                 return (
                   <li
                     key={`${b.teamId}-${b.amount}`}
@@ -169,17 +171,17 @@ export function LotStage(props: LotStageProps) {
                       top ? (mine ? 'bg-highlight -mx-2 px-2' : 'bg-surface -mx-2 px-2') : ''
                     }`}
                   >
-                    <TeamBadge team={t} size="sm" />
+                    <TeamBadge team={bidTeam} size="sm" />
                     <span className={`flex-1 min-w-0 truncate ${top ? 'font-bold text-ink' : 'text-ink-soft'}`}>
-                      {mine ? 'La tua squadra' : t?.name}
+                      {mine ? t('auction.lot.yourTeam') : bidTeam?.name}
                     </span>
                     {top && (
                       <span className="shrink-0 border-2 border-ink bg-canvas px-1.5 py-0.5 font-display font-extrabold text-xs leading-none uppercase">
-                        In testa
+                        {t('auction.lot.leadingBy')}
                       </span>
                     )}
                     <span className={`w-10 shrink-0 text-right text-sm font-semibold tabular-nums ${top ? 'text-ink' : 'text-ink-muted'}`}>
-                      {b.delta === null ? 'apre' : `+${b.delta}`}
+                      {b.delta === null ? t('auction.lot.opens') : `+${b.delta}`}
                     </span>
                     <span
                       className={`w-16 shrink-0 text-right font-display font-extrabold tabular-nums leading-none ${

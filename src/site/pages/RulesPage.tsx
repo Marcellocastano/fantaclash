@@ -1,6 +1,7 @@
 import { buildRoutes } from '../routes';
 import { ContentLayout } from '../ContentLayout';
 import { GameCta, H2, Li, PageTitle, Prose, Table, Ul } from '../blocks';
+import { useT } from '../../i18n/I18nProvider';
 
 const route = buildRoutes().find(r => r.kind === 'rules')!;
 
@@ -10,130 +11,97 @@ const route = buildRoutes().find(r => r.kind === 'rules')!;
  * regole, aggiornare questa pagina.
  */
 export function RulesPage() {
+  const t = useT();
   return (
     <ContentLayout breadcrumbs={route.breadcrumbs}>
       <article>
-        <PageTitle kicker="Regolamento">Regole di FantaClash: asta, rosa e torneo</PageTitle>
+        <PageTitle kicker={t('site.rules.kicker')}>{t('site.rules.title')}</PageTitle>
         <Prose>
-          <p>
-            FantaClash è un gioco di fantacalcio ad asta sulle stagioni storiche della Serie A: scegli un'annata, vinci
-            l'asta contro 7 avversari comandati dal computer e porta la tua squadra a una coppa a eliminazione diretta.
-            Qui trovi tutte le regole, con i numeri esatti usati dal gioco.
-          </p>
+          <p>{t('site.rules.intro')}</p>
 
-          <H2>La squadra</H2>
+          <H2>{t('site.rules.hTeam')}</H2>
           <Ul>
             <Li>
-              <strong>8 squadre</strong> in ogni torneo: la tua e 7 bot, ognuno con una personalità diversa (c'è chi
-              spende solo per i fuoriclasse, chi punta tutto sui pupilli, chi aspetta gli ultimi giocatori di un
-              reparto).
+              <strong>{t('site.rules.t1b')}</strong> {t('site.rules.t1t')}
             </Li>
             <Li>
-              <strong>100 crediti</strong> per squadra, identici per tutti.
+              <strong>{t('site.rules.t2b')}</strong> {t('site.rules.t2t')}
             </Li>
             <Li>
-              <strong>Rosa da 8 giocatori</strong> con modulo fisso <strong>1-2-3-2</strong>: un portiere, due
-              difensori, tre centrocampisti e due attaccanti. Niente panchina: ogni acquisto conta.
+              <strong>{t('site.rules.t3b1')}</strong> {t('site.rules.t3m')}{' '}
+              <strong>{t('site.rules.t3b2')}</strong>{t('site.rules.t3t')}
             </Li>
           </Ul>
 
-          <H2>Il listone</H2>
+          <H2>{t('site.rules.hListone')}</H2>
           <p>
-            Ogni annata ha un listone di <strong>96 giocatori reali</strong>: 12 portieri, 24 difensori, 36
-            centrocampisti e 24 attaccanti. Sono i migliori della Serie A di quella stagione, scelti per valore di
-            listone. Accanto al nome trovi l'overall, un punteggio da 70 a 99 che riassume rendimento in campo e
-            reputazione nel fantacalcio di quell'anno. I giocatori sono divisi in fasce: bronzo fino a 79, argento da
-            80 a 84, oro da 85 a 89, fuoriclasse da 90 in su.
+            {t('site.rules.l1a')}<strong>{t('site.rules.l1b')}</strong>{t('site.rules.l1c')}
           </p>
           <p>
-            In alternativa all'annata c'è la modalità <strong>Legends</strong>: un unico listone con i 96 più forti
-            delle 23 stagioni disponibili, una card per giocatore nella sua annata migliore e overall riscritti da
-            84 a 99. I GOAT della Serie A, tutti nella stessa asta.
+            {t('site.rules.l2a')}<strong>{t('site.rules.l2b')}</strong>{t('site.rules.l2c')}
           </p>
 
-          <H2>L'asta</H2>
+          <H2>{t('site.rules.hAsta')}</H2>
           <Ul>
             <Li>
-              Si gioca <strong>per reparti</strong>: prima tutti i portieri, poi i difensori, i centrocampisti e infine
-              gli attaccanti. A ogni giro una squadra chiama un giocatore da mettere all'asta; la chiamata ruota tra
-              le squadre e continua anche quando cambia il reparto.
+              {t('site.rules.a1a')}<strong>{t('site.rules.a1b')}</strong>{t('site.rules.a1c')}
             </Li>
             <Li>
-              Chi chiama fa <strong>l'offerta d'apertura da 1 credito</strong>. Gli altri rilanciano di quanto vogliono,
-              purché restino sotto il loro massimo.
+              {t('site.rules.a2a')}<strong>{t('site.rules.a2b')}</strong>{t('site.rules.a2c')}
             </Li>
             <Li>
-              Il <strong>cronometro è di 5 secondi</strong> e riparte a ogni rilancio: chi non rilancia in tempo resta
-              fuori. All'ultimo secondo un rilancio allunga sempre il lotto.
+              {t('site.rules.a3a')}<strong>{t('site.rules.a3b')}</strong>{t('site.rules.a3c')}
             </Li>
             <Li>
-              <strong>L'offerta massima</strong> è pari ai crediti rimasti meno un credito per ogni altro posto libero:
-              la rosa deve potersi completare, non puoi scommettere tutto su un solo giocatore.
+              <strong>{t('site.rules.a4b')}</strong>{t('site.rules.a4t')}
             </Li>
-            <Li>
-              Chi vince paga il prezzo dell'ultima offerta e il giocatore entra in rosa. L'asta continua finché tutte
-              le 8 squadre non hanno gli 8 giocatori.
-            </Li>
+            <Li>{t('site.rules.a5')}</Li>
           </Ul>
 
-          <H2>Il torneo</H2>
+          <H2>{t('site.rules.hTournament')}</H2>
           <Ul>
             <Li>
-              Coppa a eliminazione diretta a 8 squadre: <strong>quarti di finale, semifinali e finale</strong>, con il
-              sorteggio degli accoppiamenti dopo l'asta.
+              {t('site.rules.c1a')}<strong>{t('site.rules.c1b')}</strong>{t('site.rules.c1c')}
             </Li>
             <Li>
-              Due formati a scelta: <strong>gara secca</strong> (una partita per turno) oppure{' '}
-              <strong>andata e ritorno</strong>, con quarti e semifinali su due partite e la finale sempre secca.
-              Nei confronti a due gare si giocano prima tutte le andate del turno e poi i ritorni, con casa invertita.
-              Passa il turno chi ha l'<strong>aggregato</strong> migliore; all'andata il pareggio è un risultato valido
-              e i rigori arrivano solo al ritorno, se l'aggregato è pari.
+              {t('site.rules.c2a')}<strong>{t('site.rules.c2b1')}</strong>{t('site.rules.c2m1')}
+              <strong>{t('site.rules.c2b2')}</strong>{t('site.rules.c2m2')}
+              <strong>{t('site.rules.c2b3')}</strong>{t('site.rules.c2m3')}
             </Li>
             <Li>
-              Le partite si svolgono minuto per minuto: occasione, tiro, parata o gol, con cartellini, rigori ed
-              eventi rari. In caso di pareggio si va ai <strong>calci di rigore</strong> ad oltranza.
+              {t('site.rules.c3a')}<strong>{t('site.rules.c3b')}</strong>{t('site.rules.c3c')}
             </Li>
             <Li>
-              Nella tua partita scegli lo <strong>stile di gioco</strong> (attacca, equilibrata o difendi) al calcio
-              d'inizio, all'intervallo e al 75'. Ogni stile cambia le occasioni e il consumo di fiato della squadra:
-              più attacchi, più corri, più ti stanchi.
+              {t('site.rules.c4a')}<strong>{t('site.rules.c4b')}</strong>{t('site.rules.c4c')}
             </Li>
             <Li>
-              Se si va ai rigori scegli tu <strong>l'ordine dei rigoristi</strong>: chi tira per primo conta, perché le
-              probabilità cambiano da giocatore a giocatore.
+              {t('site.rules.c5a')}<strong>{t('site.rules.c5b')}</strong>{t('site.rules.c5c')}
             </Li>
-            <Li>
-              Le altre partite del turno si simulano da sole quando finisce la tua. Alla fine ottieni una card del
-              torneo da scaricare o condividere.
-            </Li>
+            <Li>{t('site.rules.c6')}</Li>
           </Ul>
 
-          <H2>Voti e fantavoti</H2>
+          <H2>{t('site.rules.hVoti')}</H2>
           <p>
-            Dopo ogni partita ogni giocatore riceve un <strong>voto</strong>, che misura il rendimento, e un
-            <strong> fantavoto</strong>, che aggiunge i bonus e i malus degli eventi. I bonus e i malus sono quelli
-            classici del fantacalcio:
+            {t('site.rules.v1a')}<strong>{t('site.rules.v1b1')}</strong>{t('site.rules.v1m')}
+            <strong>{t('site.rules.v1b2')}</strong>{t('site.rules.v1c')}
           </p>
           <Table
-            head={['Evento', 'Bonus / malus']}
+            head={[t('site.rules.th1'), t('site.rules.th2')]}
             rows={[
-              ['Gol', '+3'],
+              [t('site.rules.r1k'), '+3'],
               ['Assist', '+1'],
-              ['Gol subito (portiere)', '−1'],
-              ['Rigore parato', '+3'],
-              ['Rigore sbagliato', '−3'],
-              ['Ammonizione', '−0,5'],
-              ['Espulsione', '−1'],
-              ['Autogol', '−2'],
-              ['Porta inviolata (portiere)', '+1'],
+              [t('site.rules.r3k'), '−1'],
+              [t('site.rules.r4k'), '+3'],
+              [t('site.rules.r5k'), '−3'],
+              [t('site.rules.r6k'), '−0,5'],
+              [t('site.rules.r7k'), '−1'],
+              [t('site.rules.r8k'), '−2'],
+              [t('site.rules.r9k'), '+1'],
             ]}
           />
-          <p>
-            Il fantavoto di squadra decide i premi di fine torneo: campione, finalista o eliminato. Il giocatore con
-            la fantamedia più alta del torneo diventa il MVP della tua card.
-          </p>
+          <p>{t('site.rules.v2')}</p>
 
-          <GameCta text="Le regole si imparano in un'asta sola. Scegli l'annata e prova." />
+          <GameCta text={t('site.rules.ctaText')} />
         </Prose>
       </article>
     </ContentLayout>

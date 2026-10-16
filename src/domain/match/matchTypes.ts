@@ -102,7 +102,18 @@ export interface MatchEvent {
   playerId?: string;
   relatedPlayerId?: string;
   impact: number;
-  description: string;
+  /**
+   * Cronaca testuale legacy. I nuovi eventi portano `descKey`/`descParams`/
+   * `descVariant` e il testo viene composto al render; `description` resta
+   * per i salvataggi e i risultati prodotti prima della localizzazione.
+   */
+  description?: string;
+  /** Chiave di catalogo della frase di cronaca */
+  descKey?: string;
+  /** Parametri di interpolazione (nomi di squadre/giocatori, punteggi) */
+  descParams?: Record<string, string | number>;
+  /** Indice della variante quando la chiave è un array di frasi */
+  descVariant?: number;
   /** Dettagli opzionali */
   chanceKind?: ChanceKind;
   isPenalty?: boolean;

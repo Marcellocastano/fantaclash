@@ -1,4 +1,5 @@
 import { MatchEvent, MatchResult, MatchSide, shortName } from '../../domain/match';
+import { useT } from '../../i18n/I18nProvider';
 import { KickPhase } from './useShootoutKick';
 
 interface ShootoutStageProps {
@@ -25,6 +26,7 @@ function aim(id: string): -1 | 0 | 1 {
  * esito rivelato con timbro, e il conteggio a caselle delle due squadre.
  */
 export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }: ShootoutStageProps) {
+  const t = useT();
   const names = new Map([...result.lineups.home, ...result.lineups.away].map(p => [p.playerId, shortName(p.name)]));
   const revealed = phase !== 'runup';
   const shown = kicks.filter(k => revealed || k.id !== kick?.id);
@@ -94,7 +96,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
             <p className="font-display text-3xl sm:text-5xl font-black leading-none truncate">{names.get(kick.playerId ?? '')}</p>
           </div>
           <p className="font-display text-lg sm:text-2xl font-extrabold text-highlight text-right">
-            {decisive ? 'Rigore decisivo' : phase === 'runup' ? 'Rincorsa…' : ''}
+            {decisive ? t('match.shootout.decisive') : phase === 'runup' ? t('match.shootout.runup') : ''}
           </p>
         </div>
       )}
@@ -108,7 +110,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
               kick.scored ? 'bg-highlight text-on-highlight' : 'bg-card-red text-white'
             }`}
           >
-            {kick.scored ? 'GOL!' : saved ? 'PARATO!' : 'FUORI!'}
+            {kick.scored ? t('match.shootout.goal') : saved ? t('match.shootout.saved') : t('match.shootout.out')}
           </span>
         </div>
       )}
@@ -141,7 +143,7 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
           );
         })}
       </div>
-      {shown.length > 10 && <p className="absolute top-20 inset-x-0 text-center font-display text-xl font-extrabold text-highlight">Ad oltranza</p>}
+      {shown.length > 10 && <p className="absolute top-20 inset-x-0 text-center font-display text-xl font-extrabold text-highlight">{t('match.shootout.sudden')}</p>}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   TournamentState,
   TournamentTeam,
 } from '../../domain/tournament';
+import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { TeamBadge } from './TeamBadge';
 
@@ -32,6 +33,7 @@ type Side = 'left' | 'right';
  * altezza. Il percorso dell'utente (partite e collegamenti) è giallo.
  */
 export function TournamentBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
+  const t = useT();
   const qf = roundMatches(tournament.bracket, 'quarterfinals');
   const sf = roundMatches(tournament.bracket, 'semifinals');
   const final = roundMatches(tournament.bracket, 'final')[0];
@@ -80,11 +82,11 @@ export function TournamentBracket({ tournament, revealIds = [] }: TournamentBrac
         <span className="absolute inset-y-0 left-1/2 w-0.5 bg-canvas/10" aria-hidden="true" />
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)] gap-8 mb-4 font-display text-lg font-extrabold text-canvas/60 text-center">
-          <span>Quarti</span>
-          <span>Semifinale</span>
-          <span className="text-highlight">Finale</span>
-          <span>Semifinale</span>
-          <span>Quarti</span>
+          <span>{t('tournament.bracket.quarters')}</span>
+          <span>{t('tournament.bracket.semi')}</span>
+          <span className="text-highlight">{t('tournament.bracket.final')}</span>
+          <span>{t('tournament.bracket.semi')}</span>
+          <span>{t('tournament.bracket.quarters')}</span>
         </div>
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)] gap-8 min-h-[290px]">
@@ -105,14 +107,14 @@ export function TournamentBracket({ tournament, revealIds = [] }: TournamentBrac
                 >
                   <Icon name="trophy" className="w-8 h-8 shrink-0" />
                   <span className="min-w-0">
-                    <span className="block text-xs font-bold">Campione</span>
+                    <span className="block text-xs font-bold">{t('tournament.bracket.champion')}</span>
                     <span className="block font-display text-2xl font-black leading-none truncate">{champion.name}</span>
                   </span>
                 </div>
               ) : (
                 <div className="flex flex-col items-center text-canvas/60">
                   <Icon name="trophy" className="w-12 h-12 text-highlight" />
-                  <span className="text-sm font-semibold mt-1">Da decidere</span>
+                  <span className="text-sm font-semibold mt-1">{t('tournament.bracket.undecided')}</span>
                 </div>
               )}
             </div>
@@ -136,6 +138,7 @@ interface MatchBoxProps {
 
 /** Tabellone compatto per mobile: tre blocchi verticali (quarti, semifinali, finale) */
 function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
+  const t = useT();
   const qf = roundMatches(tournament.bracket, 'quarterfinals');
   const sf = roundMatches(tournament.bracket, 'semifinals');
   const final = roundMatches(tournament.bracket, 'final')[0];
@@ -150,31 +153,31 @@ function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
         <div className="mb-4 flex items-center gap-3 border-2 border-ink bg-highlight px-3 py-2 text-on-highlight">
           <Icon name="trophy" className="w-7 h-7 shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide">Campione</p>
+            <p className="text-xs font-bold uppercase tracking-wide">{t('tournament.bracket.champion')}</p>
             <p className="font-display text-2xl font-black leading-none truncate">{champion.name}</p>
           </div>
         </div>
       )}
 
       <section>
-        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">Quarti di finale</h3>
+        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">{t('tournament.bracket.quartersFull')}</h3>
         <div className="grid sm:grid-cols-2 gap-2">{qf.map(box)}</div>
       </section>
 
       <section className="mt-4">
-        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">Semifinali</h3>
+        <h3 className="font-display text-lg font-extrabold text-canvas/60 mb-2">{t('tournament.bracket.semisFull')}</h3>
         <div className="grid sm:grid-cols-2 gap-2">{sf.map(box)}</div>
       </section>
 
       <section className="mt-4">
-        <h3 className="font-display text-lg font-extrabold text-highlight mb-2">Finale</h3>
+        <h3 className="font-display text-lg font-extrabold text-highlight mb-2">{t('tournament.bracket.finalFull')}</h3>
         <div>{box(final)}</div>
       </section>
 
       {!champion && (
         <div className="mt-4 flex flex-col items-center justify-center text-canvas/60">
           <Icon name="trophy" className="w-10 h-10 text-highlight" />
-          <span className="mt-1 text-sm font-semibold">Coppa da assegnare</span>
+          <span className="mt-1 text-sm font-semibold">{t('tournament.bracket.cupTbd')}</span>
         </div>
       )}
     </div>
@@ -182,6 +185,7 @@ function MobileBracket({ tournament, revealIds = [] }: TournamentBracketProps) {
 }
 
 function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
+  const t = useT();
   const status = getMatchStatus(tournament, match);
   const double = matchLegs(match) === 2;
   const team = (id: string | null) => tournament.teams.find(t => t.id === id);
@@ -211,11 +215,12 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
     const f = legResult(tournament, match, 1);
     const s = legResult(tournament, match, 2);
     if (!f) {
-      return <p className="px-2 py-1 text-[10px] font-bold text-ink-muted uppercase tracking-wide border-t border-ink/15">Andata e ritorno</p>;
+      return <p className="px-2 py-1 text-[10px] font-bold text-ink-muted uppercase tracking-wide border-t border-ink/15">{t('tournament.bracket.twoLegs')}</p>;
     }
+    const l2 = s ? `${s.homeScore}-${s.awayScore}` : leg === 2 ? t('tournament.bracket.toPlay') : t('tournament.bracket.none');
     return (
       <p className="px-2 py-1 text-[10px] font-bold text-ink-soft tabular-nums border-t border-ink/15">
-        And. {f.homeScore}-{f.awayScore} · Rit. {s ? `${s.homeScore}-${s.awayScore}` : leg === 2 ? 'da giocare' : '—'}
+        {t('tournament.bracket.legLine', { l1: `${f.homeScore}-${f.awayScore}`, l2 })}
       </p>
     );
   };
@@ -223,7 +228,7 @@ function MatchBox({ match, tournament, revealDelay }: MatchBoxProps) {
   return (
     <div className={`w-full border-2 ${tone} ${isUserMatch ? 'outline outline-2 outline-highlight' : ''}`}>
       {double && (
-        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-wider text-whistle-deep">A/R</p>
+        <p className="px-2 pt-1 text-[9px] font-black uppercase tracking-wider text-whistle-deep">{t('tournament.bracket.twoLegsShort')}</p>
       )}
       {row(match.homeId, 'home')}
       <div className={`border-t-2 ${empty ? 'border-dashed border-canvas/30' : 'border-line'}`} />
@@ -244,6 +249,7 @@ interface TeamRowProps {
 }
 
 function TeamRow({ team, score, shootout, outcome, revealDelay, onDark }: TeamRowProps) {
+  const t = useT();
   const reveal = revealDelay !== null;
   const revealStyle = reveal ? { animationDelay: `${revealDelay}ms` } : undefined;
   const nameClass =
@@ -266,7 +272,7 @@ function TeamRow({ team, score, shootout, outcome, revealDelay, onDark }: TeamRo
         style={revealStyle}
         title={team?.name}
       >
-        {team ? team.name : 'In attesa'}
+        {team ? team.name : t('tournament.bracket.waiting')}
       </span>
       {score !== null && (
         <span

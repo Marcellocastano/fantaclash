@@ -1,4 +1,5 @@
 import { SITE_NAME } from '../config';
+import { t } from '../i18n/translate';
 import { absoluteUrl, breadcrumbJsonLd, OG_IMAGE, SiteRoute } from './routes';
 
 /** Escape per testo dentro attributi e contenuti HTML */
@@ -40,7 +41,7 @@ export function renderHead(route: SiteRoute): string {
     `<meta property="og:image" content="${OG_IMAGE}" />`,
     `<meta property="og:image:width" content="1200" />`,
     `<meta property="og:image:height" content="630" />`,
-    `<meta property="og:image:alt" content="FantaClash, l'asta del fantacalcio nostalgico" />`,
+    `<meta property="og:image:alt" content="${escapeHtml(t('site.seo.ogImageAlt'))}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:title" content="${title}" />`,
     `<meta name="twitter:description" content="${description}" />`,
