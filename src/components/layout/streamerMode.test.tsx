@@ -116,7 +116,7 @@ describe('AppNavbar', () => {
     render(<AppNavbar />);
     fireEvent.click(screen.getByLabelText('Menu'));
     expect(screen.getByText('Modalità streamer')).toBeTruthy();
-    expect(screen.getByText(/Libera l'angolo in alto a destra/)).toBeTruthy();
+    expect(screen.getByText(/Lascia libero l’angolo in alto a destra/)).toBeTruthy();
     const yes = screen.getByText('Sì');
     fireEvent.click(yes);
     expect(localStorage.getItem(KEY)).toBe('true');

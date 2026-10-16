@@ -3,6 +3,7 @@ import { useT } from '../i18n/I18nProvider';
 import { CatalogKey } from '../i18n/translate';
 import { MULTIPLAYER_ENABLED } from '../config';
 import { GameConfig, Player } from '../types';
+import { KitId, kitOf } from '../domain/teamKits';
 import { Icon } from './Icon';
 import { Footer } from './Footer';
 import { GUIDES } from '../site/routes';
@@ -127,6 +128,12 @@ export function Landing({ onSubmit }: LandingProps) {
               </Preview>
               <Preview className="col-span-12 sm:col-span-6 lg:col-span-5" n="3" title={t('landing.howTo.match.title')} text={t('landing.howTo.match.text')}>
                 <MatchPreview />
+              </Preview>
+              <Preview className="col-span-12 lg:col-span-7" n="4" title={t('landing.howTo.tournament.title')} text={t('landing.howTo.tournament.text')}>
+                <TournamentPreview />
+              </Preview>
+              <Preview className="col-span-12 sm:col-span-6 lg:col-span-5 lg:col-start-8" n="5" title={t('landing.howTo.share.title')} text={t('landing.howTo.share.text')}>
+                <SharePreview />
               </Preview>
             </div>
           </div>
@@ -321,23 +328,130 @@ function AuctionPreview() {
   );
 }
 
-function DrawPreview() {
-  const balls = ['TU', 'GD', 'BP', 'QA', 'TT', 'SV', 'MU', 'CL'];
-  const spots = [[28, 70], [50, 78], [72, 70], [20, 46], [41, 52], [61, 52], [80, 46], [50, 26]];
+/** Mini stemma nei colori sociali (le anteprime sono decorative) */
+function MiniBadge({ kit }: { kit: KitId }) {
+  const k = kitOf({ name: 'x', kit });
   return (
-    <div className="relative w-64 h-64">
-      <span className="absolute inset-0 rounded-full border-4 border-ink" />
-      {balls.map((b, i) => (
-        <span
-          key={b}
-          className={`absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full border-2 border-ink flex items-center justify-center font-display text-lg font-black ${
-            i === 0 ? 'bg-pitch text-on-pitch' : 'bg-highlight text-on-highlight'
-          }`}
-          style={{ left: `${spots[i][0]}%`, top: `${spots[i][1]}%` }}
-        >
-          {b}
-        </span>
+    <span
+      className="w-5 h-5 shrink-0 border-2 border-ink"
+      style={{ background: `linear-gradient(to bottom, ${k.primary} 72%, ${k.secondary} 72%)` }}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Riga di un mini riquadro: stemma + nome, oppure segnaposto/accesa */
+function MiniRow({ name, kit, lit }: { name?: string; kit?: KitId; lit?: boolean }) {
+  return (
+    <div className={`flex items-center gap-1.5 px-1.5 min-h-[1.4rem] border-2 ${lit ? 'border-ink bg-highlight' : name ? 'border-ink bg-canvas text-ink' : 'border-dashed border-canvas/40'}`}>
+      {name ? (
+        <>
+          <MiniBadge kit={kit!} />
+          <span className="min-w-0 truncate font-display text-xs font-extrabold leading-none">{name}</span>
+        </>
+      ) : (
+        <>
+          <span className={`w-4 h-4 shrink-0 border border-dashed ${lit ? 'border-ink/50' : 'border-canvas/40'}`} />
+          <span className={`text-[9px] font-semibold ${lit ? 'text-on-highlight' : 'text-canvas/50'}`}>···</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Mini riquadro di un incrocio: testata verde + due righe */
+function MiniMatch({ tag, rows }: { tag: string; rows: { name?: string; kit?: KitId; lit?: boolean }[] }) {
+  return (
+    <div className="border-2 border-ink bg-pitch shadow-block-sm">
+      <div className="flex items-center justify-between px-1.5 py-0.5">
+        <span className="font-display text-[10px] font-black uppercase tracking-wider text-canvas leading-none">{tag}</span>
+        <span className="bg-highlight text-on-highlight px-1 text-[8px] font-black leading-none py-px">A/R</span>
+      </div>
+      {rows.map((r, i) => (
+        <MiniRow key={i} {...r} />
       ))}
+    </div>
+  );
+}
+
+/** Coppa in miniatura */
+function MiniCup({ size = 'w-10 h-10' }: { size?: string }) {
+  return (
+    <span className={`${size} rounded-full border-2 border-ink bg-highlight shadow-block-sm inline-flex items-center justify-center`}>
+      <Icon name="trophy" className="w-5 h-5 text-on-highlight" />
+    </span>
+  );
+}
+
+/** Sorteggio a tabellone: la luce corre sugli slot mentre la card attende */
+function DrawPreview() {
+  return (
+    <div className="w-full max-w-md bg-pitch-deep border-2 border-ink shadow-block-sm p-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+        <div className="space-y-2">
+          <MiniMatch tag="Q1" rows={[{ name: 'La Mia Squadra', kit: 'granata' }, { lit: true }]} />
+          <MiniMatch tag="Q2" rows={[{}, {}]} />
+        </div>
+        <MiniCup />
+        <div className="space-y-2">
+          <MiniMatch tag="Q3" rows={[{ name: 'Union Valle Po', kit: 'rossoblu' }, { name: 'Atletico Borgo', kit: 'viola' }]} />
+          <MiniMatch tag="Q4" rows={[{ name: 'Sparta Litorale', kit: 'azzurro' }, {}]} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Tabellone riempito coi risultati: il cammino dell'utente in giallo */
+function TournamentPreview() {
+  const win = 'La Mia Squadra';
+  const row = (name: string, kit: KitId, score: string, me: boolean) => (
+    <div className="flex items-center gap-1.5 px-1.5 min-h-[1.4rem] bg-canvas text-ink border-2 border-ink">
+      <MiniBadge kit={kit} />
+      <span className={`min-w-0 flex-1 truncate font-display text-xs font-extrabold leading-none ${me ? 'text-pitch' : ''}`}>{name}</span>
+      <span className="font-display text-xs font-black tabular-nums leading-none">{score}</span>
+    </div>
+  );
+  const bx = (tag: string, kids: ReactNode, me: boolean) => (
+    <div className={`border-2 shadow-block-sm ${me ? 'border-highlight bg-pitch outline outline-1 outline-highlight' : 'border-ink bg-pitch'}`}>
+      <div className="flex items-center justify-between px-1.5 py-0.5">
+        <span className="font-display text-[10px] font-black uppercase tracking-wider text-canvas leading-none">{tag}</span>
+      </div>
+      {kids}
+    </div>
+  );
+  const arrow = <Icon name="arrow" className="w-4 h-4 text-canvas/40" />;
+  return (
+    <div className="w-full max-w-xl bg-pitch-deep border-2 border-ink shadow-block-sm p-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-1.5">
+        {bx('Q1', <>{row(win, 'granata', '2', true)}{row('FC Stella', 'nerazzurro', '1', false)}</>, true)}
+        {arrow}
+        {bx('S1', <>{row(win, 'granata', '1', true)}{row('Atletico Borgo', 'viola', '0', false)}</>, true)}
+        {arrow}
+        {bx('Finale', <>{row(win, 'granata', '3', true)}{row('Union Valle Po', 'rossoblu', '1', false)}</>, true)}
+        <MiniCup />
+      </div>
+    </div>
+  );
+}
+
+/** Figurina del riepilogo condiviso a fine torneo */
+function SharePreview() {
+  const t = useT();
+  const k = kitOf({ name: 'x', kit: 'granata' });
+  return (
+    <div className="w-full max-w-[220px] bg-pitch-deep border-2 border-ink shadow-block-sm p-3 text-center text-canvas">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-canvas/60">FantaClash Cup</p>
+      <p className="font-display text-4xl font-black leading-none text-highlight mt-1">{t('tournament.placement.campione')}</p>
+      <div className="mt-2 flex items-center justify-center gap-1.5">
+        <span className="w-6 h-6 border-2 border-ink inline-block" style={{ background: `linear-gradient(to bottom, ${k.primary} 72%, ${k.secondary} 72%)` }} />
+        <span className="font-display text-sm font-extrabold">La Mia Squadra</span>
+      </div>
+      <p className="mt-2 text-[10px] font-bold text-canvas/70 tabular-nums">QF 2-1 · SF 1-0 · F 3-1</p>
+      <p className="mt-2 inline-flex items-center gap-1.5 border-2 border-ink bg-canvas text-ink px-2 py-1 text-[10px] font-bold shadow-block-sm">
+        <Icon name="share" className="w-3 h-3" />
+        {t('tournament.summary.share')}
+      </p>
     </div>
   );
 }

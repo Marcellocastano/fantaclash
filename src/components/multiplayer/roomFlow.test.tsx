@@ -45,7 +45,7 @@ describe('multiplayer UI su rete in memoria', () => {
 
   it('flag spento: pagina con avviso "non ancora disponibile"', () => {
     render(<MultiplayerPage />);
-    expect(screen.getByText(/non ancora disponibile/i)).toBeInTheDocument();
+    expect(screen.getByText(/non sono ancora disponibili/i)).toBeInTheDocument();
   });
 
   it('host crea stanza, un giocatore entra, pronto, espulsione e condizioni di avvio', async () => {
@@ -70,7 +70,7 @@ describe('multiplayer UI su rete in memoria', () => {
       code = m![1];
     }, { timeout: 5000 });
     expect(hostView.getByText('Giocatori 1/8', { exact: false })).toBeInTheDocument();
-    expect(hostView.getByText(/Tieni aperta questa scheda/)).toBeInTheDocument();
+    expect(hostView.getByText(/Non chiudere questa scheda/)).toBeInTheDocument();
 
     // --- ospite ---
     const guestApp = renderApp(shared);
@@ -91,8 +91,8 @@ describe('multiplayer UI su rete in memoria', () => {
     expect(startBtn.disabled).toBe(false);
 
     // espulsione: l'host espelle l'ospite
-    fireEvent.click(hostView.getByRole('button', { name: 'Espelli' }));
-    await waitFor(() => expect(guest.getByText(/espulso da questa stanza/i)).toBeInTheDocument(), { timeout: 3000 });
+    fireEvent.click(hostView.getByRole('button', { name: 'Rimuovi' }));
+    await waitFor(() => expect(guest.getByText(/rimosso dalla stanza/i)).toBeInTheDocument(), { timeout: 3000 });
     await waitFor(() => expect(hostView.getByText('Giocatori 1/8', { exact: false })).toBeInTheDocument());
   }, 20000);
 
@@ -114,7 +114,7 @@ describe('multiplayer UI su rete in memoria', () => {
     fireEvent.click(guest.getByRole('button', { name: /Entra nella stanza/i }));
 
     // REJECT name_taken: errore sul campo squadra, niente schermate intermedie
-    await waitFor(() => expect(guest.getByText('Nome già in uso da un altro utente')).toBeInTheDocument(), { timeout: 5000 });
+    await waitFor(() => expect(guest.getByText('Questo nome è già in uso')).toBeInTheDocument(), { timeout: 5000 });
     expect(guest.queryByText('Stanza non trovata')).toBeNull();
     expect(guest.queryByText('Non sei entrato')).toBeNull();
     expect(guest.getByLabelText('Codice stanza')).toBeInTheDocument();
@@ -183,7 +183,7 @@ describe('multiplayer UI su rete in memoria', () => {
     fireEvent.change(screen.getByLabelText('Codice stanza'), { target: { value: 'ABCDE' } });
     fireEvent.click(screen.getByRole('button', { name: /Entra nella stanza/i }));
     await waitFor(() =>
-      expect(screen.getByText(/server del multiplayer sono al completo/i)).toBeInTheDocument(), { timeout: 5000 }
+      expect(screen.getByText(/server multiplayer sono al completo/i)).toBeInTheDocument(), { timeout: 5000 }
     );
     expect(screen.queryByText(/Codice non corretto/)).toBeNull();
   });
@@ -205,9 +205,9 @@ describe('multiplayer UI su rete in memoria', () => {
     await waitFor(() => expect(guest.getByText('Giocatori 2/8', { exact: false })).toBeInTheDocument(), { timeout: 5000 });
 
     // Esci dalla lobby: la close() emette 'closed' ma la sessione è stantia
-    fireEvent.click(guest.getByRole('button', { name: 'Esci dalla stanza' }));
+    fireEvent.click(guest.getByRole('button', { name: 'Esci' }));
     // secondo "Esci dalla stanza": il bottone di conferma del dialogo
-    fireEvent.click(guest.getAllByRole('button', { name: 'Esci dalla stanza' })[1]);
+    fireEvent.click(guest.getAllByRole('button', { name: 'Esci' })[1]);
     await waitFor(() => expect(guest.getByLabelText('Nickname')).toBeInTheDocument(), { timeout: 5000 });
     expect(guest.queryByText('Stanza non trovata')).toBeNull();
   }, 20000);

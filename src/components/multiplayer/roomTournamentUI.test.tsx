@@ -174,21 +174,20 @@ describe('torneo in stanza (UI)', () => {
     }
     setRoom(x, 'h1', 'host');
     render(<RoomTournamentScreen />);
-    fireEvent.click(screen.getByText('Vai al riepilogo'));
+    fireEvent.click(screen.getByText('Vedi il riepilogo'));
     expect(dispatched).toEqual([{ type: 'FINISH' }]);
   });
 
-  it("in 'final' l'host vede 'Rigioca' che chiama rematch", () => {
+  it("in 'final' l'host vede 'Nuova partita' che chiama rematch", () => {
     const s = tournamentState({ finish: true });
     const rematch = vi.fn();
     setRoom(s, 'h1', 'host');
     mockRoom.rematch = rematch;
     render(<RoomFinalScreen />);
-    fireEvent.click(screen.getByText('Rigioca'));
+    fireEvent.click(screen.getByText('Nuova partita'));
     expect(rematch).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Chiudi la stanza')).toBeInTheDocument();
-    expect(screen.queryByText('Nuova partita')).toBeNull();
-    expect(screen.queryByText('Esci dalla stanza')).toBeNull();
+    expect(screen.getByText('Chiudi stanza')).toBeInTheDocument();
+    expect(screen.queryByText('Esci')).toBeNull();
   });
 
   it("in 'final' l'ospite vede il riepilogo e l'attesa della rivincita", () => {
@@ -198,9 +197,9 @@ describe('torneo in stanza (UI)', () => {
     render(<RoomFinalScreen />);
     // Riepilogo personale: nome squadra del guest e pulsante di uscita
     expect(screen.getAllByText('Guest FC').length).toBeGreaterThan(0);
-    expect(screen.getByText('Esci dalla stanza')).toBeInTheDocument();
-    expect(screen.getByText(/attesa che l'host lanci la rivincita/)).toBeInTheDocument();
-    expect(screen.queryByText('Rigioca')).toBeNull();
+    expect(screen.getByText('Esci')).toBeInTheDocument();
+    expect(screen.getByText(/attesa che l'host avvii una nuova partita/)).toBeInTheDocument();
+    expect(screen.queryByText('Nuova partita')).toBeNull();
     expect(screen.queryByText('Nuova partita')).toBeNull();
   });
 
@@ -210,8 +209,8 @@ describe('torneo in stanza (UI)', () => {
     render(<RoomFinalScreen />);
     const champion = s.tournament!.teams.find(t => t.id === s.tournament!.winnerId)!;
     expect(screen.getByText(`Campione: ${champion.name}`)).toBeInTheDocument();
-    expect(screen.getByText(/attesa che l'host lanci la rivincita/)).toBeInTheDocument();
-    expect(screen.getByText('Esci dalla stanza')).toBeInTheDocument();
+    expect(screen.getByText(/attesa che l'host avvii una nuova partita/)).toBeInTheDocument();
+    expect(screen.getByText('Esci')).toBeInTheDocument();
     expect(screen.queryByText('Nuova partita')).toBeNull();
   });
 });

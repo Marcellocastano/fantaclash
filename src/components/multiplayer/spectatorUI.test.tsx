@@ -58,7 +58,7 @@ describe('esito del join nel form', () => {
     const onJoin = vi.fn(async () => ({ ok: false, reason: 'name_taken' }) as never);
     renderJoin(onJoin);
     await joinAs();
-    await waitFor(() => expect(screen.getByText('Nome già in uso da un altro utente')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Questo nome è già in uso')).toBeInTheDocument());
     expect(screen.getByLabelText('Nome squadra')).toHaveAttribute('aria-invalid', 'true');
   });
 
@@ -67,7 +67,7 @@ describe('esito del join nel form', () => {
     renderJoin(onJoin);
     await joinAs();
     await waitFor(() =>
-      expect(screen.getByRole('alert')).toHaveTextContent('Codice non corretto: nessuna stanza attiva con questo codice.')
+      expect(screen.getByRole('alert')).toHaveTextContent('Non trovo una stanza attiva con questo codice.')
     );
   });
 
@@ -75,6 +75,6 @@ describe('esito del join nel form', () => {
     const onJoin = vi.fn(() => new Promise(() => {}) as never);
     renderJoin(onJoin);
     await joinAs();
-    await waitFor(() => expect(screen.getByRole('button', { name: /Entro…/ })).toBeDisabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /Accesso in corso/ })).toBeDisabled());
   });
 });

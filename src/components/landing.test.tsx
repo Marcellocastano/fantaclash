@@ -26,16 +26,16 @@ describe('landing', () => {
   it('nome precompilato, "Genera" lo cambia; annata casuale e frecce', async () => {
     const onSubmit = vi.fn();
     render(<Landing onSubmit={onSubmit} />);
-    const input = screen.getByLabelText('La tua squadra') as HTMLInputElement;
+    const input = screen.getByLabelText('Nome della squadra') as HTMLInputElement;
     const first = input.value;
     expect(BOT_TEAM_NAMES).toContain(first);
     fireEvent.click(screen.getByTitle('Genera un nome'));
     expect(input.value).not.toBe(first);
 
-    const group = await screen.findByRole('group', { name: 'Annata' });
+    const group = await screen.findByRole('group', { name: 'Stagione' });
     const start = SEASONS.findIndex(s => group.textContent?.includes(s.season));
     expect(start).toBeGreaterThanOrEqual(0);
-    fireEvent.click(screen.getByLabelText('Annata precedente'));
+    fireEvent.click(screen.getByLabelText('Stagione precedente'));
     const expected = SEASONS[(start - 1 + SEASONS.length) % SEASONS.length].season;
     expect(group).toHaveTextContent(expected);
     fireEvent.click(screen.getByRole('radio', { name: 'Difficile' }));
@@ -67,7 +67,7 @@ describe('landing', () => {
     // la modalità Legends è un'alternativa all'annata
     fireEvent.click(screen.getByRole('radio', { name: /Legends/ }));
     expect(screen.getByText('HALL OF FAME')).toBeInTheDocument();
-    expect(screen.queryByRole('group', { name: 'Annata' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Stagione' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Gioca/ }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     const config = onSubmit.mock.calls[0][0];
@@ -78,6 +78,6 @@ describe('landing', () => {
   it('mostra regole e footer con il bottone di supporto', () => {
     render(<Landing onSubmit={vi.fn()} />);
     expect(screen.getByText('Le regole in breve')).toBeInTheDocument();
-    expect(screen.getByText('Supporta FantaClash')).toBeInTheDocument();
+    expect(screen.getByText('Sostieni FantaClash')).toBeInTheDocument();
   });
 });

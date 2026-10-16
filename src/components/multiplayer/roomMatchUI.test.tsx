@@ -92,13 +92,13 @@ describe('partita live in stanza (UI)', () => {
     // Overlay di decisione con countdown (15s default)
     expect(screen.getByRole('timer')).toHaveTextContent('15s');
     // Niente controlli del singolo: velocità, pausa, skip, test rigori
-    expect(screen.queryByText('Fischio finale')).toBeNull();
+    expect(screen.queryByText('Vai al risultato')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Velocità' })).toBeNull();
     expect(screen.queryByText('Test rigori')).toBeNull();
     // Scelta -> intento TACTIC (segreto), poi "in attesa dell'avversario"
-    fireEvent.click(screen.getByText('Attacca'));
+    fireEvent.click(screen.getAllByRole('button', { name: /Attacco/ })[0]);
     expect(sent).toEqual([{ type: 'TACTIC', matchId, stopTick: 0, tactic: 'attacca' }]);
-    expect(screen.getByText(/in attesa dell'avversario/)).toBeInTheDocument();
+    expect(screen.getByText(/In attesa/)).toBeInTheDocument();
   });
 
   it('spettatore sulla partita altrui: niente overlay, solo attesa', () => {
@@ -107,6 +107,6 @@ describe('partita live in stanza (UI)', () => {
     render(<RoomMatchScreen matchId={matchId} onExit={() => {}} />);
     expect(screen.queryByRole('dialog', { name: 'Scelta tattica' })).toBeNull();
     expect(screen.getByText(/In attesa delle scelte/)).toBeInTheDocument();
-    expect(screen.queryByText('Fischio finale')).toBeNull();
+    expect(screen.queryByText('Vai al risultato')).toBeNull();
   });
 });

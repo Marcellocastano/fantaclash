@@ -16,9 +16,9 @@ describe('ordine dei rigoristi', () => {
   it('le frecce riordinano e la conferma restituisce il nuovo ordine', () => {
     const onConfirm = vi.fn();
     render(<ShootoutOrderPanel players={[player('a', 'ROSSI Mario'), player('b', 'BIANCHI Luca'), player('c', 'VERDI Gino')]} onConfirm={onConfirm} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Sposta Verdi su' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sposta Rossi giù' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Conferma e si tira' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sposta Verdi in alto' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sposta Rossi in basso' }));
+    fireEvent.click(screen.getByRole('button', { name: "Conferma l'ordine" }));
     expect(onConfirm).toHaveBeenCalledWith(['c', 'a', 'b']);
   });
 });

@@ -63,7 +63,7 @@ describe('UI torneo (smoke)', () => {
     render(<TournamentHub tournament={t} onPlay={onPlay} onCompleteRound={noop} onSummary={noop} />);
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: /Gioca i quarti di finale/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Gioca i quarti/ }));
     expect(onPlay).toHaveBeenCalledWith(findUserMatch(t)!.id);
   });
 
@@ -73,20 +73,20 @@ describe('UI torneo (smoke)', () => {
     const onFinish = vi.fn();
     render(<MatchScreen tournament={t} teams={TEAMS} matchId={t.currentMatchId!} onFinish={onFinish} />);
     expect(screen.getByRole('dialog', { name: 'Scelta tattica' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Attacca/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Attacco/ })[0]);
     expect(screen.queryByRole('dialog', { name: 'Scelta tattica' })).not.toBeInTheDocument();
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: /Fischio finale/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Vai al risultato/ }));
     });
     // In caso di pareggio ci si ferma ai rigori: si conferma l'ordine e si salta la lotteria
     if (screen.queryByRole('dialog', { name: 'Ordine dei rigoristi' })) {
       fireEvent.click(screen.getByRole('button', { name: 'Conferma e si tira' }));
       act(() => {
-        fireEvent.click(screen.getByRole('button', { name: /Fischio finale/ }));
+        fireEvent.click(screen.getByRole('button', { name: /Vai al risultato/ }));
       });
     }
-    expect(screen.getByText(/PASSI IL TURNO|ELIMINATO|CAMPIONE/)).toBeInTheDocument();
-    const cta = screen.getByRole('button', { name: /Avanti: semifinale|Concludi torneo/ });
+    expect(screen.getByText(/SEI PASSATO|ELIMINATO|CAMPIONE/)).toBeInTheDocument();
+    const cta = screen.getByRole('button', { name: /Vai alla semifinale|Concludi torneo/ });
     fireEvent.click(cta);
     expect(onFinish).toHaveBeenCalledTimes(1);
     expect(onFinish.mock.calls[0][0].decisionTicks).toHaveLength(3);
@@ -105,7 +105,7 @@ describe('UI torneo (smoke)', () => {
     // Tracker del confronto: le due gare e l'aggregato parziale
     expect(screen.getByText('Andata')).toBeInTheDocument();
     expect(screen.getByText('Ritorno')).toBeInTheDocument();
-    expect(screen.getByText(/Aggregato \d+-\d+/)).toBeInTheDocument();
+    expect(screen.getByText(/Totale \d+-\d+/)).toBeInTheDocument();
   });
 
   it('MatchEnd all\'andata: "FINE ANDATA" e un solo "Avanti: ritorno", mai eliminazione', () => {
@@ -128,7 +128,7 @@ describe('UI torneo (smoke)', () => {
     expect(screen.getByText('FINE ANDATA')).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]).toHaveTextContent('Avanti: ritorno');
+    expect(buttons[0]).toHaveTextContent('Vai al ritorno');
   });
 
   it('sorteggio: apre sul tabellone vuoto, si riempie e chiama onDrawn una volta', () => {
@@ -142,7 +142,7 @@ describe('UI torneo (smoke)', () => {
     // 8 slot vuoti (layout mobile + desktop) e la coppa al centro
     expect(container.querySelectorAll('[data-draw-slot]')).toHaveLength(16);
     expect(container.querySelectorAll('[data-draw-cup]').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Da sorteggiare')).toHaveLength(16);
+    expect(screen.getAllByText('In attesa del sorteggio')).toHaveLength(16);
 
     runDraw();
 
