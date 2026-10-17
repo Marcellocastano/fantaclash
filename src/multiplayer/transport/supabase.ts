@@ -4,8 +4,8 @@ import {
   HostMessage,
   isClientIntent,
   isHostMessage,
-} from '../protocol';
-import { PresenceEntry, RoomTransport, TransportOptions } from './types';
+} from "../protocol";
+import { PresenceEntry, RoomTransport, TransportOptions } from "./types";
 
 /**
  * Transport Supabase Realtime (Broadcast + Presence).
@@ -20,51 +20,69 @@ import { PresenceEntry, RoomTransport, TransportOptions } from './types';
  * di subscribe(); su Node serve il WebSocket globale (Node >=22).
  */
 
-type SupabaseClient = import('@supabase/supabase-js').SupabaseClient;
-type RealtimeChannel = import('@supabase/supabase-js').RealtimeChannel;
+type SupabaseClient = import("@supabase/supabase-js").SupabaseClient;
+type RealtimeChannel = import("@supabase/supabase-js").RealtimeChannel;
 
-const MSG_EVENT = 'msg';
-const INTENT_EVENT = 'intent';
+const MSG_EVENT = "msg";
+const INTENT_EVENT = "intent";
 
 function subscribeChannel(
   ch: RealtimeChannel,
   onClosed: () => void,
-  onResubscribed: () => void = () => {}
+  onResubscribed: () => void = () => {},
 ): Promise<void> {
   let subscribed = false;
   return new Promise((resolve, reject) => {
     ch.subscribe((status, err) => {
-      if (status === 'SUBSCRIBED') {
+      if (status === "SUBSCRIBED") {
         // realtime-js rientra da solo dopo una caduta del socket, ma la
         // presence propria va registrata di nuovo
         if (subscribed) onResubscribed();
         subscribed = true;
         resolve();
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        reject(new Error(`canale ${ch.topic}: ${status} ${err?.message ?? ''}`));
-      } else if (status === 'CLOSED') {
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        reject(
+          new Error(`canale ${ch.topic}: ${status} ${err?.message ?? ""}`),
+        );
+      } else if (status === "CLOSED") {
         onClosed();
       }
     });
   });
 }
 
-export async function createSupabaseTransport(opts: TransportOptions): Promise<RoomTransport> {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) {
-    throw new Error('VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti: multiplayer non configurato');
-  }
-  const { createClient } = await import('@supabase/supabase-js');
-  const client: SupabaseClient = createClient(url, anonKey, {
+// Un solo client Supabase per contesto: evita il warning "Multiple
+// GoTrueClient instances" e riusa la connessione realtime tra i trasporti
+let sharedClient: SupabaseClient | null = null;
+async function getSharedClient(
+  url: string,
+  anonKey: string,
+): Promise<SupabaseClient> {
+  if (sharedClient) return sharedClient;
+  const { createClient } = await import("@supabase/supabase-js");
+  sharedClient = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     realtime: {
       params: { eventsPerSecond: 20 },
       // heartbeat in un Web Worker: sopravvive al throttling delle schede
       // in background (opzione `worker` di realtime-js, se Worker esiste)
-      ...(typeof Worker !== 'undefined' ? { worker: true } : {}),
+      ...(typeof Worker !== "undefined" ? { worker: true } : {}),
     },
   });
+  return sharedClient;
+}
+
+export async function createSupabaseTransport(
+  opts: TransportOptions,
+): Promise<RoomTransport> {
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error(
+      "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY mancanti: multiplayer non configurato",
+    );
+  }
+  const client = await getSharedClient(url, anonKey);
 
   const downlinkTopic = `room:${opts.code}`;
   const uplinkTopic = `${downlinkTopic}:up:${opts.selfId}`;
@@ -74,11 +92,16 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
   const uplinkChans = new Map<string, RealtimeChannel>();
 
   const emitPresence = (ch: RealtimeChannel) => {
-    const state = ch.presenceState<{ id: string; role: PresenceEntry['role']; pubKey?: JsonWebKey }>();
-    const entries: PresenceEntry[] = Object.entries(state).flatMap(([key, metas]) =>
-      metas.map(m => ({ id: m.id ?? key, role: m.role, pubKey: m.pubKey }))
+    const state = ch.presenceState<{
+      id: string;
+      role: PresenceEntry["role"];
+      pubKey?: JsonWebKey;
+    }>();
+    const entries: PresenceEntry[] = Object.entries(state).flatMap(
+      ([key, metas]) =>
+        metas.map((m) => ({ id: m.id ?? key, role: m.role, pubKey: m.pubKey })),
     );
-    presenceCbs.forEach(cb => cb(entries));
+    presenceCbs.forEach((cb) => cb(entries));
   };
 
   // Downlink: i callback presence vanno registrati PRIMA di subscribe()
@@ -88,17 +111,17 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
       presence: { key: opts.selfId },
     },
   });
-  downlink.on('presence', { event: 'sync' }, () => emitPresence(downlink));
-  downlink.on('broadcast', { event: MSG_EVENT }, ({ payload }) => {
+  downlink.on("presence", { event: "sync" }, () => emitPresence(downlink));
+  downlink.on("broadcast", { event: MSG_EVENT }, ({ payload }) => {
     const env = payload as Envelope<HostMessage>;
-    if (env && typeof env.from === 'string' && isHostMessage(env.msg)) {
-      hostCbs.forEach(cb => cb(env));
+    if (env && typeof env.from === "string" && isHostMessage(env.msg)) {
+      hostCbs.forEach((cb) => cb(env));
     }
   });
 
   // Uplink proprio (solo non-host): gli intenti escono di qui
   let uplink: RealtimeChannel | null = null;
-  if (opts.role !== 'host') {
+  if (opts.role !== "host") {
     uplink = client.channel(uplinkTopic, {
       config: { broadcast: { self: false, ack: false } },
     });
@@ -106,10 +129,21 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
 
   const transport: RoomTransport = {
     async connect() {
-      const track = () => downlink.track({ id: opts.selfId, role: opts.role, pubKey: opts.pubKey });
-      await subscribeChannel(downlink, () => presenceCbs.forEach(cb => cb([])), () => void track());
+      const track = () =>
+        downlink.track({
+          id: opts.selfId,
+          role: opts.role,
+          pubKey: opts.pubKey,
+        });
+      await subscribeChannel(
+        downlink,
+        () => presenceCbs.forEach((cb) => cb([])),
+        () => void track(),
+      );
       if (uplink) {
-        await subscribeChannel(uplink, () => presenceCbs.forEach(cb => cb([])));
+        await subscribeChannel(uplink, () =>
+          presenceCbs.forEach((cb) => cb([])),
+        );
       }
       await track();
     },
@@ -120,7 +154,11 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
     },
 
     sendIntent(env) {
-      void uplink?.send({ type: 'broadcast', event: INTENT_EVENT, payload: env });
+      void uplink?.send({
+        type: "broadcast",
+        event: INTENT_EVENT,
+        payload: env,
+      });
     },
 
     onHostMessage(cb) {
@@ -129,7 +167,7 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
     },
 
     broadcast(env) {
-      void downlink.send({ type: 'broadcast', event: MSG_EVENT, payload: env });
+      void downlink.send({ type: "broadcast", event: MSG_EVENT, payload: env });
     },
 
     async listenTo(participantId) {
@@ -138,10 +176,10 @@ export async function createSupabaseTransport(opts: TransportOptions): Promise<R
       const ch = client.channel(topic, {
         config: { broadcast: { self: false, ack: false } },
       });
-      ch.on('broadcast', { event: INTENT_EVENT }, ({ payload }) => {
+      ch.on("broadcast", { event: INTENT_EVENT }, ({ payload }) => {
         const env = payload as Envelope<ClientIntent>;
-        if (env && typeof env.from === 'string' && isClientIntent(env.msg)) {
-          intentCbs.forEach(cb => cb(env));
+        if (env && typeof env.from === "string" && isClientIntent(env.msg)) {
+          intentCbs.forEach((cb) => cb(env));
         }
       });
       uplinkChans.set(topic, ch);
