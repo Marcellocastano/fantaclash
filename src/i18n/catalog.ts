@@ -124,8 +124,8 @@ export const catalog = {
     },
 
     album: {
-      legendsTitle: "Legends · Hall of Fame",
-      legendsSub: "23 annate · overall fino a 99",
+      legendsTitle: "Legends - Hall of Fame",
+      legendsSub: "23 annate - overall fino a 99",
       stickers: "Figurine {listone}",
       buy: "Acquista all’asta",
     },
@@ -284,7 +284,7 @@ export const catalog = {
   },
 
   landing: {
-    kicker: "Serie A · 23 annate, dal 2003-04 al 2025-26",
+    kicker: "Serie A - 23 annate, dal 2003-04 al 2025-26",
     titleSmall: "Il fantacalcio d’asta, stagione per stagione",
     heroSub:
       "Scegli una stagione, sfida 7 bot all’asta e costruisci la tua rosa. Poi gioca il torneo fino alla finale.",
@@ -370,10 +370,10 @@ export const catalog = {
     },
 
     preview: {
-      auctionHead: "Centrocampisti · lotto 38",
+      auctionHead: "Centrocampisti - lotto 38",
       expiresIn: "Scade tra",
       leading: "Sei in testa",
-      finalShootout: "Finale · rigori",
+      finalShootout: "Finale - rigori",
     },
   },
 
@@ -393,7 +393,7 @@ export const catalog = {
       "96 leggende delle 23 annate. Una scheda per giocatore, basata sulla sua stagione migliore. Overall fino a 99.",
     cupLabel: "Formato della coppa",
     botsLabel: "Difficoltà dei bot",
-    hint: "{teams} squadre (tu + {bots} bot) · {credits} crediti · 8 giocatori per rosa · modulo 1-2-3-2",
+    hint: "{teams} squadre (tu + {bots} bot) - {credits} crediti - 8 giocatori per rosa - modulo 1-2-3-2",
 
     error: {
       nameRequired: "Inserisci il nome della squadra",
@@ -651,7 +651,7 @@ export const catalog = {
       aheadSub: "Sei in vantaggio: si decide al ritorno",
       behindSub: "Sei sotto: al ritorno serve una rimonta",
       evenSub: "È tutto in parità: si decide al ritorno",
-      tieLine: "Andata {l1h}-{l1a} · Ritorno {l2h}-{l2a} · Totale {ah}-{aa}",
+      tieLine: "Andata {l1h}-{l1a} - Ritorno {l2h}-{l2a} - Totale {ah}-{aa}",
       shootoutScore: "rigori {home}-{away}",
       scorers: "Marcatori",
       noGoals: "Nessun gol nei tempi regolamentari.",
@@ -660,7 +660,7 @@ export const catalog = {
       assist: "assist di {name}",
       mvp: "Migliore in campo",
       reportCard: "I voti della tua squadra",
-      cols: "Voto · bonus · fantavoto",
+      cols: "Voto - bonus - fantavoto",
       total: "Totale: {score}",
       nextLeg: "Vai al ritorno",
       endTournament: "Termina il torneo",
@@ -710,7 +710,7 @@ export const catalog = {
       legBack: "Ritorno",
       aggregate: "Totale {home}-{away}",
       partial: " (parziale)",
-      shootoutSuffix: " · rigori {home}-{away}",
+      shootoutSuffix: " - rigori {home}-{away}",
       rit: "Rit.",
       aggShort: "tot. {home}-{away}",
       shootoutShort: "Rigori {home}-{away}",
@@ -745,7 +745,7 @@ export const catalog = {
       semiTag: "S{n}",
       twoLegs: "Andata e ritorno",
       twoLegsShort: "A/R",
-      legLine: "And. {l1} · Rit. {l2}",
+      legLine: "And. {l1} - Rit. {l2}",
       toPlay: "Da giocare",
       none: "—",
     },
@@ -800,7 +800,7 @@ export const catalog = {
       },
       cardNotPlayed: "Non giocata",
       cardVs: "Contro {opponent}",
-      cardLegs: "And. {l1f}-{l1a} · Rit. {l2f}-{l2a}",
+      cardLegs: "And. {l1f}-{l1a} - Rit. {l2f}-{l2a}",
       cardShootout: "rig. {for}-{against}",
       cardGoals: "Gol fatti / subiti",
       cardWins: "Vittorie",
@@ -830,7 +830,7 @@ export const catalog = {
       nameTaken: "C'è già una squadra con questo nome. Scegline un altro.",
     },
     entry: {
-      subtitle: "Fino a {max} giocatori · asta e torneo online",
+      subtitle: "Fino a {max} giocatori - asta e torneo online",
       intro:
         "Crea una stanza e invita gli amici con il link. I posti rimasti liberi saranno occupati dai bot.",
       createTab: "Crea stanza",
@@ -964,7 +964,7 @@ export const catalog = {
       waitingTournament: "In attesa che l'host avvii il torneo…",
       standings: "Forza delle rose",
       standingsSub: "Overall medio della rosa",
-      spent: "Spesi {spent} Cr · Rimasti {left} Cr",
+      spent: "Spesi {spent} Cr - Rimasti {left} Cr",
       you: "Tu",
       waitSummary: "In attesa del riepilogo…",
       waitHostTurn: "In attesa che l'host avvii il turno…",
@@ -1207,9 +1207,9 @@ export const catalog = {
       crumbSeason: "Serie A {season}",
     },
     seo: {
-      homeTitle: "FantaClash · Fantacalcio d'asta con la Serie A di ieri",
+      homeTitle: "FantaClash - Fantacalcio d'asta con la Serie A di ieri",
       homeDesc:
-        "Gioco di fantacalcio online gratis: scegli un'annata o il listone Legends, vinci l'asta contro 7 bot e porta la tua rosa in finale, anche con andata e ritorno.",
+        "Gioco di fantacalcio online gratis: rivivi l'emozione di partecipare all'asta di una stagione passata. Scegli un'annata o il listone delle leggende, gioca contro 7 amici o bot e prova a vincere il torneo.",
       genre1: "Fantacalcio",
       genre2: "Calcio",
       genre3: "Manageriale",
@@ -1217,33 +1217,33 @@ export const catalog = {
       rulesTitle: "Regole di FantaClash: asta, rosa e torneo",
       rulesDesc:
         "Tutte le regole del gioco: asta da 100 crediti con rilanci, modulo 1-2-3-2, torneo a eliminazione diretta, bonus e malus del fantavoto.",
-      faqTitle: "Domande frequenti su FantaClash · FantaClash",
+      faqTitle: "Domande frequenti su FantaClash - FantaClash",
       faqDesc:
         "Costo, registrazione, stagioni disponibili, funzionamento dell'asta e del torneo: le risposte alle domande più comuni su FantaClash.",
-      guideIndexTitle: "Guide al fantacalcio: asta e strategia · FantaClash",
+      guideIndexTitle: "Guide al fantacalcio: asta e strategia - FantaClash",
       guideIndexDesc:
         "Guide pratiche al fantacalcio ad asta: come funziona l'asta, le strategie vincenti, bonus e malus e il fantacalcio sulle stagioni storiche.",
       collectionName: "Guide al fantacalcio",
       top11IndexTitle:
-        "Top 11 della Serie A dal 2003-04 al 2025-26 · FantaClash",
+        "Top 11 della Serie A dal 2003-04 al 2025-26 - FantaClash",
       top11IndexDesc:
         "La formazione ideale 4-3-3 di ognuna delle 23 stagioni della Serie A: i migliori giocatori per annata, anno dopo anno.",
-      aboutTitle: "Chi siamo · FantaClash",
+      aboutTitle: "Chi siamo - FantaClash",
       aboutDesc:
         "FantaClash è un progetto amatoriale nato per chi il fantacalcio d'asta lo ama davvero: storia del gioco, come è fatto e contatti.",
-      privacyTitle: "Privacy · FantaClash",
+      privacyTitle: "Privacy - FantaClash",
       privacyDesc:
         "FantaClash non raccoglie dati personali: nessun account, nessun cookie di profilazione e analytics anonime senza cookie.",
-      mpTitle: "Multiplayer · {site}",
+      mpTitle: "Multiplayer - {site}",
       mpDesc:
         "Crea una stanza privata o entra con un codice: l’asta del fantacalcio con gli amici in diretta, con le stagioni storiche della Serie A.",
-      nfTitle: "Pagina non trovata · FantaClash",
+      nfTitle: "Pagina non trovata - FantaClash",
       nfDesc:
         "La pagina che cerchi non esiste o è stata spostata. Torna alla home di FantaClash e inizia un'asta con le stagioni storiche della Serie A.",
-      top11Title: "Top 11 Serie A {season}: la formazione ideale · {site}",
+      top11Title: "Top 11 Serie A {season}: la formazione ideale - {site}",
       top11Desc:
         "I migliori giocatori della Serie A {season} schierati in una formazione ideale 4-3-3: overall, squadra e il link per rifare quell’asta.",
-      guideTitleSuffix: "{title} · {site}",
+      guideTitleSuffix: "{title} - {site}",
       crumbRules: "Regole",
       crumbFaq: "Domande frequenti",
       crumbGuides: "Guide",
