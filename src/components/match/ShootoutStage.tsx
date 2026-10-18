@@ -120,11 +120,14 @@ export function ShootoutStage({ result, kicks, kick, phase, decisive, userSide }
         {SIDES.map(s => {
           const own = shown.filter(k => k.side === s);
           const slots = Math.max(5, own.length + (kick?.side === s && !revealed ? 1 : 0));
+          // Oltre i 5 rigori: finestra scorrevole sulle ultime 5 caselle
+          const start = Math.max(0, slots - 5);
           return (
             <div key={s} className={`bg-pitch-deep/90 border-2 border-ink px-3 py-2 ${s === 'away' ? 'text-right' : ''}`}>
               <p className={`text-xs font-bold truncate max-w-[14rem] ${s === userSide ? 'text-highlight' : 'text-canvas/80'}`}>{teamName(s)}</p>
               <div className={`flex gap-1.5 mt-1 ${s === 'away' ? 'justify-end' : ''}`}>
-                {Array.from({ length: slots }, (_, i) => {
+                {Array.from({ length: slots - start }, (_, j) => {
+                  const i = start + j;
                   const k = own[i];
                   const pending = !k && kick?.side === s && !revealed && i === own.length;
                   return (

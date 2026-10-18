@@ -14,6 +14,8 @@ interface PlayerCardProps {
   size?: CardSize;
   /** Card non disponibile (venduta): desaturata */
   dimmed?: boolean;
+  /** Difficile: carta coperta, niente overall/fascia/statistiche */
+  covered?: boolean;
   /** Pagine pubbliche (landing, Top 11): niente media voto, al suo posto il valore */
   publicStats?: boolean;
   className?: string;
@@ -34,7 +36,7 @@ function stats(player: Player, publicStats: boolean, t: TFunction): { label: str
  * Il colore dipende dalla fascia dell'overall (bronzo, argento, oro,
  * fuoriclasse).
  */
-export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = false, className = '' }: PlayerCardProps) {
+export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = false, covered = false, className = '' }: PlayerCardProps) {
   const tr = useT();
   const overall = playerOverall(player);
   const tier = tierOf(overall);
@@ -44,15 +46,15 @@ export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = 
 
   return (
     <div
-      className={`relative ${t.bg} ${t.ink} border-2 border-ink ${lg ? 'p-5 shadow-block-lg' : 'p-3 shadow-block-sm'} ${
+      className={`relative ${covered ? 'bg-pitch-deep text-canvas' : `${t.bg} ${t.ink}`} border-2 border-ink ${lg ? 'p-5 shadow-block-lg' : 'p-3 shadow-block-sm'} ${
         dimmed ? 'grayscale opacity-50' : ''
       } ${className}`}
     >
-      {tier === 'elite' && <span className={`absolute ${lg ? 'inset-2' : 'inset-1'} border border-tier-elite-ink/60 pointer-events-none`} aria-hidden="true" />}
+      {!covered && tier === 'elite' && <span className={`absolute ${lg ? 'inset-2' : 'inset-1'} border border-tier-elite-ink/60 pointer-events-none`} aria-hidden="true" />}
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex flex-col items-start leading-none">
-          <span className={`font-display font-black tabular-nums ${lg ? 'text-7xl' : 'text-4xl'}`}>{overall}</span>
-          <span className={`${ROLE_TAG[player.role]} mt-1 ${lg ? '' : '!w-5 !h-5 !text-xs'}`}>{player.role}</span>
+          <span className={`font-display font-black tabular-nums ${lg ? 'text-7xl' : 'text-4xl'} ${covered ? 'text-highlight' : ''}`}>{covered ? player.role : overall}</span>
+          {!covered && <span className={`${ROLE_TAG[player.role]} mt-1 ${lg ? '' : '!w-5 !h-5 !text-xs'}`}>{player.role}</span>}
         </div>
         <div className="text-right min-w-0">
           {/* Leggenda: stellina e annata d'origine al posto della fascia */}
@@ -60,34 +62,38 @@ export function PlayerCard({ player, size = 'sm', dimmed = false, publicStats = 
             {player.legend && <Icon name="star" className={`inline-block align-baseline ${lg ? 'w-4 h-4' : 'w-3 h-3'} text-highlight mr-1`} aria-hidden="true" />}
             {player.team}
           </p>
-          <p className={`${t.muted} ${lg ? 'text-sm mt-1' : 'text-[11px]'}`}>
+          <p className={`${covered ? 'text-canvas/70' : t.muted} ${lg ? 'text-sm mt-1' : 'text-[11px]'}`}>
             {player.legend
               ? lg ? `${tr(ROLE_KEY[player.role])} · ${player.season}` : seasonShort(player.season)
-              : lg ? `${tr(ROLE_KEY[player.role])} · ${tr(TIER_KEY[tier])}` : tr(TIER_KEY[tier])}
+              : covered
+                ? tr(ROLE_KEY[player.role])
+                : lg ? `${tr(ROLE_KEY[player.role])} · ${tr(TIER_KEY[tier])}` : tr(TIER_KEY[tier])}
           </p>
         </div>
       </div>
 
       <div className={lg ? 'relative mt-6' : 'relative mt-3'}>
-        {firstName && <p className={`${t.muted} leading-none ${lg ? 'text-lg' : 'text-xs'}`}>{firstName}</p>}
+        {firstName && <p className={`${covered ? 'text-canvas/70' : t.muted} leading-none ${lg ? 'text-lg' : 'text-xs'}`}>{firstName}</p>}
         <p
-          className={`font-display font-black leading-[0.9] ${lg ? 'text-6xl md:text-7xl' : 'text-2xl truncate'} ${tier === 'elite' ? 'text-canvas' : ''}`}
+          className={`font-display font-black leading-[0.9] ${lg ? 'text-6xl md:text-7xl' : 'text-2xl truncate'} ${covered || tier === 'elite' ? 'text-canvas' : ''}`}
           title={player.name}
         >
           {surname}
         </p>
       </div>
 
-      <div className={`relative grid grid-cols-3 border-t-2 ${tier === 'elite' ? 'border-canvas/25' : 'border-ink/20'} ${lg ? 'mt-5 pt-3' : 'mt-3 pt-2'}`}>
-        {stats(player, publicStats, tr).map(s => (
-          <div key={s.label} className="text-center leading-none">
-            <span className={`block font-display font-extrabold tabular-nums ${lg ? 'text-3xl' : 'text-lg'} ${tier === 'elite' ? 'text-canvas' : ''}`}>
-              {s.value}
-            </span>
-            <span className={`${t.muted} font-semibold ${lg ? 'text-xs' : 'text-[10px]'}`}>{s.label}</span>
-          </div>
-        ))}
-      </div>
+      {!covered && (
+        <div className={`relative grid grid-cols-3 border-t-2 ${tier === 'elite' ? 'border-canvas/25' : 'border-ink/20'} ${lg ? 'mt-5 pt-3' : 'mt-3 pt-2'}`}>
+          {stats(player, publicStats, tr).map(s => (
+            <div key={s.label} className="text-center leading-none">
+              <span className={`block font-display font-extrabold tabular-nums ${lg ? 'text-3xl' : 'text-lg'} ${tier === 'elite' ? 'text-canvas' : ''}`}>
+                {s.value}
+              </span>
+              <span className={`${t.muted} font-semibold ${lg ? 'text-xs' : 'text-[10px]'}`}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

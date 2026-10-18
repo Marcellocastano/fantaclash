@@ -4,6 +4,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useT } from '../../i18n/I18nProvider';
 import { Icon } from '../Icon';
 import { StreamerReserve } from '../layout/GameShell';
+import { PAGE_CONTAINER, PageHeader } from '../layout/PageHeader';
 import { buildDrawSequence, slotOf } from './draw/drawSequence';
 import { DrawBoard } from './draw/DrawBoard';
 import { DrawCard } from './draw/DrawCard';
@@ -21,6 +22,9 @@ interface TournamentDrawProps {
   /** Animazione finita: si va al tabellone (click su "Vai al torneo") */
   onDone: () => void;
 }
+
+/** Secondi a tabellone completo prima di passare da soli al torneo */
+const AUTO_DONE_S = 3;
 
 /** Primo elemento visibile della query (i layout desktop/mobile coesistono nel DOM) */
 function visibleEl(selector: string): HTMLElement | null {
@@ -79,9 +83,23 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
     });
   }, [pb.phase, step]);
 
-  // A tabellone completo il focus va al CTA
+  // A tabellone completo il focus va al CTA e parte il conto alla rovescia
+  const [countdown, setCountdown] = useState(AUTO_DONE_S);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
   useEffect(() => {
-    if (done) ctaRef.current?.focus();
+    if (!done) return;
+    ctaRef.current?.focus();
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const left = AUTO_DONE_S - Math.floor((Date.now() - started) / 1000);
+      setCountdown(Math.max(0, left));
+      if (left <= 0) {
+        clearInterval(timer);
+        onDoneRef.current();
+      }
+    }, 250);
+    return () => clearInterval(timer);
   }, [done]);
 
   const progress = done
@@ -122,46 +140,40 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
 
   return (
     <StreamerReserve>
-      <div className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-6 sm:py-10">
-        <div className="flex flex-wrap items-end justify-between gap-4 mb-6 sm:mb-10">
-          <div>
-            <p className="font-display text-2xl font-extrabold text-ink-muted">{tournament.name}</p>
-            <h1 className="font-display text-4xl sm:text-6xl font-black text-ink leading-none mt-1">
-              {t('tournament.draw.title')}
-            </h1>
-            <p className="text-lg text-ink-soft mt-3">
-              {t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
-            </p>
-          </div>
-          <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
-            {done ? (
+      <div className={PAGE_CONTAINER}>
+        <PageHeader
+          kicker={tournament.name}
+          title={t('tournament.draw.title')}
+          subtitle={t(tournament.format === 'double' ? 'tournament.draw.formatDouble' : 'tournament.draw.formatSingle')}
+          actions={
+            done ? (
               <span className="border-2 border-ink px-3 py-1.5 font-display text-lg font-extrabold leading-none shadow-block-sm bg-highlight text-on-highlight">
                 {progress}
               </span>
             ) : (
-              // Avanzamento: etichetta + una tacca per estrazione
-              <div className="flex flex-col items-start sm:items-end gap-1.5">
-                <span className="font-display text-lg font-extrabold leading-none text-ink">{progress}</span>
-                <span className="flex gap-1" aria-hidden="true">
-                  {order.map((_, i) => (
-                    <span
-                      key={i}
-                      className={`w-4 h-2 border border-ink transition-colors duration-200 ${
-                        i < pb.placed.size ? 'bg-pitch' : i === pb.stepIndex ? 'bg-highlight' : 'bg-transparent'
-                      }`}
-                    />
-                  ))}
-                </span>
-              </div>
-            )}
-            {!done && (
-              <button onClick={pb.skip} className="btn-bid whitespace-nowrap !text-base sm:!text-lg !px-4 sm:!px-5 !py-2.5">
-                {t('tournament.draw.skip')}
-                <Icon name="skip" className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-        </div>
+              <>
+                {/* Avanzamento: etichetta + una tacca per estrazione */}
+                <div className="flex flex-col items-start lg:items-end gap-1.5">
+                  <span className="font-display text-lg font-extrabold leading-none text-ink">{progress}</span>
+                  <span className="flex gap-1" aria-hidden="true">
+                    {order.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`w-4 h-2 border border-ink transition-colors duration-200 ${
+                          i < pb.placed.size ? 'bg-pitch' : i === pb.stepIndex ? 'bg-highlight' : 'bg-transparent'
+                        }`}
+                      />
+                    ))}
+                  </span>
+                </div>
+                <button onClick={pb.skip} className="btn-bid whitespace-nowrap !text-base sm:!text-lg !px-4 sm:!px-5 !py-2.5">
+                  {t('tournament.draw.skip')}
+                  <Icon name="skip" className="w-5 h-5" />
+                </button>
+              </>
+            )
+          }
+        />
 
         <section aria-label={t('tournament.draw.boardAria')}>
           <DrawBoard
@@ -184,8 +196,16 @@ export function TournamentDraw({ tournament, order: fixedOrder, onDrawn, onDone 
 
         {done && (
           <div className="mt-8 sm:mt-10 flex justify-center">
-            <button ref={ctaRef} onClick={onDone} className="btn-cta w-full sm:w-auto motion-safe:animate-reveal">
+            <button ref={ctaRef} onClick={onDone} className="btn-cta relative overflow-hidden w-full sm:w-auto motion-safe:animate-reveal">
               {t('tournament.draw.toTournament')}
+              <span aria-hidden="true" className="font-display text-xl md:text-2xl font-black tabular-nums bg-highlight text-on-highlight border-2 border-ink px-2 leading-tight">
+                {countdown}
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 bottom-0 h-1.5 bg-highlight origin-left animate-drain"
+                style={{ animationDuration: `${AUTO_DONE_S * 1000}ms` }}
+              />
             </button>
           </div>
         )}

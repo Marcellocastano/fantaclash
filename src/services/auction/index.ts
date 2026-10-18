@@ -74,7 +74,7 @@ export type { AuctionAction, AuctionWorld } from './session';
 export { createInitialAuctionState, getCurrentCallerId, auctionReducer } from './session';
 
 export type { AuctionRoundState, AuctionView } from './view';
-export { deriveAuctionView } from './view';
+export { deriveAuctionView, isCovered } from './view';
 
 export type { RunOptions } from './simulator';
 export { AUTOPILOT_BOT_CONFIG, runAuction } from './simulator';

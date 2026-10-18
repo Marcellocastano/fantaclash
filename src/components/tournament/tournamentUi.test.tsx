@@ -149,9 +149,7 @@ describe('UI torneo (smoke)', () => {
     for (const team of t.teams) expect(screen.getAllByText(team.name).length).toBeGreaterThan(0);
     expect(onDrawn).toHaveBeenCalledTimes(1);
     expect(onDrawn).toHaveBeenCalledWith(order);
-    expect(onDone).not.toHaveBeenCalled();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Vai al torneo' }));
+    // runDraw supera anche il conto alla rovescia finale: si passa al torneo da soli
     expect(onDone).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
@@ -171,6 +169,20 @@ describe('UI torneo (smoke)', () => {
     expect(onDone).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Vai al torneo' }));
+    expect(onDone).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('sorteggio: a tabellone completo passa da solo al torneo dopo il conto alla rovescia', () => {
+    vi.useFakeTimers();
+    const t = createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 11 });
+    const onDone = vi.fn();
+    render(<TournamentDraw tournament={t} order={t.teams.map(x => x.id)} onDone={onDone} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Salta il sorteggio' }));
+    act(() => vi.advanceTimersByTime(2000));
+    expect(onDone).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1500));
     expect(onDone).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });

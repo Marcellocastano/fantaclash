@@ -9,6 +9,7 @@ import { playSound } from '../../services/sound';
 import { Footer } from '../Footer';
 import { Icon, IconName } from '../Icon';
 import { StreamerReserve } from '../layout/GameShell';
+import { PAGE_CONTAINER } from '../layout/PageHeader';
 import { TournamentBracket } from './TournamentBracket';
 import { TournamentSummaryCard } from './TournamentSummaryCard';
 import { useSummaryCard } from './useSummaryCard';
@@ -93,7 +94,7 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
     <StreamerReserve>
       <div className="flex-1 flex flex-col">
         {champion && <Confetti />}
-        <main className="flex-1 w-full max-w-[1300px] mx-auto px-4 py-12">
+        <main className={PAGE_CONTAINER}>
         <div className="grid grid-cols-12 gap-x-0 gap-y-10 md:gap-x-12 items-start">
           {/* Card + condivisione */}
           <div className="col-span-12 md:col-span-6 lg:col-span-5">
@@ -126,8 +127,8 @@ function Summary({ summary, tournament, onNewGame, newGameLabel, finalSlot }: Su
             <p className={`inline-block px-4 py-2 border-2 border-ink shadow-block font-display text-4xl sm:text-6xl md:text-8xl font-black leading-none motion-safe:animate-stamp ${PLACEMENT_TONE[summary.placement]}`}>
               {t(PLACEMENT_KEY[summary.placement])}
             </p>
-            <h1 className="font-display text-3xl sm:text-5xl md:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
-            <p className="text-lg text-ink-soft mt-3">
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-ink leading-none mt-8 break-words">{summary.teamName}</h1>
+            <p className="text-base sm:text-lg text-ink-soft mt-3">
               {summary.tournamentName} · {listoneLabel(summary.seasonId, t)}
               {summary.championName && !champion && <> · {t('tournament.summary.cupTo', { name: summary.championName })}</>}
             </p>

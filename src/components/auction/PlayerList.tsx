@@ -4,6 +4,7 @@ import { CatalogKey } from '../../i18n/translate';
 import { Player, PlayerRole } from '../../types';
 import { playerOverall } from '../../services/auction/teamStrength';
 import { listoneLabel } from '../../services/seasons';
+import { splitName } from '../../utils/playerName';
 import { usePersistentState } from '../../hooks/usePersistentState';
 import { Icon } from '../Icon';
 import { PlayerCard } from '../player/PlayerCard';
@@ -28,6 +29,8 @@ interface PlayerListProps {
   onSelectPlayer: (player: Player) => void;
   scanId?: string | null;
   lockedId?: string | null;
+  /** Difficile: overall/statistiche/valore coperti, niente ordinamento */
+  covered?: boolean;
 }
 
 type RoleFilter = PlayerRole | 'TUTTI';
@@ -43,7 +46,7 @@ const isView = (v: unknown): v is View => v === 'righe' || v === 'card';
  * default sul reparto in corso (segue il cambio di reparto finché
  * l'utente non sceglie un altro filtro).
  */
-export function PlayerList({ available, sold, currentRole, season, isSelectable, onSelectPlayer, scanId, lockedId }: PlayerListProps) {
+export function PlayerList({ available, sold, currentRole, season, isSelectable, onSelectPlayer, scanId, lockedId, covered = false }: PlayerListProps) {
   const t = useT();
   const [manual, setManual] = useState<{ role: RoleFilter; during: PlayerRole } | null>(null);
   const [showSold, setShowSold] = useState(false);
@@ -57,10 +60,12 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
     const match = (p: Player) =>
       (role === 'TUTTI' || p.role === role) && (!q || p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q));
     const key = (p: Player) => (sort === 'ovr' ? playerOverall(p) * 1000 + p.baseValue : p.baseValue * 1000 + playerOverall(p));
-    const free = available.filter(match).sort((a, b) => key(b) - key(a)).map(player => ({ player, soldTo: null as SoldEntry | null }));
+    const free = covered
+      ? available.filter(match).sort((a, b) => splitName(a.name).surname.localeCompare(splitName(b.name).surname, 'it'))
+      : available.filter(match).sort((a, b) => key(b) - key(a));
     const gone = showSold ? sold.filter(s => match(s.player)).map(s => ({ player: s.player, soldTo: s })) : [];
-    return [...free, ...gone];
-  }, [available, sold, role, sort, query, showSold]);
+    return [...free.map(player => ({ player, soldTo: null as SoldEntry | null })), ...gone];
+  }, [available, sold, role, sort, query, showSold, covered]);
 
   return (
     <div className="h-full flex flex-col">
@@ -118,15 +123,17 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
             className="input-field py-1.5 pl-8 text-sm"
           />
         </label>
-        <select
-          value={sort}
-          onChange={e => setSort(e.target.value as Sort)}
-          className="bg-canvas border-2 border-ink px-2 py-1.5 text-sm font-semibold"
-          aria-label={t('auction.list.sort')}
-        >
-          <option value="ovr">{t('auction.list.byOvr')}</option>
-          <option value="valore">{t('auction.list.byValue')}</option>
-        </select>
+        {!covered && (
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value as Sort)}
+            className="bg-canvas border-2 border-ink px-2 py-1.5 text-sm font-semibold"
+            aria-label={t('auction.list.sort')}
+          >
+            <option value="ovr">{t('auction.list.byOvr')}</option>
+            <option value="valore">{t('auction.list.byValue')}</option>
+          </select>
+        )}
         <label className="flex items-center gap-2 text-sm font-semibold text-ink-soft cursor-pointer select-none">
           <input type="checkbox" checked={showSold} onChange={e => setShowSold(e.target.checked)} className="w-4 h-4 accent-pitch" />
           {t('auction.list.sold')}
@@ -144,6 +151,7 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
                   selectable={!soldTo && isSelectable && player.role === currentRole}
                   scanning={scanId === player.id}
                   locked={lockedId === player.id}
+                  covered={covered}
                   onSelect={() => onSelectPlayer(player)}
                 />
               </li>
@@ -161,10 +169,10 @@ export function PlayerList({ available, sold, currentRole, season, isSelectable,
                       onClick={() => onSelectPlayer(player)}
                       className="w-full text-left transition-transform duration-100 hover:-rotate-1 focus-visible:outline outline-2 outline-offset-2 outline-pitch"
                     >
-                      <PlayerCard player={player} />
+                      <PlayerCard player={player} covered={covered} />
                     </button>
                   ) : (
-                    <PlayerCard player={player} dimmed={!!soldTo} />
+                    <PlayerCard player={player} dimmed={!!soldTo} covered={covered} />
                   )}
                 </li>
               );

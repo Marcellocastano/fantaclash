@@ -15,6 +15,7 @@ import {
 } from '../../domain/tournament';
 import { MatchPlayback, PlaybackSpeed, useMatchPlayback } from '../../hooks/useMatchPlayback';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { useT } from '../../i18n/I18nProvider';
 import { playSound } from '../../services/sound';
 import { Icon } from '../Icon';
@@ -47,6 +48,8 @@ const SPEEDS: PlaybackSpeed[] = [1, 2, 4];
  * dei rigori.
  */
 export function MatchScreen({ tournament, teams, matchId, onFinish }: MatchScreenProps) {
+  // Schermo sveglio per tutta la diretta della gara
+  useWakeLock(true);
   const match = findMatch(tournament.bracket, matchId);
   // Gara da giocare del confronto: andata, ritorno (casa invertita) o secca
   const leg = match ? (nextLeg(tournament, match) ?? 1) : 1;

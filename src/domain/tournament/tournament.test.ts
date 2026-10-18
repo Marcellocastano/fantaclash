@@ -18,6 +18,7 @@ import {
   roundLeg,
   roundMatches,
   simulateBracketMatch,
+  simulateOthers,
   simulateRemaining,
   simulateRound,
   tieScore,
@@ -383,5 +384,56 @@ describe('torneo — formato andata e ritorno', () => {
       }
       expect(s.stats.played).toBe(s.matches.reduce((n, m) => n + (m.legs?.length ?? 1), 0));
     }
+  });
+
+  it("simulateOthers non simula il ritorno dell'utente, anche se il suo tie è l'ultimo del turno", () => {
+    // Utente in QF4 (slot 6/7 del sorteggio): il suo confronto viene
+    // valutato per ultimo dal ciclo di simulateRound. Senza skip, quando il
+    // ciclo lo raggiunge tutte le andate sono registrate e il ritorno è
+    // 'ready' -> verrebbe simulato dall'IA (bug).
+    const order = TEAMS.map(x => x.id).filter(id => id !== 'user');
+    order.splice(6, 0, 'user');
+    let t = tournamentReducer(
+      createTournament({ teams: TEAMS, seasonId: '2015-16', seed: 1, format: 'double' }),
+      { type: 'DRAW', order }
+    );
+    const qf4 = findMatch(t.bracket, 'QF4')!;
+    expect(qf4.homeId).toBe('user');
+    expect(findUserMatch(t)!.id).toBe('QF4');
+
+    // L'utente gioca la sua andata
+    t = tournamentReducer(t, { type: 'START_MATCH', matchId: 'QF4' });
+    t = tournamentReducer(t, {
+      type: 'RECORD_RESULT',
+      matchId: 'QF4',
+      result: simulateBracketMatch(t, TEAMS, 'QF4'),
+    });
+    const pre = t;
+
+    // Causa documentata: simulateRound senza skip simulerebbe QF4-R
+    expect(simulateRound(pre, TEAMS).matches['QF4-R']).toBeDefined();
+
+    // Con simulateOthers si registrano le 4 andate e basta
+    t = simulateOthers(pre, TEAMS);
+    expect(Object.keys(t.matches)).toHaveLength(4);
+    for (const id of ['QF1', 'QF2', 'QF3', 'QF4']) expect(t.matches[id]).toBeDefined();
+    expect(t.matches['QF4-R']).toBeUndefined();
+    expect(findMatch(t.bracket, 'QF4')!.winnerId).toBeNull();
+    expect(t.status).toBe('quarterfinals');
+    for (const id of ['QF1', 'QF2', 'QF3']) {
+      expect(t.matches[`${id}-R`]).toBeUndefined();
+      expect(findMatch(t.bracket, id)!.winnerId).toBeNull();
+    }
+
+    // L'utente gioca il ritorno: il turno si chiude
+    t = tournamentReducer(t, { type: 'START_MATCH', matchId: 'QF4' });
+    t = tournamentReducer(t, {
+      type: 'RECORD_RESULT',
+      matchId: 'QF4-R',
+      result: simulateBracketMatch(t, TEAMS, 'QF4'),
+    });
+    t = simulateOthers(t, TEAMS);
+    for (const m of roundMatches(t.bracket, 'quarterfinals')) expect(m.winnerId).not.toBeNull();
+    expect(t.status).toBe('semifinals');
   });
 });

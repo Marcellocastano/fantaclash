@@ -75,6 +75,26 @@ describe('landing', () => {
     expect(config.format).toBe('double');
   });
 
+  it('doppia scelta in hero: "Sfida gli amici" mostra i link e nasconde il form', async () => {
+    // MULTIPLAYER_ENABLED è letto da config.ts al caricamento del modulo:
+    // ambiente stubbato + modulo reimportato per vedere il ramo abilitato.
+    vi.resetModules();
+    vi.stubEnv('VITE_MULTIPLAYER', '1');
+    try {
+      const { Landing: MpLanding } = await import('./Landing');
+      render(<MpLanding onSubmit={vi.fn()} />);
+      // Default: tile "Gioca da solo" selezionata e form visibile
+      expect(screen.getByLabelText('Nome della squadra')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('radio', { name: /Sfida gli amici/ }));
+      expect(screen.queryByLabelText('Nome della squadra')).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Crea una stanza' })).toHaveAttribute('href', '/multiplayer/?vista=crea');
+      expect(screen.getByRole('link', { name: 'Entra con un codice' })).toHaveAttribute('href', '/multiplayer/?vista=entra');
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
   it('mostra regole e footer con il bottone di supporto', () => {
     render(<Landing onSubmit={vi.fn()} />);
     expect(screen.getByText('Le regole in breve')).toBeInTheDocument();

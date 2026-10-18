@@ -4,6 +4,7 @@ import { CatalogKey } from '../i18n/translate';
 import { MULTIPLAYER_ENABLED } from '../config';
 import { GameConfig, Player } from '../types';
 import { KitId, kitOf } from '../domain/teamKits';
+import { MAX_PLAYERS } from '../multiplayer/constants';
 import { Icon } from './Icon';
 import { Footer } from './Footer';
 import { GUIDES } from '../site/routes';
@@ -58,6 +59,35 @@ const RULES: { value: string; unit: CatalogKey; term: CatalogKey; text: CatalogK
 export function Landing({ onSubmit }: LandingProps) {
   const t = useT();
   const [season, setSeason] = useState<string | null>(null);
+  const [heroMode, setHeroMode] = useState<'solo' | 'friends'>('solo');
+
+  /** Tile della doppia scelta in hero (stile ListoneModePicker, taglia hero) */
+  const heroTile = (mode: 'solo' | 'friends', title: string, subtitle: string, badge?: string) => {
+    const selected = heroMode === mode;
+    return (
+      <button
+        key={mode}
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        onClick={() => setHeroMode(mode)}
+        className={`relative text-left border-2 border-ink px-3 sm:px-4 py-3 sm:py-4 transition-all duration-150 focus-visible:outline outline-2 outline-offset-2 outline-pitch ${
+          selected ? 'bg-canvas shadow-block' : 'bg-canvas/60 hover:bg-canvas'
+        }`}
+      >
+        {badge && (
+          <span className="absolute -top-3 -right-2 -rotate-6 bg-whistle text-on-whistle border-2 border-ink px-1.5 py-0.5 font-display text-xs font-black uppercase leading-none">
+            {badge}
+          </span>
+        )}
+        <span className="flex items-center justify-between gap-2">
+          <span className="font-display text-2xl sm:text-3xl font-black text-ink">{title}</span>
+          {selected && <Icon name="check" className="w-5 h-5 text-pitch shrink-0" />}
+        </span>
+        <span className="block mt-1 text-xs sm:text-sm text-ink-muted leading-snug">{subtitle}</span>
+      </button>
+    );
+  };
   return (
     <div className="flex-1 flex flex-col">
       <main className="flex-1">
@@ -85,27 +115,38 @@ export function Landing({ onSubmit }: LandingProps) {
                   {t('landing.heroSub')}
                 </p>
 
-                {/* Etichetta dell'album: il form */}
-                <div className="mt-6 sm:mt-8 border-2 border-ink p-1 sm:p-1.5 bg-canvas">
-                  <div className="border-2 border-dashed border-line-strong p-3 sm:p-5">
-                    <SetupForm onSubmit={onSubmit} onSeasonChange={setSeason} />
-                  </div>
-                </div>
-
                 {MULTIPLAYER_ENABLED && (
-                  <div className="mt-4 border-2 border-ink bg-canvas p-3 sm:p-4">
-                    <p className="font-display font-extrabold text-ink">{t('landing.mp.title')}</p>
-                    <p className="text-sm text-ink-soft mt-1">{t('landing.mp.sub')}</p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <a href="/multiplayer/?vista=crea" className="btn-primary text-center text-sm sm:text-base py-2">
-                        {t('landing.mp.create')}
-                      </a>
-                      <a href="/multiplayer/?vista=entra" className="btn-ghost text-center text-sm sm:text-base py-2">
-                        {t('landing.mp.join')}
-                      </a>
-                    </div>
+                  <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3" role="radiogroup" aria-label={t('landing.mp.group')}>
+                    {heroTile('solo', t('landing.mp.soloTitle'), t('landing.mp.soloSub'))}
+                    {heroTile('friends', t('landing.mp.friendsTitle'), t('landing.mp.friendsSub', { max: MAX_PLAYERS }), t('landing.mp.badge'))}
                   </div>
                 )}
+
+                {/* Etichetta dell'album: il form del singolo oppure il pannello multiplayer */}
+                <div className={`${MULTIPLAYER_ENABLED ? 'mt-4' : 'mt-6 sm:mt-8'} border-2 border-ink p-1 sm:p-1.5 bg-canvas`}>
+                  <div className="border-2 border-dashed border-line-strong p-3 sm:p-5">
+                    {MULTIPLAYER_ENABLED && heroMode === 'friends' ? (
+                      <div>
+                        <p className="font-display text-2xl font-black text-ink">{t('landing.mp.title')}</p>
+                        <p className="text-sm text-ink-soft mt-1">{t('landing.mp.sub')}</p>
+                        <ul className="mt-4 space-y-2">
+                          {(['landing.mp.point1', 'landing.mp.point2', 'landing.mp.point3'] as const).map(k => (
+                            <li key={k} className="flex items-start gap-2 text-sm font-semibold text-ink">
+                              <Icon name="check" className="w-4 h-4 mt-0.5 text-pitch shrink-0" />
+                              {t(k)}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <a href="/multiplayer/?vista=crea" className="btn-primary text-center">{t('landing.mp.create')}</a>
+                          <a href="/multiplayer/?vista=entra" className="btn-ghost text-center">{t('landing.mp.join')}</a>
+                        </div>
+                      </div>
+                    ) : (
+                      <SetupForm onSubmit={onSubmit} onSeasonChange={setSeason} />
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="p-5 sm:p-8 lg:pl-12 border-t-4 lg:border-t-0 border-ink">

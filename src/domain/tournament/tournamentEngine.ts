@@ -7,6 +7,7 @@ import {
   createBracket,
   currentRound,
   findMatch,
+  findUserMatch,
   getMatchStatus,
   legKey,
   legResult,
@@ -139,6 +140,12 @@ export function simulateRound(state: TournamentState, teams: Team[], skip: strin
     });
   }
   return next;
+}
+
+/** Simula le gare pronte del turno tranne il confronto dell'utente (che le gioca lui) */
+export function simulateOthers(state: TournamentState, teams: Team[]): TournamentState {
+  const user = findUserMatch(state);
+  return simulateRound(state, teams, user ? [user.id] : []);
 }
 
 /**

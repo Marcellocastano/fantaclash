@@ -1,4 +1,4 @@
-import { AuctionBid, Player, PlayerRole, Team } from '../../types';
+import { AuctionBid, AuctionPhase, DifficultyLevel, Player, PlayerRole, Team } from '../../types';
 import { getCurrentCallerId, AuctionWorld } from './session';
 import { getLotDuration, getMaxBid, needsRole } from './rules';
 
@@ -7,6 +7,11 @@ import { getLotDuration, getMaxBid, needsRole } from './rules';
  * a partire dal mondo. "Utente" è la squadra con id === myTeamId
  * (null = spettatore: niente turno di chiamata né rilanci).
  */
+
+/** Difficile: le schede giocatore restano coperte finché l'asta non è conclusa */
+export function isCovered(difficulty: DifficultyLevel | undefined, phase: AuctionPhase | undefined): boolean {
+  return difficulty === 'difficile' && phase !== 'complete';
+}
 
 /** Stati dell'asta esposti alla UI */
 export type AuctionRoundState =

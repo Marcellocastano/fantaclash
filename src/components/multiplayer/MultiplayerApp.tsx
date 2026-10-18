@@ -15,6 +15,7 @@ import { RoomFinalScreen, RoomTournamentScreen } from './RoomTournamentScreen';
 import { useRoom } from './RoomProvider';
 import { useRoomExit } from './useRoomExit';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { CatalogKey } from '../../i18n/translate';
 import { useT } from '../../i18n/I18nProvider';
 
@@ -37,6 +38,9 @@ export function MultiplayerApp() {
   const t = useT();
   const room = useRoom();
   const [starting, setStarting] = useState(false);
+  // In stanza lo schermo resta sveglio: sospendere il telefono buttarebbe
+  // giù la connessione realtime
+  useWakeLock(!!room.state);
   useScrollToTop(`${room.status}:${room.state?.phase ?? ''}`);
   const [startError, setStartError] = useState<string | null>(null);
 

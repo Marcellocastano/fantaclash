@@ -14,18 +14,26 @@ interface PlayerRowProps {
   scanning?: boolean;
   /** Scelto dal bot (fine scanner) */
   locked?: boolean;
+  /** Difficile: overall, statistiche e valore coperti */
+  covered?: boolean;
   onSelect?: () => void;
 }
 
 /** Riga "figurina" del listone: overall per fascia, nome, club, numeri */
-export function PlayerRow({ player, soldTo, selectable, scanning = false, locked = false, onSelect }: PlayerRowProps) {
+export function PlayerRow({ player, soldTo, selectable, scanning = false, locked = false, covered = false, onSelect }: PlayerRowProps) {
   const t = useT();
   const { surname, firstName } = splitName(player.name);
   const goalLabel = player.role === 'P' ? t('ui.stats.inv') : t('ui.stats.gol');
   const goalValue = player.role === 'P' ? player.cleanSheetProbability ?? 0 : player.goalProbability;
   const body = (
     <>
-      <OvrBadge overall={playerOverall(player)} role={player.role} />
+      {covered ? (
+        <span className="w-12 h-12 shrink-0 inline-flex flex-col items-center justify-center border-2 border-ink leading-none bg-pitch-deep text-highlight">
+          <span className="font-display font-black text-2xl">{player.role}</span>
+        </span>
+      ) : (
+        <OvrBadge overall={playerOverall(player)} role={player.role} />
+      )}
       <span className="flex-1 min-w-0">
         <span className="flex items-baseline gap-2 min-w-0">
           <span className={`font-display text-2xl font-extrabold leading-none truncate ${soldTo ? 'text-ink-muted line-through decoration-2' : 'text-ink'}`}>
@@ -38,6 +46,11 @@ export function PlayerRow({ player, soldTo, selectable, scanning = false, locked
             <>
               <span className="font-semibold text-ink">{soldTo.team}</span> · {soldTo.price} Cr
             </>
+          ) : covered ? (
+            <>
+              {player.team}
+              {player.legend && ` ${seasonShort(player.season)}`}
+            </>
           ) : (
             <>
               {player.team}
@@ -46,13 +59,15 @@ export function PlayerRow({ player, soldTo, selectable, scanning = false, locked
           )}
         </span>
       </span>
-      <span className="text-right shrink-0 leading-none">
-        <span className="block font-display text-2xl font-extrabold tabular-nums text-ink">{player.baseValue}</span>
-        <span className="text-xs font-semibold text-ink-muted">{t('ui.stats.value')}</span>
-      </span>
+      {!covered && (
+        <span className="text-right shrink-0 leading-none">
+          <span className="block font-display text-2xl font-extrabold tabular-nums text-ink">{player.baseValue}</span>
+          <span className="text-xs font-semibold text-ink-muted">{t('ui.stats.value')}</span>
+        </span>
+      )}
       {selectable && (
         <span className="hidden group-hover:inline-flex group-focus-visible:inline-flex items-center px-3 py-2 bg-pitch text-on-pitch font-display font-extrabold text-lg leading-none border-2 border-ink">
-          {t('auction.call')}
+          {t('auction.call.now')}
         </span>
       )}
     </>

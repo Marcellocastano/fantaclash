@@ -18,6 +18,7 @@ import { Icon } from '../Icon';
 import { CatalogKey } from '../../i18n/translate';
 import { useT } from '../../i18n/I18nProvider';
 import { StreamerReserve } from '../layout/GameShell';
+import { PAGE_CONTAINER } from '../layout/PageHeader';
 import { TeamBadge } from './TeamBadge';
 import { REVEAL_STEP_MS, TournamentBracket } from './TournamentBracket';
 
@@ -94,7 +95,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
     const userLegIsWaiting = !userMatchReady; // ritorno in attesa delle altre andate
     hero = (
       <section className="text-center">
-        <p className="font-display text-2xl font-extrabold text-ink-muted">
+        <p className="font-display text-xl sm:text-2xl font-extrabold text-whistle-deep leading-none">
           {tournament.name} · {t(ROUND_TITLE_KEY[round])}
           {legs === 2 && ` · ${t(leg === 1 ? 'tournament.hub.legGo' : 'tournament.hub.legBack')}`}
         </p>
@@ -136,7 +137,7 @@ export function TournamentHub({ tournament, revealIds = [], onPlay, onCompleteRo
 
   return (
     <StreamerReserve>
-      <div className="flex-1 w-full max-w-[1400px] mx-auto px-4 py-8">
+      <div className={PAGE_CONTAINER}>
         {hero}
         {revealIds.length > 0 && <RoundResults tournament={tournament} ids={revealIds} />}
         <section className="mt-10" aria-label={t('tournament.hub.bracketAria')}>
@@ -151,9 +152,9 @@ function Hero({ kicker, title, children }: { kicker?: string; title: string; chi
   return (
     <section className="text-center motion-safe:animate-stamp">
       {kicker && (
-        <p className="font-display text-2xl font-extrabold text-ink-muted mb-3">{kicker}</p>
+        <p className="font-display text-xl sm:text-2xl font-extrabold text-whistle-deep leading-none">{kicker}</p>
       )}
-      <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-black text-ink leading-none break-words">{title}</h1>
+      <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-ink leading-none mt-2 break-words">{title}</h1>
       <div className="mt-8">{children}</div>
     </section>
   );

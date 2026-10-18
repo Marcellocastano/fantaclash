@@ -175,7 +175,7 @@ function AuctionDoneScreen({ state }: { state: RoomState }) {
 
   return (
     <StreamerReserve>
-      <div className="w-full max-w-[1600px] mx-auto px-4 py-6 space-y-10">
+      <div className="w-full max-w-[1600px] mx-auto px-4 py-8 sm:py-10 space-y-10">
         {/* Eroe */}
         <section className="relative bg-pitch-deep text-canvas border-2 border-ink shadow-block p-5 sm:p-8 overflow-hidden">
           <p className="label !text-canvas/70">{listoneLabel(state.settings.season, t)} · {t('room.game.doneKicker')}</p>

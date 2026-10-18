@@ -260,8 +260,8 @@ export function RoomFinalScreen() {
     return (
       <div className="px-1">
         <div className="max-w-3xl mx-auto py-8 text-center">
-          <p className="section-heading">{t.name}</p>
-          <h1 className="font-display text-4xl sm:text-6xl font-black text-ink mt-4">
+          <p className="font-display text-xl sm:text-2xl font-extrabold text-whistle-deep leading-none">{t.name}</p>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-ink leading-none mt-2 break-words">
             {tr('room.game.championLine', { name: champion?.name ?? '—' })}
           </h1>
           <section className="mt-10" aria-label={tr('tournament.hub.bracketAria')}>

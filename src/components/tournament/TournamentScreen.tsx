@@ -5,7 +5,7 @@ import { MatchResult } from '../../domain/match';
 import {
   legKey,
   nextLeg,
-  simulateRound,
+  simulateOthers,
   tournamentReducer,
   TournamentState,
 } from '../../domain/tournament';
@@ -37,9 +37,9 @@ export function TournamentScreen() {
 
   if (!tournament) return null;
 
-  /** Simula le gare rimaste del turno e ne prepara la rivelazione (per chiave) */
+  /** Simula le gare rimaste del turno (mai quella dell'utente) e ne prepara la rivelazione (per chiave) */
   const completeRound = (from: TournamentState) => {
-    const next = simulateRound(from, teams);
+    const next = simulateOthers(from, teams);
     const simulated = Object.keys(next.matches).filter(k => !(k in from.matches));
     setRevealIds(simulated);
     return next;

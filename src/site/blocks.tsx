@@ -11,8 +11,8 @@ import { Icon } from '../components/Icon';
 export function PageTitle({ kicker, children }: { kicker?: string; children: ReactNode }) {
   return (
     <header className="mb-10">
-      {kicker && <p className="font-display text-sm font-extrabold tracking-wide text-whistle-deep">{kicker.toUpperCase()}</p>}
-      <h1 className="font-display text-5xl md:text-6xl font-black text-ink leading-[1.05] mt-2 max-w-3xl">{children}</h1>
+      {kicker && <p className="font-display text-xl sm:text-2xl font-extrabold text-whistle-deep leading-none">{kicker}</p>}
+      <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black text-ink leading-none mt-2 break-words max-w-3xl">{children}</h1>
     </header>
   );
 }

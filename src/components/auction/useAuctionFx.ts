@@ -13,21 +13,20 @@ const OUTBID_MS = 1300;
  * alcuni candidati plausibili (solo presentazione, il motore non cambia),
  * poi si ferma sul giocatore chiamato.
  */
-export function useBotScanner(active: boolean, role: PlayerRole, pool: Player[], calledId: string | null) {
+export function useBotScanner(active: boolean, role: PlayerRole, pool: Player[], calledId: string | null, covered: boolean) {
   const [scanId, setScanId] = useState<string | null>(null);
   const [lockedId, setLockedId] = useState<string | null>(null);
   const wasActive = useRef(false);
 
   const candidates = useMemo(() => {
     if (!active) return [];
-    const top = pool
-      .filter(p => p.role === role)
-      .sort((a, b) => playerOverall(b) - playerOverall(a))
-      .slice(0, 8);
+    const rolePool = pool.filter(p => p.role === role);
+    // Schede coperte: i candidati si prendono da tutto il reparto, non dai più forti
+    const top = covered ? rolePool : rolePool.sort((a, b) => playerOverall(b) - playerOverall(a)).slice(0, 8);
     return top.sort(() => Math.random() - 0.5).slice(0, 5).map(p => p.id);
     // I candidati si fissano all'inizio della scelta del bot
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, role]);
+  }, [active, role, covered]);
 
   useEffect(() => {
     if (!active || candidates.length === 0) return;

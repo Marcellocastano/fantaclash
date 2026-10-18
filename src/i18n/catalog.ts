@@ -154,7 +154,17 @@ export const catalog = {
   },
 
   auction: {
-    call: "Chiama",
+    call: {
+      now: "Chiama",
+      kicker: "La tua chiamata",
+      pick: "Scegli un {role}",
+      missing: "Da prendere",
+      credits: "Crediti",
+      maxBid: "Offerta max",
+      hintSide: "Clicca un giocatore nel listone: l’asta parte da 1 credito",
+      hintBelow: "Scegli un giocatore nel listone qui sotto: l’asta parte da 1 credito",
+      timer: "Tempo per chiamare",
+    },
 
     stage: {
       idle: "Pronti?",
@@ -171,9 +181,6 @@ export const catalog = {
     startFromWait: "Si parte dai {role}.",
     waitStart: "In attesa dell’inizio dell’asta…",
     start: "Inizia l’asta",
-    pickRole: "Scegli un {role} dal listone e chiamalo.",
-    clickRow: "Seleziona un giocatore per aprire l’asta da 1 credito.",
-    timeToCall: "Hai {seconds} secondi per scegliere",
     humanCalling: "{name} sta scegliendo…",
     humanCallingRole: "Sta scegliendo un {role} da chiamare.",
     nextRole: "Prossimo reparto: {role}.",
@@ -197,8 +204,7 @@ export const catalog = {
       time: "Tempo",
       leadingWait: "Sei in testa. Attendi la fine del conto alla rovescia.",
       maxBid: "Puoi offrire fino a {max} crediti.",
-      roleDoneSim:
-        "Hai completato questo reparto. Puoi passare al successivo con Avanti veloce.",
+      roleDoneSim: "Hai completato questo reparto.",
       roleDoneWatch:
         "Hai completato questo reparto. Puoi attendere la fine delle altre aste.",
       nextPlayer: "Prossimo giocatore",
@@ -210,18 +216,19 @@ export const catalog = {
     },
 
     ff: {
-      button: "Avanti veloce",
-      autoOn: "Avanzamento automatico attivo",
-      simLot: "Salta l’asta di questo giocatore",
-      simLotHint: "I bot concludono l’asta senza di te",
       simRole: "Salta il reparto dei {role}",
       simRoleHint: "Hai già completato questo reparto",
-      simAll: "Completa tutta l’asta",
+      simAll: "Completa l’asta",
       simAllHint: "Anche gli acquisti della tua squadra verranno simulati",
+      simAllConfirmTitle: "Completare l’asta?",
+      simAllConfirm: "Completa",
+      skipLot: "Salta questo giocatore",
+      skipLotHint: "I bot chiudono l’asta senza di te",
     },
 
     autoAdvance: {
       label: "Avanzamento automatico",
+      short: "Auto",
       hint: "Dopo ogni acquisto si passa automaticamente al successivo",
     },
 
@@ -290,8 +297,17 @@ export const catalog = {
       "Scegli una stagione, sfida 7 bot all’asta e costruisci la tua rosa. Poi gioca il torneo fino alla finale.",
 
     mp: {
+      group: "Modalità di gioco",
+      soloTitle: "Gioca da solo",
+      soloSub: "Tu contro 7 bot, subito",
+      friendsTitle: "Sfida gli amici",
+      friendsSub: "Fino a {max} giocatori online",
+      badge: "Novità",
       title: "Gioca con gli amici",
       sub: "Chi costruirà la rosa migliore?",
+      point1: "Crea una stanza e invita gli amici con un link",
+      point2: "Asta in diretta: rilanci in tempo reale",
+      point3: "I posti liberi li occupano i bot",
       create: "Crea una stanza",
       join: "Entra con un codice",
     },
@@ -304,19 +320,19 @@ export const catalog = {
       },
       draw: {
         title: "Sorteggio",
-        text: "Il tabellone si riempie in diretta: la luce corre sugli slot vuoti e forma gli accoppiamenti.",
+        text: "Vengono sorteggiati gli abbinamenti squadra dopo squadra in modo casuale.",
       },
       match: {
         title: "Partita",
-        text: "Scegli lo stile di gioco, segui la partita e prova a vincere. Se finisce in parità, si va ai rigori quando previsto dal formato.",
+        text: "Scegli lo stile di gioco, segui la partita e prova a vincere. Se finisce in parità si va ai rigori.",
       },
       tournament: {
         title: "Torneo",
-        text: "Quarti, semifinali e finale sul tabellone: gare secche o andata e ritorno, fino ad alzare la coppa.",
+        text: "Quarti, semifinali e finale. Puoi scegliere tra gare secche o andata e ritorno.",
       },
       share: {
         title: "Riepilogo e condivisione",
-        text: "A fine torneo il riepilogo racconta il tuo cammino gara per gara: salvalo e condividilo come una figurina.",
+        text: "Alla fine del torneo il riepilogo racconta il tuo cammino gara per gara: salvalo e condividilo.",
       },
     },
 
@@ -392,7 +408,7 @@ export const catalog = {
     hallOfFameSub:
       "96 leggende delle 23 annate. Una scheda per giocatore, basata sulla sua stagione migliore. Overall fino a 99.",
     cupLabel: "Formato della coppa",
-    botsLabel: "Difficoltà dei bot",
+    botsLabel: "Difficoltà",
     hint: "{teams} squadre (tu + {bots} bot) - {credits} crediti - 8 giocatori per rosa - modulo 1-2-3-2",
 
     error: {
@@ -429,11 +445,13 @@ export const catalog = {
       group: "Difficoltà dei bot",
       normale: {
         label: "Normale",
+        tag: "",
         desc: "I bot valutano i giocatori e gestiscono i crediti senza strategie troppo aggressive.",
       },
       difficile: {
         label: "Difficile",
-        desc: "I bot valutano meglio i giocatori e possono rilanciare per farti spendere di più.",
+        tag: "",
+        desc: "I bot valutano meglio i giocatori e possono rilanciare per farti spendere di più. In asta overall, valore e statistiche dei giocatori restano coperti fino alla fine.",
       },
     },
 
@@ -441,11 +459,13 @@ export const catalog = {
       group: "Formato della coppa",
       double: {
         label: "Andata e ritorno",
-        desc: "Quarti e semifinali si giocano su due partite, la finale in gara secca. Fino a 5 partite; se l’aggregato è pari, si va ai rigori.",
+        tag: "Fino a 5 partite",
+        desc: "Quarti e semifinali si giocano su due partite, la finale in gara secca.",
       },
       single: {
         label: "Gara secca",
-        desc: "Una partita per turno. Chi perde è eliminato; in caso di parità si va ai rigori.",
+        tag: "Fino a 3 partite",
+        desc: "Una partita secca per turno. Chi perde è eliminato e in caso di parità si va ai rigori.",
       },
     },
   },
@@ -926,10 +946,10 @@ export const catalog = {
         "La stanza non esiste o l'host non è raggiungibile. Controlla il codice e riprova.",
       retry: "Riprova",
       hostOffline: "L'host si è disconnesso. In attesa che torni online…",
-      resumeTitle: "La tua stanza è ancora aperta",
+      resumeTitle: "Hai una sessione ancora aperta",
       resumeText:
         "Sei l'host: puoi riprendere la partita da dove l'avevi lasciata.",
-      resume: "Riprendi la stanza",
+      resume: "Rientra",
       startFail: "Non riesco a caricare il listone. Riprova.",
     },
     topbar: {
@@ -1209,7 +1229,7 @@ export const catalog = {
     seo: {
       homeTitle: "FantaClash - Fantacalcio d'asta con la Serie A di ieri",
       homeDesc:
-        "Gioco di fantacalcio online gratis: rivivi l'emozione di partecipare all'asta di una stagione passata. Scegli un'annata o il listone delle leggende, gioca contro 7 amici o bot e prova a vincere il torneo.",
+        "Fantacalcio online gratis: rivivi l'emozione dell'asta di una stagione passata. Scegli un'annata o le leggende, sfida amici o bot e vinci il torneo.",
       genre1: "Fantacalcio",
       genre2: "Calcio",
       genre3: "Manageriale",

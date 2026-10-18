@@ -40,6 +40,7 @@ export {
   drawOrder,
   simulateBracketMatch,
   simulateRound,
+  simulateOthers,
   simulateRemaining,
   randomTournamentSeed,
 } from './tournamentEngine';

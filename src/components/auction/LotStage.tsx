@@ -1,5 +1,6 @@
-import { AuctionBid, Player, Team } from '../../types';
+import { AuctionBid, Player, PlayerRole, Team } from '../../types';
 import { useT } from '../../i18n/I18nProvider';
+import { CatalogKey } from '../../i18n/translate';
 import { Icon } from '../Icon';
 import { PlayerCard } from '../player/PlayerCard';
 import { TeamBadge } from '../tournament/TeamBadge';
@@ -22,13 +23,30 @@ interface LotStageProps {
   autoAdvance: boolean;
   /** false in stanza: niente pulsante di avanzamento, lo decide l'host */
   allowSimulation?: boolean;
+  /** Difficile: carta del lotto coperta */
+  covered?: boolean;
+  /** Reparto in corso (per "Salta il reparto dei …") */
+  currentRole: PlayerRole;
+  /** I bot possono chiudere questo lotto senza l'utente */
+  canSkipLot: boolean;
+  /** L'utente ha completato il reparto: può saltarlo */
+  canSkipRole: boolean;
   onBid: (amount: number) => void;
   onNext: () => void;
+  onSkipLot: () => void;
+  onSkipRole: () => void;
 }
 
 const LOT_MS = 5000;
 const INCREMENTS = [1, 5, 10];
 const HISTORY_SIZE = 5;
+
+const ROLE_NAMES: Record<PlayerRole, CatalogKey> = {
+  P: 'ui.roles.pluralLower.P',
+  D: 'ui.roles.pluralLower.D',
+  C: 'ui.roles.pluralLower.C',
+  A: 'ui.roles.pluralLower.A',
+};
 
 /**
  * Il lotto sul banco: card del giocatore, prezzo, chi è in testa, timer,
@@ -36,7 +54,7 @@ const HISTORY_SIZE = 5;
  * quando ti superano lampeggia in arancio.
  */
 export function LotStage(props: LotStageProps) {
-  const { player, currentBid, bidderId, bids, teams, userTeam, timeRemaining, active, canBid, userMaxBid, outbid, outbidKey, autoAdvance, allowSimulation = true, onBid, onNext } = props;
+  const { player, currentBid, bidderId, bids, teams, userTeam, timeRemaining, active, canBid, userMaxBid, outbid, outbidKey, autoAdvance, allowSimulation = true, covered = false, currentRole, canSkipLot, canSkipRole, onBid, onNext, onSkipLot, onSkipRole } = props;
   const t = useT();
   const leader = teams.find(x => x.id === bidderId);
   const userLeads = !!userTeam && bidderId === userTeam.id;
@@ -56,7 +74,7 @@ export function LotStage(props: LotStageProps) {
   return (
     <div className="space-y-5">
       <div key={player.id} className="relative motion-safe:animate-drop">
-        <PlayerCard player={player} size="lg" />
+        <PlayerCard player={player} size="lg" covered={covered} />
         {!active && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <span
@@ -131,11 +149,29 @@ export function LotStage(props: LotStageProps) {
               </p>
             </div>
           ) : (
-            <p className="text-ink-soft">
-              {allowSimulation
-                ? t('auction.lot.roleDoneSim')
-                : t('auction.lot.roleDoneWatch')}
-            </p>
+            <div>
+              <p className="text-ink-soft">
+                {allowSimulation
+                  ? t('auction.lot.roleDoneSim')
+                  : t('auction.lot.roleDoneWatch')}
+              </p>
+              {allowSimulation && canSkipRole && (
+                <button onClick={onSkipRole} className="btn-primary w-full mt-3 py-3 text-lg">
+                  <Icon name="skip" className="w-5 h-5" />
+                  {t('auction.ff.simRole', { role: t(ROLE_NAMES[currentRole]) })}
+                </button>
+              )}
+            </div>
+          )}
+
+          {allowSimulation && (
+            <div className="mt-3">
+              <button onClick={onSkipLot} disabled={!canSkipLot} className="btn-ghost w-full py-3 text-lg">
+                <Icon name="skip" className="w-5 h-5" />
+                {t('auction.ff.skipLot')}
+              </button>
+              <p className="text-xs text-ink-muted text-center mt-1.5">{t('auction.ff.skipLotHint')}</p>
+            </div>
           )}
         </>
       ) : allowSimulation ? (

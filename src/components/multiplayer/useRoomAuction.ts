@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AuctionController, TeamMeta } from '../../hooks/auctionController';
-import { deriveAuctionView } from '../../services/auction';
+import { deriveAuctionView, isCovered } from '../../services/auction';
 import { projectForViewer } from '../../multiplayer/view';
 import { createWorkerTick } from '../../multiplayer/clock/workerTick';
 import { Player } from '../../types';
@@ -84,6 +84,7 @@ export function useRoomAuction(): AuctionController {
     teams,
     season: state?.settings.season,
     allowSimulation: false,
+    coveredCards: isCovered(state?.settings.difficulty, state?.auction?.phase),
     teamMeta,
     callDeadline: state?.callDeadline ?? null,
     now,

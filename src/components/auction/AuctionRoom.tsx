@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuctionController } from '../../hooks/auctionController';
 import { useT } from '../../i18n/I18nProvider';
 import { CatalogKey, tParts } from '../../i18n/translate';
 import { Player, PlayerRole } from '../../types';
 import { Icon } from '../Icon';
 import { BotThinking } from './BotThinking';
-import { FastForwardMenu } from './FastForwardMenu';
+import { AuctionToolbar } from './AuctionToolbar';
+import { MobileAuctionBar } from './MobileAuctionBar';
 import { LotStage } from './LotStage';
 import { PlayerList, SoldEntry } from './PlayerList';
 import { TeamsRecap } from './TeamsRecap';
+import { UserCalling } from './UserCalling';
 import { useAutoAdvance, useBidFeedback, useBotScanner } from './useAuctionFx';
 import { AdvanceButton } from './AutoAdvance';
 import { isBoolean, usePersistentState } from '../../hooks/usePersistentState';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useStreamerMode } from '../../hooks/useStreamerMode';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { StreamerCamZone } from '../layout/StreamerCamZone';
 
 interface AuctionRoomProps {
@@ -44,6 +48,9 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
   const [showTeams, setShowTeams] = useState(false);
   const [autoAdvance, setAutoAdvance] = usePersistentState('fanta-fc-auto-advance-v2', true, isBoolean);
   const [streamer] = useStreamerMode();
+  useWakeLock(true);
+  const stageRef = useRef<HTMLElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const userTeam = a.myTeam;
   const caller = a.teams.find(t => t.id === a.callerId);
@@ -60,7 +67,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
     [a.teams]
   );
 
-  const { scanId, lockedId } = useBotScanner(roundState === 'bot_calling', currentRole, remaining, currentPlayer?.id ?? null);
+  const { scanId, lockedId } = useBotScanner(roundState === 'bot_calling', currentRole, remaining, currentPlayer?.id ?? null, a.coveredCards);
   const { outbid, outbidKey } = useBidFeedback({
     active: roundState === 'auction_active',
     bidderId: currentBidderId,
@@ -79,9 +86,15 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
   const handlePlayerSelect = useCallback(
     (player: Player) => {
-      if (a.isUserCallingTurn && roundState === 'calling') a.userCallPlayer(player);
+      if (!(a.isUserCallingTurn && roundState === 'calling')) return;
+      // In stanza la chiamata è un intent ottimistico: restituisce sempre true
+      if (!a.userCallPlayer(player)) return;
+      // Su mobile il listone è sotto il banco: riporta in vista il lotto
+      if (window.matchMedia('(max-width: 1023.98px)').matches) {
+        stageRef.current?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' });
+      }
     },
-    [a, roundState]
+    [a, roundState, reducedMotion]
   );
 
   // Asta completata: si passa subito al torneo (il sorteggio parte da solo)
@@ -109,17 +122,19 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
 
   return (
     <div className="flex-1 min-h-0 lg:h-[calc(100vh-4rem)] w-full max-w-[1600px] mx-auto px-4">
+      {userTeam && (
+        <MobileAuctionBar team={userTeam} role={currentRole} maxBid={a.userMaxBid} leading={isUserWinning} />
+      )}
       <div className="grid grid-cols-12 lg:h-full">
         {/* Banco d'asta */}
-        <section className="col-span-12 lg:col-span-5 xl:col-span-4 lg:min-h-0 lg:overflow-y-auto py-6 lg:pr-6 lg:border-r-2 lg:border-ink">
+        <section ref={stageRef} className="col-span-12 lg:col-span-5 xl:col-span-4 lg:min-h-0 lg:overflow-y-auto py-6 lg:pr-6 lg:border-r-2 lg:border-ink scroll-mt-[120px] lg:scroll-mt-0">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <h1 className="font-display text-4xl xl:text-5xl font-black text-ink leading-none">{stageTitle}</h1>
             {a.allowSimulation && (
-              <FastForwardMenu
+              <AuctionToolbar
                 currentRole={currentRole}
-                canSimulateLot={a.canSimulateLot}
                 canSimulateRole={a.canSimulateRole}
-                onSimulateLot={a.simulateLot}
+                showRoleSkip={roundState !== 'auction_active'}
                 onSimulateRole={a.simulateRoleCompletion}
                 onSimulateAll={a.simulateAll}
                 autoAdvance={autoAdvance}
@@ -159,24 +174,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
           )}
 
           {roundState === 'calling' && a.isUserCallingTurn && (
-            <div className="py-6">
-              <p className="text-2xl text-ink leading-snug">
-                {tParts(t, 'auction.pickRole', { role: '' }, 'role').map((part, i) => (
-                  i === 1
-                    ? <span key="role" className="font-bold text-pitch">{t(ROLE_SINGULAR[currentRole])}</span>
-                    : <span key="pre">{part}</span>
-                ))}
-              </p>
-              <p className="flex items-center gap-2 text-ink-muted mt-4">
-                <Icon name="arrow" className="w-5 h-5 text-pitch" />
-                {t('auction.clickRow')}
-              </p>
-              {callSeconds != null && (
-                <p className="font-display text-2xl font-extrabold text-ink mt-4">
-                  {t('auction.timeToCall', { seconds: callSeconds })}
-                </p>
-              )}
-            </div>
+            <UserCalling team={userTeam} role={currentRole} maxBid={a.userMaxBid} callSeconds={callSeconds} />
           )}
 
           {roundState === 'bot_calling' &&
@@ -230,8 +228,14 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
               outbidKey={outbidKey}
               autoAdvance={autoAdvance}
               allowSimulation={a.allowSimulation}
+              covered={a.coveredCards}
+              currentRole={currentRole}
+              canSkipLot={a.canSimulateLot}
+              canSkipRole={a.canSimulateRole}
               onBid={a.userBid}
               onNext={a.confirmAssignment}
+              onSkipLot={a.simulateLot}
+              onSkipRole={a.simulateRoleCompletion}
             />
           )}
         </section>
@@ -247,6 +251,7 @@ export function AuctionRoom({ onComplete }: AuctionRoomProps) {
             onSelectPlayer={handlePlayerSelect}
             scanId={scanId}
             lockedId={lockedId}
+            covered={a.coveredCards}
           />
         </section>
 

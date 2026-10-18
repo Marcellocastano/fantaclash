@@ -7,6 +7,7 @@ import {
   AuctionWorld,
   auctionReducer,
   deriveAuctionView,
+  isCovered,
   runAuction,
   shuffle,
 } from '../services/auction';
@@ -32,6 +33,8 @@ export interface AuctionController extends AuctionView {
   season: string | undefined;
   /** false in stanza: la UI nasconde simulazioni e avanzamenti manuali */
   allowSimulation: boolean;
+  /** Difficile: schede coperte durante l'asta */
+  coveredCards: boolean;
   /** In stanza: chi controlla ogni squadra (assente nel gioco singolo) */
   teamMeta?: Record<string, TeamMeta>;
   /** Scadenza del turno di chiamata di un umano (clock host), null in locale */
@@ -203,6 +206,7 @@ export function useLocalAuction(): AuctionController {
     teams: state.teams,
     season: state.config?.season,
     allowSimulation: true,
+    coveredCards: isCovered(state.config?.difficulty, state.auction?.phase),
     callDeadline: null,
     now,
     startAuction,
